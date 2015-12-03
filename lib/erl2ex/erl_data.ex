@@ -19,16 +19,6 @@ defmodule Erl2ex.ErlFunc do
 end
 
 
-defmodule Erl2ex.ErlClause do
-
-  defstruct line: nil,
-            args: [],
-            guards: [],
-            exprs: []
-
-end
-
-
 defmodule Erl2ex.ErlModule do
 
   defstruct name: nil,

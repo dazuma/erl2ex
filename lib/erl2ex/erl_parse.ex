@@ -55,8 +55,7 @@ defmodule Erl2ex.ErlParse do
   end
 
 
-  defp add_form(module, {:function, _line, name, arity, clause_asts}, comments) do
-    clauses = clause_asts |> Enum.map(&create_clause/1)
+  defp add_form(module, {:function, _line, name, arity, clauses}, comments) do
     func = %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}
     %Erl2ex.ErlModule{module | forms: [func | module.forms]}
   end
@@ -76,11 +75,5 @@ defmodule Erl2ex.ErlParse do
     attribute = %Erl2ex.ErlAttr{line: line, name: attr, arg: arg, comments: comments}
     %Erl2ex.ErlModule{module | forms: [attribute | module.forms]}
   end
-
-
-  defp create_clause({:clause, line, args, guards, expr_asts}) do
-    %Erl2ex.ErlClause{line: line, args: args, guards: guards, exprs: expr_asts}
-  end
-
 
 end

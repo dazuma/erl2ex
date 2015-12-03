@@ -22,8 +22,7 @@ end
 
 defmodule Erl2ex.ExClause do
 
-  defstruct args: [],
-            guard: nil,
+  defstruct signature: nil,
             exprs: [],
             comments: [],
             inline_comments: []

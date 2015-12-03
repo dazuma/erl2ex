@@ -1,21 +1,22 @@
 
 defmodule Erl2ex.ExWrite do
 
+  defmodule Context do
+    defstruct indent: 0,
+              last_form: :start
+  end
+
+
   def to_file(module, path, opts \\ []) do
     File.open!(path, [:write], fn io ->
       to_io(module, io, opts)
-      :ok
     end)
   end
 
 
-  def to_io(module, io, opts \\ []) do
-    module.comments |> Enum.each(&(write_string(io, &1, opts)))
-    write_string(io, "defmodule :#{to_string(module.name)} do", opts)
-    inner_opts = increment_indent(opts)
-    module.forms |> Enum.each(&(write_form(io, &1, inner_opts)))
-    write_string(io, "end", opts)
-    io
+  def to_io(ex_module, io, opts \\ []) do
+    build_context(opts) |> write_module(ex_module, io)
+    :ok
   end
 
 
@@ -27,55 +28,116 @@ defmodule Erl2ex.ExWrite do
   end
 
 
-  defp write_form(io, func = %Erl2ex.ExFunc{}, opts) do
-    write_string(io, "", opts)
-    func.comments |> Enum.each(&(write_string(io, &1, opts)))
-    func.clauses |> Enum.each(&(write_clause(io, func, &1, opts)))
+  defp build_context(_opts) do
+    %Context{}
   end
 
-  defp write_form(io, attr = %Erl2ex.ExAttr{}, opts) do
-    attr.comments |> Enum.each(&(write_string(io, &1, opts)))
-    write_string(io, "@#{attr.name} #{Macro.to_string(attr.arg)}", opts)
-    write_string(io, "", opts)
+  def increment_indent(context) do
+    %Context{context | indent: context.indent + 1}
+  end
+
+  def decrement_indent(context) do
+    %Context{context | indent: context.indent - 1}
   end
 
 
-  defp write_clause(io, func, clause, opts) do
-    clause.comments |> Enum.each(&(write_string(io, &1, opts)))
-    write_string(io, "#{func_declaration(func)}#{func_args(clause)}#{func_guard(clause)} do", opts)
-    inner_opts = increment_indent(opts)
-    clause.exprs |> Enum.each(fn expr ->
-      write_string(io, Macro.to_string(expr), inner_opts)
+  defp write_module(context, %Erl2ex.ExModule{name: nil, forms: forms}, io) do
+    context |> foreach(forms, io, &write_form/3)
+  end
+
+  defp write_module(context, %Erl2ex.ExModule{name: name, forms: forms, comments: comments}, io) do
+    context
+      |> write_comment_list(comments, :module_comments, io)
+      |> skip_lines(:module_begin, io)
+      |> write_string("defmodule :#{to_string(name)} do", io)
+      |> increment_indent
+      |> foreach(forms, io, &write_form/3)
+      |> decrement_indent
+      |> skip_lines(:module_end, io)
+      |> write_string("end", io)
+  end
+
+
+  defp write_form(context, %Erl2ex.ExFunc{comments: comments, clauses: [first_clause | remaining_clauses], public: public}, io) do
+    context
+      |> write_comment_list(comments, :func_header, io)
+      |> write_func_clause(public, first_clause, :func_clause_first, io)
+      |> foreach(remaining_clauses, fn (ctx, clause) ->
+        write_func_clause(ctx, public, clause, :func_clause, io)
+      end)
+  end
+
+  defp write_form(context, attr = %Erl2ex.ExAttr{comments: comments}, io) do
+    context
+      |> skip_lines(:attr, io)
+      |> foreach(comments, io, &write_string/3)
+      |> write_raw_attr(attr, io)
+  end
+
+
+  defp write_raw_attr(context, %Erl2ex.ExAttr{name: name, arg: arg}, io) do
+    context
+      |> write_string("@#{name} #{Macro.to_string(arg)}", io)
+  end
+
+
+  defp write_comment_list(context, [], _form_type, _io), do: context
+  defp write_comment_list(context, comments, form_type, io) do
+    context
+      |> skip_lines(form_type, io)
+      |> foreach(comments, io, &write_string/3)
+  end
+
+
+  defp write_func_clause(context, public, clause, form_type, io) do
+    decl = if public, do: "def", else: "defp"
+    context
+      |> skip_lines(form_type, io)
+      |> foreach(clause.comments, io, &write_string/3)
+      |> write_string("#{decl} #{Macro.to_string(clause.signature)} do", io)
+      |> increment_indent
+      |> foreach(clause.exprs, fn (ctx, expr) ->
+        write_string(ctx, Macro.to_string(expr), io)
+      end)
+      |> decrement_indent
+      |> write_string("end", io)
+  end
+
+
+  defp write_string(context, str, io) do
+    indent = String.duplicate("  ", context.indent)
+    String.split(str, "\n") |> Enum.each(fn line ->
+      IO.puts(io, "#{indent}#{line}")
     end)
-    write_string(io, "end", opts)
-    write_string(io, "", opts)
+    context
   end
 
 
-  defp func_declaration(%Erl2ex.ExFunc{public: true, name: name}), do: "def #{name}"
-  defp func_declaration(%Erl2ex.ExFunc{public: false, name: name}), do: "defp #{name}"
-
-  defp func_args(clause) do
-    args = clause.args
-      |> Enum.map(&Macro.to_string/1)
-      |> Enum.join(", ")
-    "(#{args})"
+  defp foreach(context, list, io, func) do
+    Enum.reduce(list, context, fn (elem, ctx) -> func.(ctx, elem, io) end)
   end
 
-  defp func_guard(%Erl2ex.ExClause{guard: nil}), do: ""
-  defp func_guard(%Erl2ex.ExClause{guard: guard}), do: " when #{Macro.to_string(guard)}"
-
-
-  defp write_string(io, str, opts) do
-    indent = Keyword.get(opts, :indent, "")
-    IO.puts(io, String.rstrip("#{indent}#{str}"))
+  defp foreach(context, list, func) do
+    Enum.reduce(list, context, fn (elem, ctx) -> func.(ctx, elem) end)
   end
 
 
-  @indent "  "
-
-  defp increment_indent(opts) do
-    Keyword.update(opts, :indent, @indent, &("#{&1}#{@indent}"))
+  defp skip_lines(context, cur_form, io) do
+    lines = calc_skip_lines(context.last_form, cur_form)
+    if lines > 0 do
+      IO.puts(io, String.duplicate("\n", lines - 1))
+    end
+    %Context{context | last_form: cur_form}
   end
+
+  defp calc_skip_lines(:start, _), do: 0
+  defp calc_skip_lines(:module_comments, :module_begin), do: 1
+  defp calc_skip_lines(:module_begin, _), do: 1
+  defp calc_skip_lines(_, :module_end), do: 1
+  defp calc_skip_lines(:func_header, :func_clause_first), do: 1
+  defp calc_skip_lines(:func_clause_first, :func_clause), do: 1
+  defp calc_skip_lines(:func_clause, :func_clause), do: 1
+  defp calc_skip_lines(_, _), do: 2
+
 
 end

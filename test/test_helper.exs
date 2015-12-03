@@ -38,11 +38,10 @@ defmodule TestFixtures do
           name: :one,
           arity: 1,
           clauses: [
-            %Erl2ex.ErlClause{
-              line: 9,
-              args: [{:var, 9, :X}],
-              guards: [],
-              exprs: [
+            {:clause, 9,
+              [{:var, 9, :X}],
+              [],
+              [
                 {:match, 10,
                   {:var, 10, :Y},
                   {:op, 10, :-, {:var, 10, :X}, {:integer, 10, 1}}
@@ -64,19 +63,17 @@ defmodule TestFixtures do
           name: :eql,
           arity: 2,
           clauses: [
-            %Erl2ex.ErlClause{
-              line: 15,
-              args: [{:var, 15, :X}, {:var, 15, :X}],
-              guards: [[{:op, 15, :>=, {:var, 15, :X}, {:integer, 15, 0}}]],
-              exprs: [
+            {:clause, 15,
+              [{:var, 15, :X}, {:var, 15, :X}],
+              [[{:op, 15, :>=, {:var, 15, :X}, {:integer, 15, 0}}]],
+              [
                 {:atom, 15, :true}
               ]
             },
-            %Erl2ex.ErlClause{
-              line: 17,
-              args: [{:var, 17, :_}, {:var, 17, :_}],
-              guards: [],
-              exprs: [
+            {:clause, 17,
+              [{:var, 17, :_}, {:var, 17, :_}],
+              [],
+              [
                 {:atom, 17, :false}
               ]
             }
@@ -103,8 +100,7 @@ defmodule TestFixtures do
           public: true,
           clauses: [
             %Erl2ex.ExClause{
-              args: [{:x, [], Elixir}],
-              guard: nil,
+              signature: {:one, [], [{:x, [], Elixir}]},
               exprs: [
                 {:=, [], [{:y, [], Elixir}, {:-, [context: Elixir, import: Kernel], [{:x, [], Elixir}, 1]}]},
                 {:eql, [], [{:y, [], Elixir}, 0]}
@@ -124,21 +120,16 @@ defmodule TestFixtures do
           public: false,
           clauses: [
             %Erl2ex.ExClause{
-              args: [
-                {:x, [], Elixir},
-                {:x, [], Elixir}
-              ],
-              guard: {:>=, [context: Elixir, import: Kernel], [{:x, [], Elixir}, 0]},
+              signature: {:when, [], [
+                {:eql, [], [{:x, [], Elixir}, {:x, [], Elixir}]},
+                {:>=, [context: Elixir, import: Kernel], [{:x, [], Elixir}, 0]}
+              ]},
               exprs: [true],
               comments: [],
               inline_comments: []
             },
             %Erl2ex.ExClause{
-              args: [
-                {:_, [], Elixir},
-                {:_, [], Elixir}
-              ],
-              guard: nil,
+              signature: {:eql, [], [{:_, [], Elixir}, {:_, [], Elixir}]},
               exprs: [false],
               comments: ["# the second clause"],
               inline_comments: []
@@ -154,12 +145,15 @@ defmodule TestFixtures do
   def test1_ex_source do
     """
     # This is a test module
+
     defmodule :test1 do
+
       @vsn 123
 
 
       # This is a one function
       # which calls eql.
+
       def one(x) do
         y = x - 1
         eql(y, 0)
@@ -167,6 +161,7 @@ defmodule TestFixtures do
 
 
       # A multi-clause function
+
       defp eql(x, x) when x >= 0 do
         true
       end
