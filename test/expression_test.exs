@@ -1,81 +1,14 @@
-defmodule FunctionExpressionTest do
+defmodule ExpressionTest do
   use ExUnit.Case
-
-
-  test "Single clause, single expr with no arguments or guards" do
-    input = """
-      foo() -> hello.
-      """
-
-    expected = """
-      defp foo() do
-        :hello
-      end
-      """
-
-    assert Erl2ex.convert_str(input) == expected
-  end
-
-
-  test "Single clause, single expr with arguments but no guards" do
-    input = """
-      foo(A, B) -> A + B.
-      """
-
-    expected = """
-      defp foo(a, b) do
-        a + b
-      end
-      """
-
-    assert Erl2ex.convert_str(input) == expected
-  end
-
-
-  test "Single clause, single expr with arguments and guards" do
-    input = """
-      foo(A, B) when A, is_atom(B); A + B > 0 -> hello.
-      """
-
-    expected = """
-      defp foo(a, b) when a and is_atom(b) or a + b > 0 do
-        :hello
-      end
-      """
-
-    assert Erl2ex.convert_str(input) == expected
-  end
-
-
-  test "Multi clause, multi expr" do
-    input = """
-      foo(A) -> B = A + 1, B;
-      foo({A}) -> B = A - 1, B.
-      """
-
-    expected = """
-      defp foo(a) do
-        b = a + 1
-        b
-      end
-
-      defp foo({a}) do
-        b = a - 1
-        b
-      end
-      """
-
-    assert Erl2ex.convert_str(input) == expected
-  end
 
 
   test "Various value types" do
     input = """
-      foo(A) -> atom, 123, $A, 3.14, {A, {}, {hello, world}}, [1, [], 2].
+      foo() -> atom, 123, $A, 3.14, {A, {}, {hello, world}}, [1, [], 2].
       """
 
     expected = """
-      defp foo(a) do
+      defp foo() do
         :atom
         123
         65
@@ -106,11 +39,11 @@ defmodule FunctionExpressionTest do
 
   test "Function calls" do
     input = """
-      foo(A) -> baz:bar(A, bar(A)).
+      foo() -> baz:bar(A, bar(A)).
       """
 
     expected = """
-      defp foo(a) do
+      defp foo() do
         :baz.bar(a, bar(a))
       end
       """
@@ -121,7 +54,7 @@ defmodule FunctionExpressionTest do
 
   test "Math operations" do
     input = """
-      foo(A) -> A + (B - C) / D * E,
+      foo() -> A + (B - C) / D * E,
         +A,
         -A,
         A div 1,
@@ -129,7 +62,7 @@ defmodule FunctionExpressionTest do
       """
 
     expected = """
-      defp foo(a) do
+      defp foo() do
         a + (b - c) / d * e
         +a
         -a
@@ -144,7 +77,7 @@ defmodule FunctionExpressionTest do
 
   test "Comparison operations" do
     input = """
-      foo(A) ->
+      foo() ->
         A == 1,
         A /= 1,
         A =< 1,
@@ -156,7 +89,7 @@ defmodule FunctionExpressionTest do
       """
 
     expected = """
-      defp foo(a) do
+      defp foo() do
         a == 1
         a != 1
         a <= 1
@@ -174,7 +107,7 @@ defmodule FunctionExpressionTest do
 
   test "Logic and misc operations" do
     input = """
-      foo(A) ->
+      foo() ->
         not A,
         A orelse B,
         A andalso B,
@@ -184,7 +117,7 @@ defmodule FunctionExpressionTest do
       """
 
     expected = """
-      defp foo(a) do
+      defp foo() do
         not a
         a or b
         a and b
@@ -200,7 +133,7 @@ defmodule FunctionExpressionTest do
 
   test "Bitwise operations" do
     input = """
-      foo(A) ->
+      foo() ->
         A band B,
         A bor B,
         A bxor B,
@@ -210,7 +143,7 @@ defmodule FunctionExpressionTest do
       """
 
     expected = """
-      defp foo(a) do
+      defp foo() do
         a &&& b
         a ||| b
         a ^^^ b
@@ -226,7 +159,7 @@ defmodule FunctionExpressionTest do
 
   test "Case statement" do
     input = """
-      foo(A) ->
+      foo() ->
         case A of
           {B, 1} when B, C; D == 2 ->
             E = 3,
@@ -236,7 +169,7 @@ defmodule FunctionExpressionTest do
       """
 
     expected = """
-      defp foo(a) do
+      defp foo() do
         case(a) do
           {b, 1} when b and c or d == 2 ->
             e = 3
@@ -253,7 +186,7 @@ defmodule FunctionExpressionTest do
 
   test "If statement" do
     input = """
-      foo(A) ->
+      foo() ->
         if
           B, C; D == 2 ->
             E = 3,
@@ -263,7 +196,7 @@ defmodule FunctionExpressionTest do
       """
 
     expected = """
-      defp foo(a) do
+      defp foo() do
         cond() do
           b and c or d == 2 ->
             e = 3
@@ -280,7 +213,7 @@ defmodule FunctionExpressionTest do
 
   test "Receive statement" do
     input = """
-      foo(A) ->
+      foo() ->
         receive
           A when B, C; D == 2 ->
             E = 3,
@@ -290,7 +223,7 @@ defmodule FunctionExpressionTest do
       """
 
     expected = """
-      defp foo(a) do
+      defp foo() do
         receive() do
           a when b and c or d == 2 ->
             e = 3
@@ -298,6 +231,55 @@ defmodule FunctionExpressionTest do
           _ ->
             2
         end
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Simple fun" do
+    input = """
+      foo() ->
+        fun
+          (X) when B, C; D == 2 ->
+            E = 3,
+            E;
+          (_) -> 2
+        end.
+      """
+
+    expected = """
+      defp foo() do
+        fn
+          x when b and c or d == 2 ->
+            e = 3
+            e
+          _ ->
+            2
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Block" do
+    input = """
+      foo() ->
+        begin
+          E = 3,
+          E
+        end.
+      """
+
+    expected = """
+      defp foo() do
+        (
+          e = 3
+          e
+        )
       end
       """
 

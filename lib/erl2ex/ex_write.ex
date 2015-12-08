@@ -74,6 +74,21 @@ defmodule Erl2ex.ExWrite do
       |> write_raw_attr(attr, io)
   end
 
+  defp write_form(context, %Erl2ex.ExMacro{signature: signature, expr: expr, comments: comments}, io) do
+    context
+      |> write_comment_list(comments, :func_header, io)
+      |> skip_lines(:func_clause_first, io)
+      |> write_string("defmacrop #{Macro.to_string(signature)} do", io)
+      |> increment_indent
+      |> write_string("quote do", io)
+      |> increment_indent
+      |> write_string(Macro.to_string(expr), io)
+      |> decrement_indent
+      |> write_string("end", io)
+      |> decrement_indent
+      |> write_string("end", io)
+  end
+
 
   defp write_raw_attr(context, %Erl2ex.ExAttr{name: name, arg: arg}, io) do
     context
@@ -137,6 +152,7 @@ defmodule Erl2ex.ExWrite do
   defp calc_skip_lines(:func_header, :func_clause_first), do: 1
   defp calc_skip_lines(:func_clause_first, :func_clause), do: 1
   defp calc_skip_lines(:func_clause, :func_clause), do: 1
+  defp calc_skip_lines(:attr, :attr), do: 1
   defp calc_skip_lines(_, _), do: 2
 
 

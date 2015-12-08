@@ -9,6 +9,16 @@ defmodule Erl2ex.ErlAttr do
 end
 
 
+defmodule Erl2ex.ErlDefine do
+
+  defstruct line: nil,
+            macro: nil,
+            replacement: nil,
+            comments: []
+
+end
+
+
 defmodule Erl2ex.ErlFunc do
 
   defstruct name: nil,
