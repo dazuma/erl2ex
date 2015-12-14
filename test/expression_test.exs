@@ -37,21 +37,6 @@ defmodule ExpressionTest do
   end
 
 
-  test "Function calls" do
-    input = """
-      foo() -> baz:bar(A, bar(A)).
-      """
-
-    expected = """
-      defp foo() do
-        :baz.bar(a, bar(a))
-      end
-      """
-
-    assert Erl2ex.convert_str(input) == expected
-  end
-
-
   test "Math operations" do
     input = """
       foo() -> A + (B - C) / D * E,

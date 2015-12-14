@@ -74,6 +74,13 @@ defmodule Erl2ex.ExWrite do
       |> write_raw_attr(attr, io)
   end
 
+  defp write_form(context, %Erl2ex.ExImport{module: module, funcs: funcs, comments: comments}, io) do
+    context
+      |> skip_lines(:attr, io)
+      |> foreach(comments, io, &write_string/3)
+      |> write_string("import #{Macro.to_string(module)}, only: #{Macro.to_string(funcs)}", io)
+  end
+
   defp write_form(context, %Erl2ex.ExMacro{signature: signature, expr: expr, comments: comments}, io) do
     context
       |> write_comment_list(comments, :func_header, io)

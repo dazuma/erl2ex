@@ -9,6 +9,16 @@ defmodule Erl2ex.ExAttr do
 end
 
 
+defmodule Erl2ex.ExImport do
+
+  defstruct module: nil,
+            funcs: [],
+            comments: [],
+            inline_comments: []
+
+end
+
+
 defmodule Erl2ex.ExMacro do
 
   defstruct signature: nil,

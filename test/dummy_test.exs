@@ -5,8 +5,7 @@ defmodule DummyTest do
   test "dummy1" do
     IO.puts("")
     erl_source = """
-      -define(hello(X), 100*X).
-      foo() -> ?hello(2).
+      -import(hello, [foo/1, bar/2]).
       """
 
     erl_raw_tokens = {erl_source |> to_char_list, 1}

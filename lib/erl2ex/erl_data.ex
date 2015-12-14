@@ -9,10 +9,21 @@ defmodule Erl2ex.ErlAttr do
 end
 
 
+defmodule Erl2ex.ErlImport do
+
+  defstruct line: nil,
+            module: nil,
+            funcs: [],
+            comments: []
+
+end
+
+
 defmodule Erl2ex.ErlDefine do
 
   defstruct line: nil,
-            macro: nil,
+            name: nil,
+            args: nil,
             replacement: nil,
             comments: []
 
@@ -34,6 +45,7 @@ defmodule Erl2ex.ErlModule do
   defstruct name: nil,
             comments: [],
             exports: [],
+            imports: [],
             forms: []
 
 end

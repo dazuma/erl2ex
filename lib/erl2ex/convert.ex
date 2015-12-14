@@ -1,8 +1,11 @@
 
 defmodule Erl2ex.Convert do
 
+  alias Erl2ex.Convert.Context
+
+
   def module(erl_module, opts \\ []) do
-    context = build_context(erl_module, opts)
+    context = Context.build(erl_module, opts)
     %Erl2ex.ExModule{
       name: erl_module.name,
       comments: erl_module.comments |> convert_comments,
@@ -12,28 +15,12 @@ defmodule Erl2ex.Convert do
 
 
   def form(form, module, opts \\ []) do
-    form(build_context(module, opts), form)
+    formp(Context.build(module, opts), form)
   end
 
 
   def expression(exp, opts \\ []) do
-    expr(build_context(opts), exp)
-  end
-
-
-  defmodule Context do
-    defstruct exports: [],
-              quoted_variables: []
-  end
-
-
-  defp build_context(erl_module, _opts) do
-    %Context{exports: erl_module.exports}
-  end
-
-
-  defp build_context(_opts) do
-    %Context{}
+    expr(Context.build(opts), exp)
   end
 
 
@@ -70,6 +57,13 @@ defmodule Erl2ex.Convert do
     bnot: {@import_bitwise_metadata, :~~~},
   ] |> Enum.into(HashDict.new)
 
+  @autoimport_map [
+    abs: :abs,
+    bit_size: :bit_size,
+    byte_size: :byte_size,
+    is_atom: :is_atom
+  ] |> Enum.into(HashDict.new)
+
 
   defp formp(context, %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do
     first_line = clauses |> List.first |> elem(1)
@@ -80,9 +74,20 @@ defmodule Erl2ex.Convert do
     %Erl2ex.ExFunc{
       name: name,
       arity: arity,
-      public: Enum.member?(context.exports, {name, arity}),
+      public: Context.is_exported?(context, name, arity),
       comments: main_comments |> convert_comments,
       clauses: ex_clauses
+    }
+  end
+
+  defp formp(_context, %Erl2ex.ErlImport{line: line, module: module, funcs: funcs, comments: comments}) do
+    {main_comments, inline_comments} = split_comments(comments, line)
+
+    %Erl2ex.ExImport{
+      module: module,
+      funcs: funcs,
+      comments: main_comments |> convert_comments,
+      inline_comments: inline_comments |> convert_comments
     }
   end
 
@@ -97,34 +102,31 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp formp(context, %Erl2ex.ErlDefine{line: line, macro: macro = {:call, _, _, args}, replacement: replacement, comments: comments}) do
-    {main_comments, inline_comments} = split_comments(comments, line)
-
-    vars = args |> Enum.map(fn {:var, _, name} -> name end)
-    replacement_context = %Context{context | quoted_variables: vars}
-
-    %Erl2ex.ExMacro{
-      signature: expr(context, macro),
-      expr: expr(replacement_context, replacement),
-      comments: main_comments |> convert_comments,
-      inline_comments: inline_comments |> convert_comments
-    }
-  end
-
-  defp formp(context, %Erl2ex.ErlDefine{line: line, macro: macro, replacement: replacement, comments: comments}) do
+  defp formp(context, %Erl2ex.ErlDefine{line: line, name: name, args: nil, replacement: replacement, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
 
     %Erl2ex.ExAttr{
-      name: macro_name(macro),
+      name: name,
       arg: expr(context, replacement),
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
   end
 
+  defp formp(context, %Erl2ex.ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}) do
+    {main_comments, inline_comments} = split_comments(comments, line)
 
-  defp macro_name({:var, _, name}), do: name
-  defp macro_name({:atom, _, name}), do: name
+    replacement_context = %Context{context | quoted_variables: args}
+    ex_args = args |> Enum.map(fn arg -> {lower_atom(arg), [], Elixir} end)
+    mapped_name = Context.macro_function_name(context, name)
+
+    %Erl2ex.ExMacro{
+      signature: {mapped_name, [], ex_args},
+      expr: expr(replacement_context, replacement),
+      comments: main_comments |> convert_comments,
+      inline_comments: inline_comments |> convert_comments
+    }
+  end
 
 
   # Expression rules
@@ -166,7 +168,7 @@ defmodule Erl2ex.Convert do
     {:., [], [expr(context, mod), expr(context, func)]}
 
   defp expr(context, {:call, _, func, args}) when is_list(args), do:
-    {func_spec(context, func), [], list(context, args)}
+    {func_spec(context, func, args), [], list(context, args)}
 
   defp expr(context, {:op, _, op, arg}) do
     {metadata, ex_op} = Dict.fetch!(@op_map, op)
@@ -208,8 +210,8 @@ defmodule Erl2ex.Convert do
   end
 
   defp generalized_var(context, atom_name, str_name) do
-    var = {str_name |> lower_bin |> String.to_atom, [], Elixir}
-    if Enum.member?(context.quoted_variables, atom_name) do
+    var = {str_name |> lower_str |> String.to_atom, [], Elixir}
+    if Context.is_quoted_var?(context, atom_name) do
       {:unquote, [], [var]}
     else
       var
@@ -217,22 +219,31 @@ defmodule Erl2ex.Convert do
   end
 
 
-  defp func_spec(_context, {:atom, _, func}), do:
-    func
-
-  defp func_spec(context, func = {:remote, _, _, _}), do:
+  defp func_spec(context, func = {:remote, _, _, _}, _args), do:
     expr(context, func)
 
-  defp func_spec(context, func = {:var, _, name}) do
-    case Atom.to_string(name) do
-      << "?" :: utf8, basename :: binary >> ->
-        String.to_atom(basename)
-      basename ->
-        generalized_var(context, name, basename)
+  defp func_spec(context, {:atom, _, func}, args) do
+    arity = Enum.count(args)
+    if Context.is_local_func?(context, func, arity) do
+      func
+    else
+      case Dict.get(@autoimport_map, func, nil) do
+        nil -> {:., [], [:erlang, func]}
+        ex_name -> ex_name
+      end
     end
   end
 
-  defp func_spec(context, func), do:
+  defp func_spec(context, func = {:var, _, name}, _args) do
+    case Atom.to_string(name) do
+      << "?" :: utf8, basename :: binary >> ->
+        Context.macro_function_name(context, String.to_atom(basename))
+      _ ->
+        {:., [], [expr(context, func)]}
+    end
+  end
+
+  defp func_spec(context, func, _args), do:
     {:., [], [expr(context, func)]}
 
 
@@ -321,12 +332,12 @@ defmodule Erl2ex.Convert do
   defp add_range(a.._b, line), do: a..line
 
 
-  defp lower_bin(<< first :: utf8, rest :: binary >>) do
+  defp lower_str(<< first :: utf8, rest :: binary >>) do
     << String.downcase(<< first >>) :: binary, rest :: binary >>
   end
 
   defp lower_atom(atom) do
-    atom |> Atom.to_string |> lower_bin |> String.to_atom
+    atom |> Atom.to_string |> lower_str |> String.to_atom
   end
 
 

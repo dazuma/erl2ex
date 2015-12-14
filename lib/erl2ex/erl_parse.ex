@@ -1,11 +1,6 @@
 
 defmodule Erl2ex.ErlParse do
 
-  defmodule Context do
-    defstruct include_path: []
-  end
-
-
   def from_file(path, opts \\ []) do
     path
       |> File.read!
@@ -77,6 +72,11 @@ defmodule Erl2ex.ErlParse do
   end
 
 
+  defmodule Context do
+    defstruct include_path: []
+  end
+
+
   defp build_context(opts) do
     %Context{
       include_path: Keyword.get_values(opts, :i)
@@ -98,7 +98,10 @@ defmodule Erl2ex.ErlParse do
   end
 
   defp add_form(module, {:attribute, _line, :module, arg}, comments, _context) do
-    %Erl2ex.ErlModule{module | name: arg, comments: module.comments ++ comments}
+    %Erl2ex.ErlModule{module |
+      name: arg,
+      comments: module.comments ++ comments
+    }
   end
 
   defp add_form(module, {:attribute, _line, :export, arg}, comments, _context) do
@@ -108,14 +111,40 @@ defmodule Erl2ex.ErlParse do
     }
   end
 
+  defp add_form(module, {:attribute, line, :import, {modname, funcs}}, comments, _context) do
+    attribute = %Erl2ex.ErlImport{line: line, module: modname, funcs: funcs, comments: comments}
+    %Erl2ex.ErlModule{module |
+      imports: module.imports ++ funcs,
+      forms: [attribute | module.forms]
+    }
+  end
+
   defp add_form(module, {:attribute, line, attr, arg}, comments, _context) do
     attribute = %Erl2ex.ErlAttr{line: line, name: attr, arg: arg, comments: comments}
     %Erl2ex.ErlModule{module | forms: [attribute | module.forms]}
   end
 
   defp add_form(module, {:define, line, macro, replacement}, comments, _context) do
-    define = %Erl2ex.ErlDefine{line: line, macro: macro, replacement: replacement, comments: comments}
+    {name, args} = interpret_macro_expr(macro)
+    define = %Erl2ex.ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}
     %Erl2ex.ErlModule{module | forms: [define | module.forms]}
   end
+
+
+  defp interpret_macro_expr({:call, _, name_expr, arg_exprs}) do
+    name = macro_name(name_expr)
+    args = arg_exprs |> Enum.map(fn {:var, _, n} -> n end)
+    {name, args}
+  end
+
+  defp interpret_macro_expr(macro_expr) do
+    name = macro_name(macro_expr)
+    {name, nil}
+  end
+
+
+  defp macro_name({:var, _, name}), do: name
+  defp macro_name({:atom, _, name}), do: name
+
 
 end
