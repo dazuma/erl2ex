@@ -188,4 +188,28 @@ defmodule PreprocessorTest do
   end
 
 
+  test "Predefined macros" do
+    input = """
+      foo() ->
+        ?MODULE,
+        ?MODULE_STRING,
+        ?FILE,
+        ?LINE,
+        ?MACHINE.
+      """
+
+    expected = """
+      defp foo() do
+        __MODULE__
+        Atom.to_char_list(__MODULE__)
+        String.to_char_list(__ENV__.file())
+        __ENV__.line()
+        'BEAM'
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
 end

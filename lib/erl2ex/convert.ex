@@ -310,10 +310,8 @@ defmodule Erl2ex.Convert do
   defp update_map(_context, base_map, []), do: base_map
 
 
-  defp generalized_var(context, _atom_name, << "?" :: utf8, name :: binary >>) do
-    macro_name = Context.macro_const_name(context, String.to_atom(name))
-    {:@, @import_kernel_metadata, [{macro_name, [], Elixir}]}
-  end
+  defp generalized_var(context, _atom_name, << "?" :: utf8, name :: binary >>), do:
+    const(context, String.to_atom(name))
 
   defp generalized_var(context, atom_name, str_name) do
     var = {str_name |> lower_str |> String.to_atom, [], Elixir}
@@ -322,6 +320,27 @@ defmodule Erl2ex.Convert do
     else
       var
     end
+  end
+
+
+  defp const(_context, :MODULE), do:
+    {:__MODULE__, [], Elixir}
+
+  defp const(_context, :MODULE_STRING), do:
+    {{:., [], [{:__aliases__, [alias: false], [:Atom]}, :to_char_list]}, [], [{:__MODULE__, [], Elixir}]}
+
+  defp const(_context, :FILE), do:
+    {{:., [], [{:__aliases__, [alias: false], [:String]}, :to_char_list]}, [], [{{:., [], [{:__ENV__, [], Elixir}, :file]}, [], []}]}
+
+  defp const(_context, :LINE), do:
+    {{:., [], [{:__ENV__, [], Elixir}, :line]}, [], []}
+
+  defp const(_context, :MACHINE), do:
+    'BEAM'
+
+  defp const(context, name) do
+    macro_name = Context.macro_const_name(context, name)
+    {:@, @import_kernel_metadata, [{macro_name, [], Elixir}]}
   end
 
 
