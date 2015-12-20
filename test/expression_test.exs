@@ -37,6 +37,21 @@ defmodule ExpressionTest do
   end
 
 
+  test "List destructuring" do
+    input = """
+      foo() -> [A, B | C] = X.
+      """
+
+    expected = """
+      defp foo() do
+        [a, b | c] = x
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
   test "Math operations" do
     input = """
       foo() -> A + (B - C) / D * E,
@@ -243,6 +258,36 @@ defmodule ExpressionTest do
           _ ->
             2
         end
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Local fun reference" do
+    input = """
+      foo() -> fun sqrt/1.
+      """
+
+    expected = """
+      defp foo() do
+        &sqrt/1
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Remote fun reference" do
+    input = """
+      foo(A) -> fun A:sqrt/1.
+      """
+
+    expected = """
+      defp foo(a) do
+        &a.sqrt/1
       end
       """
 

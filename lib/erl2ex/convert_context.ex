@@ -213,7 +213,7 @@ defmodule Erl2ex.Convert.Context do
   defp find_available_name(basename, used_names, prefix), do:
     find_available_name(to_string(basename), used_names, prefix, 1)
 
-  defp find_available_name(basename, used_names, prefix, val \\ 1) do
+  defp find_available_name(basename, used_names, prefix, val) do
     suggestion = suggest_name(basename, prefix, val)
     if Set.member?(used_names, suggestion) do
       find_available_name(basename, used_names, prefix, val + 1)

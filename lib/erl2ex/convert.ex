@@ -175,8 +175,14 @@ defmodule Erl2ex.Convert do
   defp expr(_context, {nil, _}), do:
     []
 
-  defp expr(context, {:cons, _, head, tail}), do:
+  defp expr(context, {:cons, _, head, tail = {:cons, _, _, _}}), do:
     [expr(context, head) | expr(context, tail)]
+
+  defp expr(context, {:cons, _, head, {nil, _}}), do:
+    [expr(context, head)]
+
+  defp expr(context, {:cons, _, head, tail}), do:
+    [{:|, [], [expr(context, head), expr(context, tail)]}]
 
   # TODO: binary literal
   # TODO: map literal
@@ -224,6 +230,12 @@ defmodule Erl2ex.Convert do
   defp expr(context, {:fun, _, {:clauses, clauses}}) when is_list(clauses), do:
     {:fn, [], list(context, clauses)}
 
+  defp expr(_context, {:fun, _, {:function, name, arity}}) when is_atom(name) and is_integer(arity), do:
+    {:&, [], [{:/, @import_kernel_metadata, [{name, [], Elixir}, arity]}]}
+
+  defp expr(context, {:fun, _, {:function, mod_expr, name_expr, arity_expr}}), do:
+    {:&, [], [{:/, @import_kernel_metadata, [{{:., [], [expr(context, mod_expr), expr(context, name_expr)]}, [], []}, expr(context, arity_expr)]}]}
+
   defp expr(context, {:block, _, arg}) when is_list(arg), do:
     block(context, arg)
 
@@ -242,14 +254,15 @@ defmodule Erl2ex.Convert do
   defp expr(context, {:map, _, associations}), do:
     {:%{}, [], list(context, associations)}
 
-  defp expr(context, {:map, _, associations}), do:
-    {:%{}, [], list(context, associations)}
-
   defp expr(context, {:map, _, base_map, []}), do:
     expr(context, base_map)
 
   defp expr(context, {:map, _, base_map, assocs}), do:
     update_map(context, expr(context, base_map), assocs)
+
+  defp expr(context, {:bin, _, elems}), do:
+    {:<<>>, [], list(context, elems)}
+  # TODO: binelement
 
 
   defp update_map(context, base_map, assocs = [{:map_field_exact, _, _, _} | _]) do
