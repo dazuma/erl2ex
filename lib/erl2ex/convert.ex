@@ -166,6 +166,9 @@ defmodule Erl2ex.Convert do
   defp expr(_context, {:float, _, val}) when is_float(val), do:
     val
 
+  defp expr(_context, {:string, _, val}) when is_list(val), do:
+    val
+
   defp expr(context, {:tuple, _, [val1, val2]}), do:
     {expr(context, val1), expr(context, val2)}
 
@@ -262,7 +265,19 @@ defmodule Erl2ex.Convert do
 
   defp expr(context, {:bin, _, elems}), do:
     {:<<>>, [], list(context, elems)}
-  # TODO: binelement
+
+  defp expr(context, {:bin_element, _, val, :default, :default}), do:
+    bin_element_expr(context, val)
+
+  defp expr(context, {:bin_element, _, val, size, :default}), do:
+    {:::, [], [bin_element_expr(context, val), {:size, [], [expr(context, size)]}]}
+
+  defp expr(context, {:bin_element, _, val, :default, [type]}), do:
+    {:::, [], [bin_element_expr(context, val), {type, [], Elixir}]}
+
+
+  defp bin_element_expr(_context, {:string, _, str}), do: List.to_string(str)
+  defp bin_element_expr(context, val), do: expr(context, val)
 
 
   defp update_map(context, base_map, assocs = [{:map_field_exact, _, _, _} | _]) do

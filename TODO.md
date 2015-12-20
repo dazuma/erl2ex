@@ -5,7 +5,7 @@ This is a (certainly partial) list of language features remaining to be implemen
 ## Syntax/expressions
 
 *   Expand list of Kernel functions
-*   Bit/binary expressions
+*   Bit/binary expressions with complex size/type specifiers
 *   Bit string comprehensions
 *   Non-short-circuiting and/or/xor
 *   Try, catch and throw

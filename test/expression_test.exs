@@ -4,7 +4,7 @@ defmodule ExpressionTest do
 
   test "Various value types" do
     input = """
-      foo() -> atom, 123, $A, 3.14, {A, {}, {hello, world}}, [1, [], 2].
+      foo() -> atom, 123, $A, 3.14, {A, {}, {hello, "world"}}, [1, [], 2].
       """
 
     expected = """
@@ -13,7 +13,7 @@ defmodule ExpressionTest do
         123
         65
         3.14
-        {a, {}, {:hello, :world}}
+        {a, {}, {:hello, 'world'}}
         [1, [], 2]
       end
       """
@@ -418,6 +418,82 @@ defmodule ExpressionTest do
     expected = """
       defp foo(m) do
         %{a: x, b: {1, y}} = m
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Bitstring literal with no qualifiers" do
+    input = """
+      foo() -> <<1, 2, "hello">>.
+      """
+
+    expected = """
+      defp foo() do
+        <<1, 2, "hello">>
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Bitstring literal with size expressions" do
+    input = """
+      foo(A) -> <<1:10, 2:A>>.
+      """
+
+    expected = """
+      defp foo(a) do
+        <<1 :: size(10), 2 :: size(a)>>
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Bitstring literal with simple type specifiers" do
+    input = """
+      foo() -> <<1/integer, 2/float, "hello"/utf16>>.
+      """
+
+    expected = """
+      defp foo() do
+        <<1 :: integer, 2 :: float, "hello" :: utf16>>
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  @tag :skip  # Not yet supported
+  test "Bitstring literal with complex types" do
+    input = """
+      foo() -> <<1:16/integer-signed-native>>.
+      """
+
+    expected = """
+      defp foo() do
+        ???
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Bitstring pattern match" do
+    input = """
+      foo(S) -> <<A, B:10, C/float>> = S.
+      """
+
+    expected = """
+      defp foo(s) do
+        <<a, b :: size(10), c :: float>> = s
       end
       """
 
