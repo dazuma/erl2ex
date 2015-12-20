@@ -4,7 +4,7 @@ defmodule Erl2ex.Mixfile do
   def project do
     [app: :erl2ex,
      version: "0.0.1",
-     elixir: "~> 1.1",
+     elixir: "~> 1.0",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      escript: [main_module: Erl2ex.Cli],
