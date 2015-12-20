@@ -1,6 +1,7 @@
 /_build
 /cover
 /deps
+/test/dummy_test.exs
 /test_files
 /erl2ex
 erl_crash.dump

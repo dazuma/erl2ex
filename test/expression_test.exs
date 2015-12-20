@@ -22,6 +22,21 @@ defmodule ExpressionTest do
   end
 
 
+  test "Variable case conversion" do
+    input = """
+      foo(_A, __B, _) -> 1.
+      """
+
+    expected = """
+      defp foo(_a, __b, _) do
+        1
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
   test "Matches" do
     input = """
       foo() -> {A, [B]} = {1, [2]}.

@@ -420,18 +420,18 @@ defmodule Erl2ex.Convert do
   defp add_range(a.._b, line), do: a..line
 
 
-  defp lower_str(<< first :: utf8, rest :: binary >>) do
+  defp lower_str("_"), do: "_"
+  defp lower_str(<< "_" :: utf8, rest :: binary >>), do:
+    << "_" :: utf8, lower_str(rest) :: binary >>
+  defp lower_str(<< first :: utf8, rest :: binary >>), do:
     << String.downcase(<< first >>) :: binary, rest :: binary >>
-  end
 
-  defp lower_atom(atom) do
+  defp lower_atom(atom), do:
     atom |> Atom.to_string |> lower_str |> String.to_atom
-  end
 
 
-  defp split_comments(comments, line) do
+  defp split_comments(comments, line), do:
     comments |> Enum.split_while(fn {:comment, ln, _} -> ln < line end)
-  end
 
 
   defp convert_comments(comments) do

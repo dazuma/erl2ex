@@ -9,7 +9,6 @@ This is a (certainly partial) list of language features remaining to be implemen
 *   Bit string comprehensions
 *   Non-short-circuiting and/or/xor
 *   Try, catch and throw
-*   Incorrect capitalization of variables starting with underscore
 *   Need to include Bitwise or qualify Bitwise operators
 *   Escape string interpolation syntax and check escape sequences for support
 
