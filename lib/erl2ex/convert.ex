@@ -227,6 +227,57 @@ defmodule Erl2ex.Convert do
   defp expr(context, {:block, _, arg}) when is_list(arg), do:
     block(context, arg)
 
+  defp expr(context, {:generate, _, into, arg}), do:
+    {:<-, [], [expr(context, into), expr(context, arg)]}
+
+  defp expr(context, {:lc, _, expression, qualifiers}), do:
+    {:for, [], list(context, qualifiers) ++ [[do: expr(context, expression)]]}
+
+  defp expr(context, {:map_field_assoc, _, lhs, rhs}), do:
+    {expr(context, lhs), expr(context, rhs)}
+
+  defp expr(context, {:map_field_exact, _, lhs, rhs}), do:
+    {expr(context, lhs), expr(context, rhs)}
+
+  defp expr(context, {:map, _, associations}), do:
+    {:%{}, [], list(context, associations)}
+
+  defp expr(context, {:map, _, associations}), do:
+    {:%{}, [], list(context, associations)}
+
+  defp expr(context, {:map, _, base_map, []}), do:
+    expr(context, base_map)
+
+  defp expr(context, {:map, _, base_map, assocs}), do:
+    update_map(context, expr(context, base_map), assocs)
+
+
+  defp update_map(context, base_map, assocs = [{:map_field_exact, _, _, _} | _]) do
+    {exact_assocs, remaining_assocs} = assocs
+      |> Enum.split_while(fn
+        {:map_field_exact, _, _, _} -> true
+        _ -> false
+      end)
+    new_base = {:%{}, [], [{:|, [], [base_map, list(context, exact_assocs)]}]}
+    update_map(context, new_base, remaining_assocs)
+  end
+
+  defp update_map(context, base_map, assocs = [{:map_field_assoc, _, _, _} | _]) do
+    {inexact_assocs, remaining_assocs} = assocs
+      |> Enum.split_while(fn
+        {:map_field_assoc, _, _, _} -> true
+        _ -> false
+      end)
+    new_base = {
+      {:., [], [{:__aliases__, [alias: false], [:Map]}, :merge]},
+      [],
+      [base_map, {:%{}, [], list(context, inexact_assocs)}]
+    }
+    update_map(context, new_base, remaining_assocs)
+  end
+
+  defp update_map(_context, base_map, []), do: base_map
+
 
   defp generalized_var(context, _atom_name, << "?" :: utf8, name :: binary >>) do
     macro_name = Context.macro_const_name(context, String.to_atom(name))

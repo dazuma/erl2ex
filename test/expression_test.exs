@@ -272,4 +272,97 @@ defmodule ExpressionTest do
   end
 
 
+  test "List comprehension" do
+    input = """
+      foo(X) -> [A + B || A <- [1,2,3], B <- X, A /= B].
+      """
+
+    expected = """
+      defp foo(x) do
+        for(a <- [1, 2, 3], b <- x, a != b) do
+          a + b
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Map literal" do
+    input = """
+      foo(X) -> \#{}, \#{a => X + 1, b => X - 1}.
+      """
+
+    expected = """
+      defp foo(x) do
+        %{}
+        %{a: x + 1, b: x - 1}
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Map update with exact followed by inexact" do
+    input = """
+      foo() -> M\#{a := 1, b := 2, c => 3}.
+      """
+
+    expected = """
+      defp foo() do
+        Map.merge(%{m | a: 1, b: 2}, %{c: 3})
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Map update with inexact followed by exact" do
+    input = """
+      foo() -> M\#{a => 1, b => 2, c := 3}.
+      """
+
+    expected = """
+      defp foo() do
+        %{Map.merge(m, %{a: 1, b: 2}) | c: 3}
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Empty map update" do
+    input = """
+      foo() -> M\#{}.
+      """
+
+    expected = """
+      defp foo() do
+        m
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Map pattern match" do
+    input = """
+      foo(M) -> \#{a := X, b := {1, Y}} = M.
+      """
+
+    expected = """
+      defp foo(m) do
+        %{a: x, b: {1, y}} = m
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
 end
