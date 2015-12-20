@@ -66,6 +66,11 @@ defmodule Erl2ex.ErlParse do
     {ast, comment_tokens}
   end
 
+  defp parse_form({[{:-, line}, {:atom, _, directive}, {:dot, _}], comment_tokens}) do
+    ast = {:attribute, line, directive}
+    {ast, comment_tokens}
+  end
+
   defp parse_form({form_tokens, comment_tokens}) do
     {:ok, ast} = :erl_parse.parse_form(form_tokens)
     {ast, comment_tokens}
@@ -117,6 +122,17 @@ defmodule Erl2ex.ErlParse do
       imports: module.imports ++ funcs,
       forms: [attribute | module.forms]
     }
+  end
+
+  defp add_form(module, {:attribute, line, directive}, comments, _context) do
+    form = %Erl2ex.ErlDirective{line: line, directive: directive, comments: comments}
+    %Erl2ex.ErlModule{module | forms: [form | module.forms]}
+  end
+
+  defp add_form(module, {:attribute, line, directive, name}, comments, _context)
+      when directive == :ifdef or directive == :ifndef or directive == :undef do
+    form = %Erl2ex.ErlDirective{line: line, directive: directive, name: name, comments: comments}
+    %Erl2ex.ErlModule{module | forms: [form | module.forms]}
   end
 
   defp add_form(module, {:attribute, line, attr, arg}, comments, _context) do

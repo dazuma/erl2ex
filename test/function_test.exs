@@ -181,4 +181,70 @@ defmodule FunctionTest do
   end
 
 
+  test "Illegal use of elixir keywords as function names" do
+    input = """
+      do() -> hello.
+      else() -> hello.
+      'end'() -> hello.
+      false() -> hello.
+      fn() -> hello.
+      nil() -> hello.
+      true() -> hello.
+      """
+
+    expected = """
+      defp func_do() do
+        :hello
+      end
+
+
+      defp func_else() do
+        :hello
+      end
+
+
+      defp func_end() do
+        :hello
+      end
+
+
+      defp func_false() do
+        :hello
+      end
+
+
+      defp func_fn() do
+        :hello
+      end
+
+
+      defp func_nil() do
+        :hello
+      end
+
+
+      defp func_true() do
+        :hello
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Strange function names" do
+    input = """
+      'E=mc^2'() -> hello.
+      """
+
+    expected = """
+      defp func_E_mc_2() do
+        :hello
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
 end

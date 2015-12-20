@@ -30,6 +30,16 @@ defmodule Erl2ex.ErlDefine do
 end
 
 
+defmodule Erl2ex.ErlDirective do
+
+  defstruct line: nil,
+            directive: nil,
+            name: nil,
+            comments: []
+
+end
+
+
 defmodule Erl2ex.ErlFunc do
 
   defstruct name: nil,

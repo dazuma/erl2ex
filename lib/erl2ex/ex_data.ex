@@ -2,7 +2,18 @@
 defmodule Erl2ex.ExAttr do
 
   defstruct name: nil,
+            tracking_name: nil,
             arg: nil,
+            comments: [],
+            inline_comments: []
+
+end
+
+
+defmodule Erl2ex.ExDirective do
+
+  defstruct directive: nil,
+            name: nil,
             comments: [],
             inline_comments: []
 
@@ -22,6 +33,7 @@ end
 defmodule Erl2ex.ExMacro do
 
   defstruct signature: nil,
+            tracking_name: nil,
             expr: nil,
             comments: [],
             inline_comments: []

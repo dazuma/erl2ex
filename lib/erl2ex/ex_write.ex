@@ -67,11 +67,18 @@ defmodule Erl2ex.ExWrite do
       end)
   end
 
-  defp write_form(context, attr = %Erl2ex.ExAttr{comments: comments}, io) do
+  defp write_form(context, %Erl2ex.ExAttr{name: name, tracking_name: tracking_name, arg: arg, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
-      |> write_raw_attr(attr, io)
+      |> write_raw_attr(name, tracking_name, arg, io)
+  end
+
+  defp write_form(context, %Erl2ex.ExDirective{directive: directive, name: name, comments: comments}, io) do
+    context
+      |> skip_lines(:attr, io)
+      |> foreach(comments, io, &write_string/3)
+      |> write_raw_directive(directive, name, io)
   end
 
   defp write_form(context, %Erl2ex.ExImport{module: module, funcs: funcs, comments: comments}, io) do
@@ -97,9 +104,40 @@ defmodule Erl2ex.ExWrite do
   end
 
 
-  defp write_raw_attr(context, %Erl2ex.ExAttr{name: name, arg: arg}, io) do
-    context
+  defp write_raw_attr(context, name, tracking_name, arg, io) do
+    context = context
       |> write_string("@#{name} #{Macro.to_string(arg)}", io)
+    if tracking_name != nil do
+      context = context
+        |> write_string("@#{tracking_name} true", io)
+    end
+    context
+  end
+
+
+  defp write_raw_directive(context, :undef, tracking_name, io) do
+    context
+      |> write_string("@#{tracking_name} false", io)
+  end
+
+  defp write_raw_directive(context, :ifdef, tracking_name, io) do
+    context
+      |> write_string("if @#{tracking_name} do", io)
+  end
+
+  defp write_raw_directive(context, :ifndef, tracking_name, io) do
+    context
+      |> write_string("if not @#{tracking_name} do", io)
+  end
+
+  defp write_raw_directive(context, :else, nil, io) do
+    context
+      |> write_string("else", io)
+  end
+
+  defp write_raw_directive(context, :endif, nil, io) do
+    context
+      |> write_string("end", io)
   end
 
 

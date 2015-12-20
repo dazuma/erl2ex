@@ -66,15 +66,17 @@ defmodule Erl2ex.Convert do
 
 
   defp formp(context, %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do
+    mapped_name = Context.local_function_name(context, name)
+    is_exported = Context.is_exported?(context, name, arity)
     first_line = clauses |> List.first |> elem(1)
     {main_comments, clause_comments} = split_comments(comments, first_line)
     {ex_clauses, _} = clauses
-      |> Enum.map_reduce(clause_comments, &(clause(context, &1, &2, name)))
+      |> Enum.map_reduce(clause_comments, &(clause(context, &1, &2, mapped_name)))
 
     %Erl2ex.ExFunc{
-      name: name,
+      name: mapped_name,
       arity: arity,
-      public: Context.is_exported?(context, name, arity),
+      public: is_exported,
       comments: main_comments |> convert_comments,
       clauses: ex_clauses
     }
@@ -104,9 +106,12 @@ defmodule Erl2ex.Convert do
 
   defp formp(context, %Erl2ex.ErlDefine{line: line, name: name, args: nil, replacement: replacement, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
+    mapped_name = Context.macro_const_name(context, name)
+    tracking_name = Context.tracking_attr_name(context, name)
 
     %Erl2ex.ExAttr{
-      name: name,
+      name: mapped_name,
+      tracking_name: tracking_name,
       arg: expr(context, replacement),
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
@@ -119,10 +124,28 @@ defmodule Erl2ex.Convert do
     replacement_context = %Context{context | quoted_variables: args}
     ex_args = args |> Enum.map(fn arg -> {lower_atom(arg), [], Elixir} end)
     mapped_name = Context.macro_function_name(context, name)
+    tracking_name = Context.tracking_attr_name(context, name)
 
     %Erl2ex.ExMacro{
       signature: {mapped_name, [], ex_args},
+      tracking_name: tracking_name,
       expr: expr(replacement_context, replacement),
+      comments: main_comments |> convert_comments,
+      inline_comments: inline_comments |> convert_comments
+    }
+  end
+
+  defp formp(context, %Erl2ex.ErlDirective{line: line, directive: directive, name: name, comments: comments}) do
+    {main_comments, inline_comments} = split_comments(comments, line)
+    tracking_name = if name == nil do
+      nil
+    else
+      Context.tracking_attr_name(context, name)
+    end
+
+    %Erl2ex.ExDirective{
+      directive: directive,
+      name: tracking_name,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
@@ -205,8 +228,9 @@ defmodule Erl2ex.Convert do
     block(context, arg)
 
 
-  defp generalized_var(_context, _atom_name, << "?" :: utf8, name :: binary >>) do
-    {:@, @import_kernel_metadata, [{String.to_atom(name), [], Elixir}]}
+  defp generalized_var(context, _atom_name, << "?" :: utf8, name :: binary >>) do
+    macro_name = Context.macro_const_name(context, String.to_atom(name))
+    {:@, @import_kernel_metadata, [{macro_name, [], Elixir}]}
   end
 
   defp generalized_var(context, atom_name, str_name) do
@@ -225,7 +249,7 @@ defmodule Erl2ex.Convert do
   defp func_spec(context, {:atom, _, func}, args) do
     arity = Enum.count(args)
     if Context.is_local_func?(context, func, arity) do
-      func
+      Context.local_function_name(context, func)
     else
       case Dict.get(@autoimport_map, func, nil) do
         nil -> {:., [], [:erlang, func]}

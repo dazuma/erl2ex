@@ -2,7 +2,7 @@ defmodule PreprocessorTest do
   use ExUnit.Case
 
 
-  test "Constant defines with a nested define" do
+  test "Macro constant defines with a nested define" do
     input = """
       -define(HELLO, 100 * 2).
       -define(hello, ?HELLO + 3).
@@ -11,18 +11,18 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      @HELLO 100 * 2
+      @erlmacro_HELLO 100 * 2
 
-      @hello @HELLO + 3
+      @erlmacro_hello @erlmacro_HELLO + 3
 
 
       defp foo() do
-        @HELLO
+        @erlmacro_HELLO
       end
 
 
       defp bar() do
-        @hello
+        @erlmacro_hello
       end
       """
 
@@ -30,7 +30,7 @@ defmodule PreprocessorTest do
   end
 
 
-  test "Simple function defines with a nested define" do
+  test "Simple macro function defines with a nested define" do
     input = """
       -define(hello(X), 100 * X).
       -define(HELLO(X), ?hello(X) + 2).
@@ -40,23 +40,23 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      defmacrop epp_hello(x) do
+      defmacrop erlmacro_hello(x) do
         quote do
           100 * unquote(x)
         end
       end
 
 
-      defmacrop epp_HELLO(x) do
+      defmacrop erlmacro_HELLO(x) do
         quote do
-          epp_hello(unquote(x)) + 2
+          erlmacro_hello(unquote(x)) + 2
         end
       end
 
 
       defp foo() do
-        epp_hello(2)
-        epp_HELLO(3)
+        erlmacro_hello(2)
+        erlmacro_HELLO(3)
       end
       """
 
@@ -64,31 +64,123 @@ defmodule PreprocessorTest do
   end
 
 
-  test "Function defines with name collisions" do
+  test "Macro function collides with function name" do
     input = """
       -define(Foo(X), X + 1).
       -define(foo(X), ?Foo(X) + 2).
-      epp_foo() ->
+      erlmacro_foo() ->
         ?foo(0).
       """
 
     expected = """
-      defmacrop epp_Foo(x) do
+      defmacrop erlmacro_Foo(x) do
         quote do
           unquote(x) + 1
         end
       end
 
 
-      defmacrop epp2_foo(x) do
+      defmacrop erlmacro2_foo(x) do
         quote do
-          epp_Foo(unquote(x)) + 2
+          erlmacro_Foo(unquote(x)) + 2
         end
       end
 
 
-      defp epp_foo() do
-        epp2_foo(0)
+      defp erlmacro_foo() do
+        erlmacro2_foo(0)
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Basic directives" do
+    input = """
+      -define(debug, 1).
+      -ifdef(debug).
+      foo() -> 1.
+      -else.
+      -ifndef(debug).
+      foo() -> 2.
+      -endif.
+      -endif.
+      -undef(debug).
+      """
+
+    expected = """
+      @erlmacro_debug 1
+      @defined_debug true
+
+      if @defined_debug do
+
+
+      defp foo() do
+        1
+      end
+
+
+      else
+
+      if not @defined_debug do
+
+
+      defp foo() do
+        2
+      end
+
+
+      end
+
+      end
+
+      @defined_debug false
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Macro name collides with attribute name" do
+    input = """
+      -erlmacro_vsn(1).
+      -define(vsn, 2).
+      -ifdef(vsn).
+      -endif.
+      """
+
+    expected = """
+      @erlmacro_vsn 1
+
+      @erlmacro2_vsn 2
+      @defined_vsn true
+
+      if @defined_vsn do
+
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Macro define tester name collides with attribute name" do
+    input = """
+      -defined_vsn(1).
+      -define(vsn, 2).
+      -ifdef(vsn).
+      -endif.
+      """
+
+    expected = """
+      @defined_vsn 1
+
+      @erlmacro_vsn 2
+      @defined2_vsn true
+
+      if @defined2_vsn do
+
       end
       """
 

@@ -13,8 +13,7 @@ This is a (certainly partial) list of language features remaining to be implemen
 *   Catch and throw
 *   Try
 *   Incorrect capitalization of variables starting with underscore
-*   Erlang function names can be capitalized or have weird characters
-*   Need to include Bitwise or quaalify Bitwise operators
+*   Need to include Bitwise or qualify Bitwise operators
 *   Escape string interpolation syntax and check escape sequences for support
 
 ## Attributes/preprocessor
@@ -24,9 +23,9 @@ This is a (certainly partial) list of language features remaining to be implemen
 *   behaviour and callback attributes
 *   Records
 *   Predefined macros (e.g. MODULE, FILE, LINE)
+*   Allow defining macros from env variables
 *   type, spec, opaque, export_type attributes
 *   File inclusion
-*   ifdef and related directives
 *   Invoking const macros as functions
 *   Stringifying macro arguments
 *   Register module attributes
