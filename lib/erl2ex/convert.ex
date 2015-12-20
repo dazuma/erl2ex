@@ -269,6 +269,9 @@ defmodule Erl2ex.Convert do
   defp expr(context, {:bin_element, _, val, :default, :default}), do:
     bin_element_expr(context, val)
 
+  defp expr(context, {:bin_element, _, val, {:integer, _, size}, :default}), do:
+    {:::, [], [bin_element_expr(context, val), size]}
+
   defp expr(context, {:bin_element, _, val, size, :default}), do:
     {:::, [], [bin_element_expr(context, val), {:size, [], [expr(context, size)]}]}
 
