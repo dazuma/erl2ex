@@ -245,8 +245,14 @@ defmodule Erl2ex.Convert do
   defp expr(context, {:generate, _, into, arg}), do:
     {:<-, [], [expr(context, into), expr(context, arg)]}
 
+  defp expr(context, {:b_generate, _, {:bin, _, elems}, arg}), do:
+    bin_generator(context, elems, arg)
+
   defp expr(context, {:lc, _, expression, qualifiers}), do:
-    {:for, [], list(context, qualifiers) ++ [[do: expr(context, expression)]]}
+    {:for, [], list(context, qualifiers) ++ [[into: [], do: expr(context, expression)]]}
+
+  defp expr(context, {:bc, _, expression, qualifiers}), do:
+    {:for, [], list(context, qualifiers) ++ [[into: "", do: expr(context, expression)]]}
 
   defp expr(context, {:map_field_assoc, _, lhs, rhs}), do:
     {expr(context, lhs), expr(context, rhs)}
@@ -277,6 +283,13 @@ defmodule Erl2ex.Convert do
 
   defp expr(context, {:bin_element, _, val, :default, [type]}), do:
     {:::, [], [bin_element_expr(context, val), {type, [], Elixir}]}
+
+
+  defp bin_generator(context, elems, arg) do
+    {elems, [last_elem]} = Enum.split(elems, -1)
+    last_ex_elem = {:<-, [], [expr(context, last_elem), expr(context, arg)]}
+    {:<<>>, [], list(context, elems) ++ [last_ex_elem]}
+  end
 
 
   defp bin_element_expr(_context, {:string, _, str}), do: List.to_string(str)

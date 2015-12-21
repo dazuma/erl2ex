@@ -339,9 +339,37 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo(x) do
-        for(a <- [1, 2, 3], b <- x, a != b) do
-          a + b
-        end
+        for(a <- [1, 2, 3], b <- x, a != b, into: [], do: a + b)
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "List comprehension with binary generator" do
+    input = """
+      foo() -> [A + B || <<A, B>> <= <<1, 2, 3, 4>>].
+      """
+
+    expected = """
+      defp foo() do
+        for(<<a, b <- <<1, 2, 3, 4>>>>, into: [], do: a + b)
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Binary comprehension with binary generator" do
+    input = """
+      foo() -> << <<B, A>> || <<A, B>> <= <<1, 2, 3, 4>> >>.
+      """
+
+    expected = """
+      defp foo() do
+        for(<<a, b <- <<1, 2, 3, 4>>>>, into: "", do: <<b, a>>)
       end
       """
 
