@@ -30,6 +30,4 @@ This is a (certainly partial) list of language features remaining to be implemen
 *   Transform doc comments
 *   Handle inline comments
 *   Option to elixirize module names
-*   Support directory-wide conversion
-*   Support mix task
 *   Nicer error reporting
