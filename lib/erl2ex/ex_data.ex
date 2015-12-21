@@ -41,6 +41,14 @@ defmodule Erl2ex.ExMacro do
 end
 
 
+defmodule Erl2ex.ExHeader do
+
+  defstruct use_bitwise: false,
+            require_record: false
+
+end
+
+
 defmodule Erl2ex.ExFunc do
 
   defstruct name: nil,

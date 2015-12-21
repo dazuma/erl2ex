@@ -158,6 +158,9 @@ defmodule ExpressionTest do
       """
 
     expected = """
+      use Bitwise, only_operators: true
+
+
       defp foo() do
         a &&& b
         a ||| b

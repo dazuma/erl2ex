@@ -58,6 +58,19 @@ defmodule Erl2ex.ExWrite do
   end
 
 
+  defp write_form(context, %Erl2ex.ExHeader{use_bitwise: use_bitwise, require_record: require_record}, io) do
+    if use_bitwise or require_record do
+      context = context |> skip_lines(:attr, io)
+    end
+    if use_bitwise do
+      context = context |> write_string("use Bitwise, only_operators: true", io)
+    end
+    if require_record do
+      context = context |> write_string("require Record", io)
+    end
+    context
+  end
+
   defp write_form(context, %Erl2ex.ExFunc{comments: comments, clauses: [first_clause | remaining_clauses], public: public}, io) do
     context
       |> write_comment_list(comments, :func_header, io)
