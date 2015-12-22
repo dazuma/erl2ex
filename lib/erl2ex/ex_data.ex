@@ -52,18 +52,11 @@ defmodule Erl2ex.ExRecord do
 end
 
 
-defmodule Erl2ex.ExRecordInfo do
-
-  defstruct comments: [],
-            records: []
-
-end
-
-
 defmodule Erl2ex.ExHeader do
 
   defstruct use_bitwise: false,
-            require_record: false
+            records: [],
+            record_info_available: false
 
 end
 

@@ -6,7 +6,6 @@ This is a (certainly partial) list of language features remaining to be implemen
 
 *   Expand list of Kernel functions
 *   Bit/binary expressions with complex size/type specifiers
-*   Non-short-circuiting and/or/xor
 *   Try, catch and throw
 *   Escape string interpolation syntax and check escape sequences for support
 

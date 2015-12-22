@@ -48,13 +48,18 @@ defmodule Erl2ex.Convert.Context do
     context = Enum.reduce(erl_module.exports, context, &collect_exports/2)
     context = Enum.reduce(erl_module.forms, context, &collect_attr_info/2)
     context = Enum.reduce(erl_module.forms, context, &collect_record_info/2)
-    Enum.reduce(erl_module.forms, context, &collect_macro_info/2)
+    context = Enum.reduce(erl_module.forms, context, &collect_macro_info/2)
+    context
   end
 
 
   def build(_opts) do
     %Context{}
   end
+
+
+  def set_quoted_variables(context, vars), do:
+    %Context{context | quoted_variables: vars}
 
 
   def is_exported?(context, name, arity) do

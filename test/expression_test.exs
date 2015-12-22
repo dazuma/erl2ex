@@ -126,6 +126,9 @@ defmodule ExpressionTest do
         not A,
         A orelse B,
         A andalso B,
+        A and B,
+        A or B,
+        A xor B,
         A ++ B,
         A -- B,
         A ! B.
@@ -136,6 +139,9 @@ defmodule ExpressionTest do
         not a
         a or b
         a and b
+        :erlang.and(a, b)
+        :erlang.or(a, b)
+        :erlang.xor(a, b)
         a ++ b
         a -- b
         send(a, b)
