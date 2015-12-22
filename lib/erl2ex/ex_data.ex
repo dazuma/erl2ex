@@ -41,6 +41,25 @@ defmodule Erl2ex.ExMacro do
 end
 
 
+defmodule Erl2ex.ExRecord do
+
+  defstruct tag: nil,
+            macro: nil,
+            fields: [],
+            comments: [],
+            inline_comments: []
+
+end
+
+
+defmodule Erl2ex.ExRecordInfo do
+
+  defstruct comments: [],
+            records: []
+
+end
+
+
 defmodule Erl2ex.ExHeader do
 
   defstruct use_bitwise: false,

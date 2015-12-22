@@ -15,7 +15,6 @@ This is a (certainly partial) list of language features remaining to be implemen
 *   compile attribute
 *   on_load attribute
 *   behaviour and callback attributes
-*   Records
 *   Allow defining macros from env variables
 *   type, spec, opaque, export_type attributes
 *   File inclusion

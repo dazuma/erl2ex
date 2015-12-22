@@ -101,6 +101,24 @@ defmodule Erl2ex.ExWrite do
       |> write_string("import #{Macro.to_string(module)}, only: #{Macro.to_string(funcs)}", io)
   end
 
+  defp write_form(context, %Erl2ex.ExRecord{tag: tag, macro: macro, fields: fields, comments: comments}, io) do
+    context
+      |> skip_lines(:attr, io)
+      |> foreach(comments, io, &write_string/3)
+      |> write_string("Record.defrecordp #{Macro.to_string(macro)}, #{Macro.to_string(tag)}, #{Macro.to_string(fields)}", io)
+  end
+
+  defp write_form(context, %Erl2ex.ExRecordInfo{records: records, comments: comments}, io) do
+    context
+      |> skip_lines(:attr, io)
+      |> foreach(comments, io, &write_string/3)
+      |> foreach(records, io, fn(context, {name, fields}, io) ->
+        context
+          |> write_string("def record_info(:fields, #{Macro.to_string(name)}), do: #{Macro.to_string(fields)}", io)
+          |> write_string("def record_info(:size, #{Macro.to_string(name)}), do: #{Enum.count(fields) + 1}", io)
+      end)
+  end
+
   defp write_form(context, %Erl2ex.ExMacro{signature: signature, expr: expr, comments: comments}, io) do
     context
       |> write_comment_list(comments, :func_header, io)

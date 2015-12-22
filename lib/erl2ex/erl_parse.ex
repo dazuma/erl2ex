@@ -124,6 +124,11 @@ defmodule Erl2ex.ErlParse do
     }
   end
 
+  defp add_form(module, {:attribute, line, :record, {recname, fields}}, comments, _context) do
+    record = %Erl2ex.ErlRecord{line: line, name: recname, fields: fields, comments: comments}
+    %Erl2ex.ErlModule{module | forms: [record | module.forms]}
+  end
+
   defp add_form(module, {:attribute, line, directive}, comments, _context) do
     form = %Erl2ex.ErlDirective{line: line, directive: directive, comments: comments}
     %Erl2ex.ErlModule{module | forms: [form | module.forms]}

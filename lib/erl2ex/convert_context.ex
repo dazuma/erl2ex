@@ -18,6 +18,7 @@ defmodule Erl2ex.Convert.Context do
 
   defstruct funcs: HashDict.new,
             macros: HashDict.new,
+            records: HashDict.new,
             used_func_names: HashSet.new,
             used_attr_names: HashSet.new,
             quoted_variables: []
@@ -34,6 +35,11 @@ defmodule Erl2ex.Convert.Context do
               requires_init: nil
   end
 
+  defmodule RecordInfo do
+    defstruct func_name: nil,
+              fields: []
+  end
+
 
   def build(erl_module, opts) do
     context = build(opts)
@@ -41,6 +47,7 @@ defmodule Erl2ex.Convert.Context do
     context = Enum.reduce(context.funcs, context, &assign_strange_func_names/2)
     context = Enum.reduce(erl_module.exports, context, &collect_exports/2)
     context = Enum.reduce(erl_module.forms, context, &collect_attr_info/2)
+    context = Enum.reduce(erl_module.forms, context, &collect_record_info/2)
     Enum.reduce(erl_module.forms, context, &collect_macro_info/2)
   end
 
@@ -74,6 +81,35 @@ defmodule Erl2ex.Convert.Context do
 
   def macro_function_name(context, name) do
     Dict.fetch!(context.macros, name).func_name |> ensure_exists
+  end
+
+
+  def record_function_name(context, name) do
+    Dict.fetch!(context.records, name).func_name
+  end
+
+
+  def record_field_index(context, record_name, field_name) do
+    (Dict.fetch!(context.records, record_name).fields
+      |> Enum.find_index(fn f -> f == field_name end)) + 1
+  end
+
+
+  def record_field_names(context, record_name) do
+    Dict.fetch!(context.records, record_name).fields
+  end
+
+
+  def needs_record_info?(context) do
+    Dict.size(context.records) > 0 and not is_local_func?(context, :record_info, 2)
+  end
+
+
+  def map_records(context, func) do
+    context.records |>
+      Enum.map(fn {name, %RecordInfo{fields: fields}} ->
+        func.(name, fields)
+      end)
   end
 
 
@@ -152,6 +188,20 @@ defmodule Erl2ex.Convert.Context do
   defp collect_attr_info(_, context), do: context
 
 
+  defp collect_record_info(%Erl2ex.ErlRecord{name: name, fields: fields}, context) do
+    macro_name = find_available_name(name, context.used_func_names, "erlrecord")
+    record_info = %RecordInfo{
+      func_name: macro_name,
+      fields: fields |> Enum.map(&extract_record_field_name/1)
+    }
+    %Context{context |
+      used_func_names: HashSet.put(context.used_func_names, macro_name),
+      records: HashDict.put(context.records, name, record_info)
+    }
+  end
+  defp collect_record_info(_, context), do: context
+
+
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: nil}, context) do
     macro = Dict.get(context.macros, name, %MacroInfo{})
     if macro.const_name == nil do
@@ -204,6 +254,10 @@ defmodule Erl2ex.Convert.Context do
   end
 
   defp collect_macro_info(_, context), do: context
+
+
+  defp extract_record_field_name({:record_field, _, {:atom, _, name}}), do: name
+  defp extract_record_field_name({:record_field, _, {:atom, _, name}, _}), do: name
 
 
   defp update_requires_init(nil, nval), do: nval
