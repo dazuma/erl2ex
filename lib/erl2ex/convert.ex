@@ -1,6 +1,8 @@
 
 defmodule Erl2ex.Convert do
 
+  @moduledoc false
+
   alias Erl2ex.Convert.Context
 
 

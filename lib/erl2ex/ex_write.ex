@@ -1,10 +1,7 @@
 
 defmodule Erl2ex.ExWrite do
 
-  defmodule Context do
-    defstruct indent: 0,
-              last_form: :start
-  end
+  @moduledoc false
 
 
   def to_file(module, path, opts \\ []) do
@@ -25,6 +22,13 @@ defmodule Erl2ex.ExWrite do
     to_io(module, io, opts)
     {:ok, {_, str}} = StringIO.close(io)
     str
+  end
+
+
+  defmodule Context do
+    @moduledoc false
+    defstruct indent: 0,
+              last_form: :start
   end
 
 

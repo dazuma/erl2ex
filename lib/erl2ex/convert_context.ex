@@ -1,6 +1,8 @@
 
 defmodule Erl2ex.Convert.Context do
 
+  @moduledoc false
+
   alias Erl2ex.Convert.Context
 
 
@@ -25,15 +27,18 @@ defmodule Erl2ex.Convert.Context do
             quoted_variables: []
 
   defmodule FuncInfo do
+    @moduledoc false
     defstruct func_name: nil,
               arities: HashDict.new  # Map of arity to exported flag
   end
 
   defmodule TypeInfo do
+    @moduledoc false
     defstruct arities: HashDict.new  # Map of arity to exported flag
   end
 
   defmodule MacroInfo do
+    @moduledoc false
     defstruct const_name: nil,
               func_name: nil,
               define_tracker: nil,
@@ -41,6 +46,7 @@ defmodule Erl2ex.Convert.Context do
   end
 
   defmodule RecordInfo do
+    @moduledoc false
     defstruct func_name: nil,
               fields: []
   end

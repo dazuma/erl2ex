@@ -1,7 +1,20 @@
 
 defmodule Erl2ex.Cli do
 
-  def main(argv) do
+  @moduledoc """
+  This module provides the command line interface for the erl2ex binary and
+  the mix erl2ex task.
+  """
+
+
+  @doc """
+  Runs the erl2ex binary, given a set of command line arguments.
+  Returns the OS result code, which is 0 for success or nonzero for failure.
+  """
+
+  @spec run([String.t]) :: non_neg_integer
+
+  def run(argv) do
     {options, args, errors} =
       OptionParser.parse(argv,
         strict: [
@@ -33,6 +46,19 @@ defmodule Erl2ex.Cli do
   end
 
 
+  @doc """
+  Runs the erl2ex binary, given a set of command line arguments.
+  Does not return. Instead, halts the VM on completion with the appropriate
+  OS result code.
+  """
+
+  @spec main([String.t]) :: none
+
+  def main(argv) do
+    run(argv) |> System.halt
+  end
+
+
   defp run_conversion([], options) do
     IO.read(:all)
       |> Erl2ex.convert_str(options)
@@ -44,18 +70,20 @@ defmodule Erl2ex.Cli do
     cond do
       File.dir?(path) ->
         Erl2ex.convert_dir(path, output, options)
+        0
       File.regular?(path) ->
         Erl2ex.convert_file(path, output, options)
+        0
       true ->
         IO.puts(:stderr, "Could not find input: #{path}")
-        System.halt(1)
+        1
     end
   end
 
   defp run_conversion(paths, _) do
     IO.puts(:stderr, "Got too many input paths: #{inspect(paths)}\n")
     display_help
-    System.halt(1)
+    1
   end
 
 
@@ -66,7 +94,7 @@ defmodule Erl2ex.Cli do
       end)
     IO.puts(:stderr, "")
     display_help
-    System.halt(1)
+    1
   end
 
 

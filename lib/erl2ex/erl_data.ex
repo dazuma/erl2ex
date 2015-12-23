@@ -1,5 +1,6 @@
 
 defmodule Erl2ex.ErlAttr do
+  @moduledoc false
 
   defstruct line: nil,
             name: nil,
@@ -10,6 +11,7 @@ end
 
 
 defmodule Erl2ex.ErlImport do
+  @moduledoc false
 
   defstruct line: nil,
             module: nil,
@@ -20,6 +22,7 @@ end
 
 
 defmodule Erl2ex.ErlDefine do
+  @moduledoc false
 
   defstruct line: nil,
             name: nil,
@@ -31,6 +34,7 @@ end
 
 
 defmodule Erl2ex.ErlDirective do
+  @moduledoc false
 
   defstruct line: nil,
             directive: nil,
@@ -41,6 +45,7 @@ end
 
 
 defmodule Erl2ex.ErlRecord do
+  @moduledoc false
 
   defstruct line: nil,
             name: nil,
@@ -51,6 +56,7 @@ end
 
 
 defmodule Erl2ex.ErlType do
+  @moduledoc false
 
   defstruct line: nil,
             kind: nil,
@@ -63,6 +69,7 @@ end
 
 
 defmodule Erl2ex.ErlFunc do
+  @moduledoc false
 
   defstruct name: nil,
             arity: nil,
@@ -73,6 +80,7 @@ end
 
 
 defmodule Erl2ex.ErlModule do
+  @moduledoc false
 
   defstruct name: nil,
             comments: [],

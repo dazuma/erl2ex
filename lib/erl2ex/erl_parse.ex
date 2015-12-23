@@ -1,6 +1,9 @@
 
 defmodule Erl2ex.ErlParse do
 
+  @moduledoc false
+
+
   def from_file(path, opts \\ []) do
     path
       |> File.read!
@@ -24,6 +27,19 @@ defmodule Erl2ex.ErlParse do
       |> Stream.map(&preprocess_tokens/1)
       |> Stream.map(&parse_form/1)
       |> build_module(build_context(opts))
+  end
+
+
+  defmodule Context do
+    @moduledoc false
+    defstruct include_path: []
+  end
+
+
+  defp build_context(opts) do
+    %Context{
+      include_path: Keyword.get_values(opts, :i)
+    }
   end
 
 
@@ -74,18 +90,6 @@ defmodule Erl2ex.ErlParse do
   defp parse_form({form_tokens, comment_tokens}) do
     {:ok, ast} = :erl_parse.parse_form(form_tokens)
     {ast, comment_tokens}
-  end
-
-
-  defmodule Context do
-    defstruct include_path: []
-  end
-
-
-  defp build_context(opts) do
-    %Context{
-      include_path: Keyword.get_values(opts, :i)
-    }
   end
 
 

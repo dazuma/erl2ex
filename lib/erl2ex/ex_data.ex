@@ -1,5 +1,6 @@
 
 defmodule Erl2ex.ExAttr do
+  @moduledoc false
 
   defstruct name: nil,
             tracking_name: nil,
@@ -11,6 +12,7 @@ end
 
 
 defmodule Erl2ex.ExDirective do
+  @moduledoc false
 
   defstruct directive: nil,
             name: nil,
@@ -21,6 +23,7 @@ end
 
 
 defmodule Erl2ex.ExImport do
+  @moduledoc false
 
   defstruct module: nil,
             funcs: [],
@@ -31,6 +34,7 @@ end
 
 
 defmodule Erl2ex.ExMacro do
+  @moduledoc false
 
   defstruct signature: nil,
             tracking_name: nil,
@@ -42,6 +46,7 @@ end
 
 
 defmodule Erl2ex.ExRecord do
+  @moduledoc false
 
   defstruct tag: nil,
             macro: nil,
@@ -53,6 +58,7 @@ end
 
 
 defmodule Erl2ex.ExType do
+  @moduledoc false
 
   defstruct kind: nil,
             signature: nil,
@@ -64,6 +70,7 @@ end
 
 
 defmodule Erl2ex.ExHeader do
+  @moduledoc false
 
   defstruct use_bitwise: false,
             records: [],
@@ -73,6 +80,7 @@ end
 
 
 defmodule Erl2ex.ExFunc do
+  @moduledoc false
 
   defstruct name: nil,
             arity: nil,
@@ -84,6 +92,7 @@ end
 
 
 defmodule Erl2ex.ExClause do
+  @moduledoc false
 
   defstruct signature: nil,
             exprs: [],
@@ -94,6 +103,7 @@ end
 
 
 defmodule Erl2ex.ExModule do
+  @moduledoc false
 
   defstruct name: nil,
             comments: [],
