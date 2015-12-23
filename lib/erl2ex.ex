@@ -27,7 +27,8 @@ defmodule Erl2ex do
   @spec convert_str(String.t, options) :: String.t
 
   def convert_str(source, opts \\ []) do
-    Erl2ex.ErlParse.from_str(source, opts)
+    source
+      |> Erl2ex.ErlParse.from_str(opts)
       |> Erl2ex.Convert.module(opts)
       |> Erl2ex.ExWrite.to_str(opts)
   end
@@ -47,7 +48,8 @@ defmodule Erl2ex do
     if dest_path == nil do
       dest_path = "#{Path.rootname(source_path)}.ex"
     end
-    Erl2ex.ErlParse.from_file(source_path, opts)
+    source_path
+      |> Erl2ex.ErlParse.from_file(opts)
       |> Erl2ex.Convert.module(opts)
       |> Erl2ex.ExWrite.to_file(dest_path, opts)
     Logger.info("Converted #{source_path} -> #{dest_path}")
@@ -66,7 +68,8 @@ defmodule Erl2ex do
     if dest_dir == nil do
       dest_dir = source_dir
     end
-    Path.wildcard("#{source_dir}/**/*.erl")
+    "#{source_dir}/**/*.erl"
+      |> Path.wildcard
       |> Enum.each(fn source_path ->
         dest_path = Path.relative_to(source_path, source_dir)
         dest_path = Path.join(dest_dir, dest_path)

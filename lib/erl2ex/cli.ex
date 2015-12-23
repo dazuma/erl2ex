@@ -29,7 +29,10 @@ defmodule Erl2ex.Cli do
         ]
       )
 
-    case Keyword.get_values(options, :verbose) |> Enum.count do
+    verbose_count = options
+      |> Keyword.get_values(:verbose)
+      |> Enum.count
+    case verbose_count do
       0 -> Logger.configure(level: :warn)
       1 -> Logger.configure(level: :info)
       _ -> Logger.configure(level: :debug)
@@ -55,12 +58,15 @@ defmodule Erl2ex.Cli do
   @spec main([String.t]) :: none
 
   def main(argv) do
-    run(argv) |> System.halt
+    argv
+      |> run
+      |> System.halt
   end
 
 
   defp run_conversion([], options) do
-    IO.read(:all)
+    :all
+      |> IO.read
       |> Erl2ex.convert_str(options)
       |> IO.write
   end

@@ -8,7 +8,7 @@ defmodule Erl2ex.Convert do
 
   def module(erl_module, opts \\ []) do
     context = Context.build(erl_module, opts)
-    forms = erl_module.forms |> Enum.map(&(form(context, &1)))
+    forms = erl_module.forms |> Enum.map(&(conv_form(context, &1)))
     forms = [determine_header(context, forms) | forms]
     %Erl2ex.ExModule{
       name: erl_module.name,
@@ -61,7 +61,7 @@ defmodule Erl2ex.Convert do
   ] |> Enum.into(HashDict.new)
 
 
-  defp form(context, %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do
+  defp conv_form(context, %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do
     mapped_name = Context.local_function_name(context, name)
     is_exported = Context.is_exported?(context, name, arity)
     first_line = clauses |> List.first |> elem(1)
@@ -78,20 +78,20 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp form(_context, %Erl2ex.ErlImport{line: line, module: module, funcs: funcs, comments: comments}) do
+  defp conv_form(_context, %Erl2ex.ErlImport{line: line, module: mod, funcs: funcs, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
 
     %Erl2ex.ExImport{
-      module: module,
+      module: mod,
       funcs: funcs,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
   end
 
-  defp form(_context, %Erl2ex.ErlAttr{name: name, line: line, arg: arg, comments: comments}) do
+  defp conv_form(_context, %Erl2ex.ErlAttr{name: name, line: line, arg: arg, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
-    {name, arg} = convert_attr(name, arg)
+    {name, arg} = conv_attr(name, arg)
 
     %Erl2ex.ExAttr{
       name: name,
@@ -101,7 +101,7 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp form(context, %Erl2ex.ErlDefine{line: line, name: name, args: nil, replacement: replacement, comments: comments}) do
+  defp conv_form(context, %Erl2ex.ErlDefine{line: line, name: name, args: nil, replacement: replacement, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
     mapped_name = Context.macro_const_name(context, name)
     tracking_name = Context.tracking_attr_name(context, name)
@@ -109,13 +109,13 @@ defmodule Erl2ex.Convert do
     %Erl2ex.ExAttr{
       name: mapped_name,
       tracking_name: tracking_name,
-      arg: expr(context, replacement),
+      arg: conv_expr(context, replacement),
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
   end
 
-  defp form(context, %Erl2ex.ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}) do
+  defp conv_form(context, %Erl2ex.ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
 
     replacement_context = Context.set_quoted_variables(context, args)
@@ -126,13 +126,13 @@ defmodule Erl2ex.Convert do
     %Erl2ex.ExMacro{
       signature: {mapped_name, [], ex_args},
       tracking_name: tracking_name,
-      expr: expr(replacement_context, replacement),
+      expr: conv_expr(replacement_context, replacement),
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
   end
 
-  defp form(context, %Erl2ex.ErlDirective{line: line, directive: directive, name: name, comments: comments}) do
+  defp conv_form(context, %Erl2ex.ErlDirective{line: line, directive: directive, name: name, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
     tracking_name = if name == nil do
       nil
@@ -148,19 +148,19 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp form(context, %Erl2ex.ErlRecord{line: line, name: name, fields: fields, comments: comments}) do
+  defp conv_form(context, %Erl2ex.ErlRecord{line: line, name: name, fields: fields, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
 
     %Erl2ex.ExRecord{
       tag: name,
       macro: Context.record_function_name(context, name),
-      fields: list(context, fields),
+      fields: conv_list(context, fields),
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
   end
 
-  defp form(context, %Erl2ex.ErlType{line: line, kind: kind, name: name, params: params, defn: defn, comments: comments}) do
+  defp conv_form(context, %Erl2ex.ErlType{line: line, kind: kind, name: name, params: params, defn: defn, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
 
     ex_kind = cond do
@@ -174,256 +174,256 @@ defmodule Erl2ex.Convert do
 
     %Erl2ex.ExType{
       kind: ex_kind,
-      signature: {name, [], list(context, params)},
-      defn: expr(context, defn),
+      signature: {name, [], conv_list(context, params)},
+      defn: conv_expr(context, defn),
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
   end
 
 
-  defp convert_attr(:on_load, {name, 0}), do: {:on_load, name}
-  defp convert_attr(attr, val), do: {attr, val}
+  defp conv_attr(:on_load, {name, 0}), do: {:on_load, name}
+  defp conv_attr(attr, val), do: {attr, val}
 
 
   # Expression rules
 
-  defp expr(_context, {:atom, _, val}) when is_atom(val), do:
+  defp conv_expr(_context, {:atom, _, val}) when is_atom(val), do:
     val
 
-  defp expr(_context, {:integer, _, val}) when is_integer(val), do:
+  defp conv_expr(_context, {:integer, _, val}) when is_integer(val), do:
     val
 
-  defp expr(_context, {:char, _, val}) when is_integer(val), do:
+  defp conv_expr(_context, {:char, _, val}) when is_integer(val), do:
     val
 
-  defp expr(_context, {:float, _, val}) when is_float(val), do:
+  defp conv_expr(_context, {:float, _, val}) when is_float(val), do:
     val
 
-  defp expr(_context, {:string, _, val}) when is_list(val), do:
+  defp conv_expr(_context, {:string, _, val}) when is_list(val), do:
     val
 
-  defp expr(context, {:tuple, _, [val1, val2]}), do:
-    {expr(context, val1), expr(context, val2)}
+  defp conv_expr(context, {:tuple, _, [val1, val2]}), do:
+    {conv_expr(context, val1), conv_expr(context, val2)}
 
-  defp expr(context, {:tuple, _, vals}) when is_list(vals), do:
-    {:{}, [], vals |> Enum.map(&(expr(context, &1)))}
+  defp conv_expr(context, {:tuple, _, vals}) when is_list(vals), do:
+    {:{}, [], vals |> Enum.map(&(conv_expr(context, &1)))}
 
-  defp expr(_context, {nil, _}), do:
+  defp conv_expr(_context, {nil, _}), do:
     []
 
-  defp expr(context, {:cons, _, head, tail = {:cons, _, _, _}}), do:
-    [expr(context, head) | expr(context, tail)]
+  defp conv_expr(context, {:cons, _, head, tail = {:cons, _, _, _}}), do:
+    [conv_expr(context, head) | conv_expr(context, tail)]
 
-  defp expr(context, {:cons, _, head, {nil, _}}), do:
-    [expr(context, head)]
+  defp conv_expr(context, {:cons, _, head, {nil, _}}), do:
+    [conv_expr(context, head)]
 
-  defp expr(context, {:cons, _, head, tail}), do:
-    [{:|, [], [expr(context, head), expr(context, tail)]}]
+  defp conv_expr(context, {:cons, _, head, tail}), do:
+    [{:|, [], [conv_expr(context, head), conv_expr(context, tail)]}]
 
-  # TODO: binary literal
-  # TODO: map literal
-
-  defp expr(context, {:var, _, name}) when is_atom(name), do:
+  defp conv_expr(context, {:var, _, name}) when is_atom(name), do:
     generalized_var(context, name, Atom.to_string(name))
 
-  defp expr(context, {:match, _, lhs, rhs}), do:
-    {:=, [], [expr(context, lhs), expr(context, rhs)]}
+  defp conv_expr(context, {:match, _, lhs, rhs}), do:
+    {:=, [], [conv_expr(context, lhs), conv_expr(context, rhs)]}
 
-  defp expr(context, {:remote, _, mod, func}), do:
-    {:., [], [expr(context, mod), expr(context, func)]}
+  defp conv_expr(context, {:remote, _, mod, func}), do:
+    {:., [], [conv_expr(context, mod), conv_expr(context, func)]}
 
-  defp expr(context, {:call, _, func, args}) when is_list(args), do:
-    {func_spec(context, func, args), [], list(context, args)}
+  defp conv_expr(context, {:call, _, func, args}) when is_list(args), do:
+    {func_spec(context, func, args), [], conv_list(context, args)}
 
-  defp expr(context, {:op, _, op, arg}) do
+  defp conv_expr(context, {:op, _, op, arg}) do
     {metadata, ex_op} = Dict.fetch!(@op_map, op)
-    {ex_op, metadata, [expr(context, arg)]}
+    {ex_op, metadata, [conv_expr(context, arg)]}
   end
 
-  defp expr(context, {:op, _, op, arg1, arg2}) do
+  defp conv_expr(context, {:op, _, op, arg1, arg2}) do
     {metadata, ex_op} = Dict.fetch!(@op_map, op)
-    {ex_op, metadata, [expr(context, arg1), expr(context, arg2)]}
+    {ex_op, metadata, [conv_expr(context, arg1), conv_expr(context, arg2)]}
   end
 
-  defp expr(context, {:clause, _, [], guards, arg}), do:
-    {:"->", [], [[guard_seq(context, guards, nil)], block(context, arg)]}
+  defp conv_expr(context, {:clause, _, [], guards, arg}), do:
+    {:"->", [], [[guard_seq(context, guards, nil)], conv_block(context, arg)]}
 
-  defp expr(context, {:clause, _, params, [], arg}), do:
-    {:"->", [], [list(context, params), block(context, arg)]}
+  defp conv_expr(context, {:clause, _, params, [], arg}), do:
+    {:"->", [], [conv_list(context, params), conv_block(context, arg)]}
 
-  defp expr(context, {:clause, _, params, guards, arg}), do:
-    {:"->", [], [[{:when, [], list(context, params) ++ [guard_seq(context, guards, nil)]}], block(context, arg)]}
+  defp conv_expr(context, {:clause, _, params, guards, arg}), do:
+    {:"->", [], [[{:when, [], conv_list(context, params) ++ [guard_seq(context, guards, nil)]}], conv_block(context, arg)]}
 
-  defp expr(context, {:case, _, val, clauses}) when is_list(clauses), do:
-    {:case, [], [expr(context, val), [do: list(context, clauses)]]}
+  defp conv_expr(context, {:case, _, val, clauses}) when is_list(clauses), do:
+    {:case, [], [conv_expr(context, val), [do: conv_list(context, clauses)]]}
 
-  defp expr(context, {:if, _, clauses}) when is_list(clauses), do:
-    {:cond, [], [[do: list(context, clauses)]]}
+  defp conv_expr(context, {:if, _, clauses}) when is_list(clauses), do:
+    {:cond, [], [[do: conv_list(context, clauses)]]}
 
-  defp expr(context, {:receive, _, clauses}) when is_list(clauses), do:
-    {:receive, [], [[do: list(context, clauses)]]}
+  defp conv_expr(context, {:receive, _, clauses}) when is_list(clauses), do:
+    {:receive, [], [[do: conv_list(context, clauses)]]}
 
-  defp expr(context, {:fun, _, {:clauses, clauses}}) when is_list(clauses), do:
-    {:fn, [], list(context, clauses)}
+  defp conv_expr(context, {:fun, _, {:clauses, clauses}}) when is_list(clauses), do:
+    {:fn, [], conv_list(context, clauses)}
 
-  defp expr(_context, {:fun, _, {:function, name, arity}}) when is_atom(name) and is_integer(arity), do:
+  defp conv_expr(_context, {:fun, _, {:function, name, arity}}) when is_atom(name) and is_integer(arity), do:
     {:&, [], [{:/, @import_kernel_metadata, [{name, [], Elixir}, arity]}]}
 
-  defp expr(context, {:fun, _, {:function, mod_expr, name_expr, arity_expr}}), do:
-    {:&, [], [{:/, @import_kernel_metadata, [{{:., [], [expr(context, mod_expr), expr(context, name_expr)]}, [], []}, expr(context, arity_expr)]}]}
+  defp conv_expr(context, {:fun, _, {:function, mod_expr, name_expr, arity_expr}}), do:
+    {:&, [], [{:/, @import_kernel_metadata, [{{:., [], [conv_expr(context, mod_expr), conv_expr(context, name_expr)]}, [], []}, conv_expr(context, arity_expr)]}]}
 
-  defp expr(context, {:block, _, arg}) when is_list(arg), do:
-    block(context, arg)
+  defp conv_expr(context, {:block, _, arg}) when is_list(arg), do:
+    conv_block(context, arg)
 
-  defp expr(context, {:generate, _, into, arg}), do:
-    {:<-, [], [expr(context, into), expr(context, arg)]}
+  defp conv_expr(context, {:generate, _, into, arg}), do:
+    {:<-, [], [conv_expr(context, into), conv_expr(context, arg)]}
 
-  defp expr(context, {:b_generate, _, {:bin, _, elems}, arg}), do:
+  defp conv_expr(context, {:b_generate, _, {:bin, _, elems}, arg}), do:
     bin_generator(context, elems, arg)
 
-  defp expr(context, {:lc, _, expression, qualifiers}), do:
-    {:for, [], list(context, qualifiers) ++ [[into: [], do: expr(context, expression)]]}
+  defp conv_expr(context, {:lc, _, expression, qualifiers}), do:
+    {:for, [], conv_list(context, qualifiers) ++ [[into: [], do: conv_expr(context, expression)]]}
 
-  defp expr(context, {:bc, _, expression, qualifiers}), do:
-    {:for, [], list(context, qualifiers) ++ [[into: "", do: expr(context, expression)]]}
+  defp conv_expr(context, {:bc, _, expression, qualifiers}), do:
+    {:for, [], conv_list(context, qualifiers) ++ [[into: "", do: conv_expr(context, expression)]]}
 
-  defp expr(context, {:map_field_assoc, _, lhs, rhs}), do:
-    {expr(context, lhs), expr(context, rhs)}
+  defp conv_expr(context, {:map_field_assoc, _, lhs, rhs}), do:
+    {conv_expr(context, lhs), conv_expr(context, rhs)}
 
-  defp expr(context, {:map_field_exact, _, lhs, rhs}), do:
-    {expr(context, lhs), expr(context, rhs)}
+  defp conv_expr(context, {:map_field_exact, _, lhs, rhs}), do:
+    {conv_expr(context, lhs), conv_expr(context, rhs)}
 
-  defp expr(context, {:map, _, associations}), do:
-    {:%{}, [], list(context, associations)}
+  defp conv_expr(context, {:map, _, associations}), do:
+    {:%{}, [], conv_list(context, associations)}
 
-  defp expr(context, {:map, _, base_map, []}), do:
-    expr(context, base_map)
+  defp conv_expr(context, {:map, _, base_map, []}), do:
+    conv_expr(context, base_map)
 
-  defp expr(context, {:map, _, base_map, assocs}), do:
-    update_map(context, expr(context, base_map), assocs)
+  defp conv_expr(context, {:map, _, base_map, assocs}), do:
+    update_map(context, conv_expr(context, base_map), assocs)
 
-  defp expr(context, {:bin, _, elems}), do:
-    {:<<>>, [], list(context, elems)}
+  defp conv_expr(context, {:bin, _, elems}), do:
+    {:<<>>, [], conv_list(context, elems)}
 
-  defp expr(context, {:bin_element, _, val, :default, :default}), do:
+  defp conv_expr(context, {:bin_element, _, val, :default, :default}), do:
     bin_element_expr(context, val)
 
-  defp expr(context, {:bin_element, _, val, {:integer, _, size}, :default}), do:
+  defp conv_expr(context, {:bin_element, _, val, {:integer, _, size}, :default}), do:
     {:::, [], [bin_element_expr(context, val), size]}
 
-  defp expr(context, {:bin_element, _, val, size, :default}), do:
-    {:::, [], [bin_element_expr(context, val), {:size, [], [expr(context, size)]}]}
+  defp conv_expr(context, {:bin_element, _, val, size, :default}), do:
+    {:::, [], [bin_element_expr(context, val), {:size, [], [conv_expr(context, size)]}]}
 
-  defp expr(context, {:bin_element, _, val, :default, [type]}), do:
+  defp conv_expr(context, {:bin_element, _, val, :default, [type]}), do:
     {:::, [], [bin_element_expr(context, val), {type, [], Elixir}]}
 
-  defp expr(context, {:record, _, name, fields}), do:
+  defp conv_expr(context, {:record, _, name, fields}), do:
     {Context.record_function_name(context, name), [], [record_field_list(context, name, fields)]}
 
-  defp expr(context, {:record, _, record, name, updates}), do:
-    {Context.record_function_name(context, name), [], [expr(context, record), list(context, updates)]}
+  defp conv_expr(context, {:record, _, record, name, updates}), do:
+    {Context.record_function_name(context, name), [], [conv_expr(context, record), conv_list(context, updates)]}
 
-  defp expr(context, {:record_index, _, name, field}), do:
-    Context.record_field_index(context, name, expr(context, field))
+  defp conv_expr(context, {:record_index, _, name, field}), do:
+    Context.record_field_index(context, name, conv_expr(context, field))
 
-  defp expr(context, {:record_field, _, name}), do:
-    {expr(context, name), :undefined}
+  defp conv_expr(context, {:record_field, _, name}), do:
+    {conv_expr(context, name), :undefined}
 
-  defp expr(context, {:record_field, _, name, default}), do:
-    {expr(context, name), expr(context, default)}
+  defp conv_expr(context, {:record_field, _, name, default}), do:
+    {conv_expr(context, name), conv_expr(context, default)}
 
-  defp expr(context, {:record_field, _, record, name, field}), do:
-    {Context.record_function_name(context, name), [], [expr(context, record), expr(context, field)]}
+  defp conv_expr(context, {:record_field, _, record, name, field}), do:
+    {Context.record_function_name(context, name), [], [conv_expr(context, record), conv_expr(context, field)]}
 
-  defp expr(context, {:type, _, type}), do:
-    type(context, type)
+  defp conv_expr(context, {:type, _, type}), do:
+    conv_type(context, type)
 
-  defp expr(context, {:type, _, type, params}), do:
-    type(context, type, params)
+  defp conv_expr(context, {:type, _, type, params}), do:
+    conv_type(context, type, params)
 
-  defp expr(context, {:type, _, type, param1, param2}), do:
-    type(context, type, param1, param2)
+  defp conv_expr(context, {:type, _, type, param1, param2}), do:
+    conv_type(context, type, param1, param2)
 
 
-  defp type(_context, :any), do:
+  defp conv_type(_context, :any), do:
     [{:..., [], Elixir}]
 
 
-  defp type(_context, :tuple, :any), do:
+  defp conv_type(_context, :tuple, :any), do:
     {:tuple, [], []}
 
-  defp type(context, :tuple, params), do:
-    {:{}, [], list(context, params)}
+  defp conv_type(context, :tuple, params), do:
+    {:{}, [], conv_list(context, params)}
 
-  defp type(_context, :list, []), do:
+  defp conv_type(_context, :list, []), do:
     {:list, [], []}
 
-  defp type(context, :list, [type]), do:
-    {:list, [], [expr(context, type)]}
+  defp conv_type(context, :list, [type]), do:
+    {:list, [], [conv_expr(context, type)]}
 
-  defp type(_context, nil, []), do:
+  defp conv_type(_context, nil, []), do:
     []
 
-  defp type(context, :range, [from, to]), do:
-    {:.., @import_kernel_metadata, [expr(context, from), expr(context, to)]}
+  defp conv_type(context, :range, [from, to]), do:
+    {:.., @import_kernel_metadata, [conv_expr(context, from), conv_expr(context, to)]}
 
-  defp type(_context, :binary, [{:integer, _, 0}, {:integer, _, 0}]), do:
+  defp conv_type(_context, :binary, [{:integer, _, 0}, {:integer, _, 0}]), do:
     {:<<>>, [], []}
 
-  defp type(context, :binary, [m, {:integer, _, 0}]), do:
-    {:<<>>, [], [{:::, [], [{:_, [], Elixir}, expr(context, m)]}]}
+  defp conv_type(context, :binary, [m, {:integer, _, 0}]), do:
+    {:<<>>, [], [{:::, [], [{:_, [], Elixir}, conv_expr(context, m)]}]}
 
-  defp type(context, :binary, [{:integer, _, 0}, n]), do:
-    {:<<>>, [], [{:::, [], [{:_, [], Elixir}, {:*, @import_kernel_metadata, [{:_, [], Elixir}, expr(context, n)]}]}]}
+  defp conv_type(context, :binary, [{:integer, _, 0}, n]), do:
+    {:<<>>, [], [{:::, [], [{:_, [], Elixir}, {:*, @import_kernel_metadata, [{:_, [], Elixir}, conv_expr(context, n)]}]}]}
 
-  defp type(context, :binary, [m, n]), do:
-    {:<<>>, [], [{:::, [], [{:_, [], Elixir}, expr(context, m)]}, {:::, [], [{:_, [], Elixir}, {:*, @import_kernel_metadata, [{:_, [], Elixir}, expr(context, n)]}]}]}
+  defp conv_type(context, :binary, [m, n]), do:
+    {:<<>>, [], [{:::, [], [{:_, [], Elixir}, conv_expr(context, m)]}, {:::, [], [{:_, [], Elixir}, {:*, @import_kernel_metadata, [{:_, [], Elixir}, conv_expr(context, n)]}]}]}
 
-  defp type(context, :fun, [args, result]), do:
-    [{:->, [], [expr(context, args), expr(context, result)]}]
+  defp conv_type(context, :fun, [args, result]), do:
+    [{:->, [], [conv_expr(context, args), conv_expr(context, result)]}]
 
-  defp type(context, :product, args), do:
-    list(context, args)
+  defp conv_type(context, :product, args), do:
+    conv_list(context, args)
 
-  defp type(_context, :map, :any), do:
+  defp conv_type(_context, :map, :any), do:
     {:map, [], []}
 
-  defp type(context, :map, assocs), do:
-    {:%{}, [], list(context, assocs)}
+  defp conv_type(context, :map, assocs), do:
+    {:%{}, [], conv_list(context, assocs)}
 
-  defp type(context, :map_field_assoc, [key, value]), do:
-    {expr(context, key), expr(context, value)}
+  defp conv_type(context, :map_field_assoc, [key, value]), do:
+    {conv_expr(context, key), conv_expr(context, value)}
 
-  defp type(context, :union, args), do:
-    union(context, args)
+  defp conv_type(context, :union, args), do:
+    conv_union(context, args)
 
-  defp type(context, name, params), do:
-    {name, [], list(context, params)}
-
-
-  defp type(context, :map_field_assoc, key, value), do:
-    {expr(context, key), expr(context, value)}
+  defp conv_type(context, name, params), do:
+    {name, [], conv_list(context, params)}
 
 
-  defp union(context, [h | []]), do:
-    expr(context, h)
+  defp conv_type(context, :map_field_assoc, key, value), do:
+    {conv_expr(context, key), conv_expr(context, value)}
 
-  defp union(context, [h | t]), do:
-    {:|, [], [expr(context, h), union(context, t)]}
+
+  defp conv_union(context, [h | []]), do:
+    conv_expr(context, h)
+
+  defp conv_union(context, [h | t]), do:
+    {:|, [], [conv_expr(context, h), conv_union(context, t)]}
 
 
   defp record_field_list(context, record_name, fields) do
-    {underscores, ex_fields} = list(context, fields)
+    {underscores, ex_fields} = context
+      |> conv_list(fields)
       |> Enum.partition(fn
         {{:_, _, Elixir}, _} -> true
         {_, _} -> false
       end)
     case underscores do
       [{_, value}] ->
-        explicit_field_names = ex_fields |> Enum.map(fn {name, _} -> name end)
+        explicit_field_names = ex_fields
+          |> Enum.map(fn {name, _} -> name end)
         needed_field_names = Context.record_field_names(context, record_name)
-        extra_fields = (needed_field_names -- explicit_field_names)
+        extra_field_names = (needed_field_names -- explicit_field_names)
+        extra_fields = extra_field_names
           |> Enum.map(fn name -> {name, value} end)
         ex_fields ++ extra_fields
       _ ->
@@ -434,13 +434,13 @@ defmodule Erl2ex.Convert do
 
   defp bin_generator(context, elems, arg) do
     {elems, [last_elem]} = Enum.split(elems, -1)
-    last_ex_elem = {:<-, [], [expr(context, last_elem), expr(context, arg)]}
-    {:<<>>, [], list(context, elems) ++ [last_ex_elem]}
+    last_ex_elem = {:<-, [], [conv_expr(context, last_elem), conv_expr(context, arg)]}
+    {:<<>>, [], conv_list(context, elems) ++ [last_ex_elem]}
   end
 
 
   defp bin_element_expr(_context, {:string, _, str}), do: List.to_string(str)
-  defp bin_element_expr(context, val), do: expr(context, val)
+  defp bin_element_expr(context, val), do: conv_expr(context, val)
 
 
   defp update_map(context, base_map, assocs = [{:map_field_exact, _, _, _} | _]) do
@@ -449,7 +449,7 @@ defmodule Erl2ex.Convert do
         {:map_field_exact, _, _, _} -> true
         _ -> false
       end)
-    new_base = {:%{}, [], [{:|, [], [base_map, list(context, exact_assocs)]}]}
+    new_base = {:%{}, [], [{:|, [], [base_map, conv_list(context, exact_assocs)]}]}
     update_map(context, new_base, remaining_assocs)
   end
 
@@ -462,7 +462,7 @@ defmodule Erl2ex.Convert do
     new_base = {
       {:., [], [{:__aliases__, [alias: false], [:Map]}, :merge]},
       [],
-      [base_map, {:%{}, [], list(context, inexact_assocs)}]
+      [base_map, {:%{}, [], conv_list(context, inexact_assocs)}]
     }
     update_map(context, new_base, remaining_assocs)
   end
@@ -471,7 +471,7 @@ defmodule Erl2ex.Convert do
 
 
   defp generalized_var(context, _atom_name, << "?" :: utf8, name :: binary >>), do:
-    const(context, String.to_atom(name))
+    conv_const(context, String.to_atom(name))
 
   defp generalized_var(context, atom_name, str_name) do
     var = {str_name |> lower_str |> String.to_atom, [], Elixir}
@@ -483,29 +483,29 @@ defmodule Erl2ex.Convert do
   end
 
 
-  defp const(_context, :MODULE), do:
+  defp conv_const(_context, :MODULE), do:
     {:__MODULE__, [], Elixir}
 
-  defp const(_context, :MODULE_STRING), do:
+  defp conv_const(_context, :MODULE_STRING), do:
     {{:., [], [{:__aliases__, [alias: false], [:Atom]}, :to_char_list]}, [], [{:__MODULE__, [], Elixir}]}
 
-  defp const(_context, :FILE), do:
+  defp conv_const(_context, :FILE), do:
     {{:., [], [{:__aliases__, [alias: false], [:String]}, :to_char_list]}, [], [{{:., [], [{:__ENV__, [], Elixir}, :file]}, [], []}]}
 
-  defp const(_context, :LINE), do:
+  defp conv_const(_context, :LINE), do:
     {{:., [], [{:__ENV__, [], Elixir}, :line]}, [], []}
 
-  defp const(_context, :MACHINE), do:
+  defp conv_const(_context, :MACHINE), do:
     'BEAM'
 
-  defp const(context, name) do
+  defp conv_const(context, name) do
     macro_name = Context.macro_const_name(context, name)
     {:@, @import_kernel_metadata, [{macro_name, [], Elixir}]}
   end
 
 
   defp func_spec(context, func = {:remote, _, _, _}, _args), do:
-    expr(context, func)
+    conv_expr(context, func)
 
   defp func_spec(context, {:atom, _, func}, args) do
     arity = Enum.count(args)
@@ -524,23 +524,23 @@ defmodule Erl2ex.Convert do
       << "?" :: utf8, basename :: binary >> ->
         Context.macro_function_name(context, String.to_atom(basename))
       _ ->
-        {:., [], [expr(context, func)]}
+        {:., [], [conv_expr(context, func)]}
     end
   end
 
   defp func_spec(context, func, _args), do:
-    {:., [], [expr(context, func)]}
+    {:., [], [conv_expr(context, func)]}
 
 
-  defp block(context, [arg]), do:
-    expr(context, arg)
+  defp conv_block(context, [arg]), do:
+    conv_expr(context, arg)
 
-  defp block(context, arg) when is_list(arg), do:
-    {:__block__, [], list(context, arg)}
+  defp conv_block(context, arg) when is_list(arg), do:
+    {:__block__, [], conv_list(context, arg)}
 
 
-  defp list(context, list) when is_list(list), do:
-    list |> Enum.map(&(expr(context, &1)))
+  defp conv_list(context, list) when is_list(list), do:
+    list |> Enum.map(&(conv_expr(context, &1)))
 
 
   defp clause(context, {:clause, line, args, guards, exprs}, comments, name) do
@@ -549,7 +549,7 @@ defmodule Erl2ex.Convert do
     {inline_comments, remaining_comments} = split_comments(comments, lines.last)
     ex_clause = %Erl2ex.ExClause{
       signature: clause_signature(context, name, args, guards),
-      exprs: list(context, exprs),
+      exprs: conv_list(context, exprs),
       comments: head_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
@@ -558,7 +558,7 @@ defmodule Erl2ex.Convert do
 
 
   defp clause_signature(context, name, params, []), do:
-    {name, [], list(context, params)}
+    {name, [], conv_list(context, params)}
 
   defp clause_signature(context, name, params, guards), do:
     {:when, [], [clause_signature(context, name, params, []), guard_seq(context, guards, nil)]}
@@ -577,11 +577,11 @@ defmodule Erl2ex.Convert do
     result
 
   defp guard_elem(context, [ghead | gtail], result), do:
-    # TODO: Make sure we can get away with expr. Erlang guards can conceivably
+    # TODO: Make sure we can get away with conv_expr. Erlang guards can conceivably
     # resolve to a value other than true or false, which for Erlang should
     # fail the guard, but in Elixir will succeed the guard. If this is a
     # problem, the Elixir version might need to compare === true.
-    guard_elem(context, gtail, guard_combine(result, expr(context, ghead), :and))
+    guard_elem(context, gtail, guard_combine(result, conv_expr(context, ghead), :and))
 
 
   defp guard_combine(nil, rhs, _op), do:
@@ -658,12 +658,13 @@ defmodule Erl2ex.Convert do
   defp header_check_clause(%Erl2ex.ExClause{exprs: exprs}, header), do:
     exprs |> Enum.reduce(header, &header_check_expr/2)
 
-  defp header_check_expr(expr, header)
-  when is_tuple(expr) and tuple_size(expr) >= 3 do
+  defp header_check_expr(expr, header) when is_tuple(expr) and tuple_size(expr) >= 3 do
     if elem(expr, 1) == @import_bitwise_metadata do
       header = %Erl2ex.ExHeader{header | use_bitwise: true}
     end
-    Tuple.to_list(expr) |> Enum.reduce(header, &header_check_expr/2)
+    expr
+      |> Tuple.to_list
+      |> Enum.reduce(header, &header_check_expr/2)
   end
   defp header_check_expr(_expr, header), do: header
 

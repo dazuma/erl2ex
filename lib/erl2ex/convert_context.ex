@@ -181,7 +181,8 @@ defmodule Erl2ex.Convert.Context do
 
 
   defp assign_strange_func_names({name, info = %FuncInfo{func_name: nil}}, context) do
-    elixir_name = Regex.replace(~r/\W/, Atom.to_string(name), "_")
+    mangled_name = Regex.replace(~r/\W/, Atom.to_string(name), "_")
+    elixir_name = mangled_name
       |> find_available_name(context.used_func_names, "func")
     info = %FuncInfo{info | func_name: elixir_name}
     %Context{context |
