@@ -2,25 +2,22 @@
 
 This is a (certainly partial) list of language features remaining to be implemented.
 
-## Syntax/expressions
+## Syntax/expressions/preprocessor/etc.
 
 *   Expand list of Kernel functions
 *   Bit/binary expressions with complex size/type specifiers
 *   Try, catch and throw
 *   Escape string interpolation syntax and check escape sequences for support
-
-## Attributes/preprocessor
-
-*   compile attribute
-*   on_load attribute
 *   behaviour and callback attributes
-*   Allow defining macros from env variables
+*   Allow defining macros from env variables (e.g. debug)
+*   Make sure defined_* attributes are properly initialized
 *   spec attributes
-*   Type info in records
+*   Support type info in records
 *   File inclusion
 *   Invoking const macros as functions
-*   Stringifying macro arguments
+*   Stringifying macro arguments (e.g. ??Arg)
 *   Register module attributes
+*   Check that macro defines work with guard fragments (examples in elixir/src/elixir_tokenizer.erl)
 
 ## Other features, comments, tooling
 

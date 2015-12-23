@@ -6,7 +6,7 @@ defmodule Erl2ex.Convert do
 
   def module(erl_module, opts \\ []) do
     context = Context.build(erl_module, opts)
-    forms = erl_module.forms |> Enum.map(&(formp(context, &1)))
+    forms = erl_module.forms |> Enum.map(&(form(context, &1)))
     forms = [determine_header(context, forms) | forms]
     %Erl2ex.ExModule{
       name: erl_module.name,
@@ -59,7 +59,7 @@ defmodule Erl2ex.Convert do
   ] |> Enum.into(HashDict.new)
 
 
-  defp formp(context, %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do
+  defp form(context, %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do
     mapped_name = Context.local_function_name(context, name)
     is_exported = Context.is_exported?(context, name, arity)
     first_line = clauses |> List.first |> elem(1)
@@ -76,7 +76,7 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp formp(_context, %Erl2ex.ErlImport{line: line, module: module, funcs: funcs, comments: comments}) do
+  defp form(_context, %Erl2ex.ErlImport{line: line, module: module, funcs: funcs, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
 
     %Erl2ex.ExImport{
@@ -87,8 +87,9 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp formp(_context, %Erl2ex.ErlAttr{name: name, line: line, arg: arg, comments: comments}) do
+  defp form(_context, %Erl2ex.ErlAttr{name: name, line: line, arg: arg, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
+    {name, arg} = convert_attr(name, arg)
 
     %Erl2ex.ExAttr{
       name: name,
@@ -98,7 +99,7 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp formp(context, %Erl2ex.ErlDefine{line: line, name: name, args: nil, replacement: replacement, comments: comments}) do
+  defp form(context, %Erl2ex.ErlDefine{line: line, name: name, args: nil, replacement: replacement, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
     mapped_name = Context.macro_const_name(context, name)
     tracking_name = Context.tracking_attr_name(context, name)
@@ -112,7 +113,7 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp formp(context, %Erl2ex.ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}) do
+  defp form(context, %Erl2ex.ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
 
     replacement_context = Context.set_quoted_variables(context, args)
@@ -129,7 +130,7 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp formp(context, %Erl2ex.ErlDirective{line: line, directive: directive, name: name, comments: comments}) do
+  defp form(context, %Erl2ex.ErlDirective{line: line, directive: directive, name: name, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
     tracking_name = if name == nil do
       nil
@@ -145,7 +146,7 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp formp(context, %Erl2ex.ErlRecord{line: line, name: name, fields: fields, comments: comments}) do
+  defp form(context, %Erl2ex.ErlRecord{line: line, name: name, fields: fields, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
 
     %Erl2ex.ExRecord{
@@ -157,7 +158,7 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp formp(context, %Erl2ex.ErlType{line: line, kind: kind, name: name, params: params, defn: defn, comments: comments}) do
+  defp form(context, %Erl2ex.ErlType{line: line, kind: kind, name: name, params: params, defn: defn, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
 
     ex_kind = cond do
@@ -177,6 +178,10 @@ defmodule Erl2ex.Convert do
       inline_comments: inline_comments |> convert_comments
     }
   end
+
+
+  defp convert_attr(:on_load, {name, 0}), do: {:on_load, name}
+  defp convert_attr(attr, val), do: {attr, val}
 
 
   # Expression rules
