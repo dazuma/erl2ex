@@ -235,11 +235,17 @@ defmodule FunctionTest do
   test "Strange function names" do
     input = """
       'E=mc^2'() -> hello.
+      foo() -> 'E=mc^2'().
       """
 
     expected = """
       defp func_E_mc_2() do
         :hello
+      end
+
+
+      defp foo() do
+        func_E_mc_2()
       end
       """
 
