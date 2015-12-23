@@ -116,12 +116,28 @@ defmodule Erl2ex.ErlParse do
     }
   end
 
+  defp add_form(module, {:attribute, _line, :export_type, arg}, _comments, _context) do
+    %Erl2ex.ErlModule{module |
+      type_exports: module.type_exports ++ arg
+    }
+  end
+
   defp add_form(module, {:attribute, line, :import, {modname, funcs}}, comments, _context) do
     attribute = %Erl2ex.ErlImport{line: line, module: modname, funcs: funcs, comments: comments}
     %Erl2ex.ErlModule{module |
       imports: module.imports ++ funcs,
       forms: [attribute | module.forms]
     }
+  end
+
+  defp add_form(module, {:attribute, line, :type, {name, defn, params}}, comments, _context) do
+    type = %Erl2ex.ErlType{line: line, kind: :type, name: name, params: params, defn: defn, comments: comments}
+    %Erl2ex.ErlModule{module | forms: [type | module.forms]}
+  end
+
+  defp add_form(module, {:attribute, line, :opaque, {name, defn, params}}, comments, _context) do
+    type = %Erl2ex.ErlType{line: line, kind: :opaque, name: name, params: params, defn: defn, comments: comments}
+    %Erl2ex.ErlModule{module | forms: [type | module.forms]}
   end
 
   defp add_form(module, {:attribute, line, :record, {recname, fields}}, comments, _context) do

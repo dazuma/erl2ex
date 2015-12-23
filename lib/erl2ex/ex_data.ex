@@ -52,6 +52,17 @@ defmodule Erl2ex.ExRecord do
 end
 
 
+defmodule Erl2ex.ExType do
+
+  defstruct kind: nil,
+            signature: nil,
+            defn: nil,
+            comments: [],
+            inline_comments: []
+
+end
+
+
 defmodule Erl2ex.ExHeader do
 
   defstruct use_bitwise: false,

@@ -119,6 +119,13 @@ defmodule Erl2ex.ExWrite do
       |> write_string("Record.defrecordp #{Macro.to_string(macro)}, #{Macro.to_string(tag)}, #{Macro.to_string(fields)}", io)
   end
 
+  defp write_form(context, %Erl2ex.ExType{kind: kind, signature: signature, defn: defn, comments: comments}, io) do
+    context
+      |> skip_lines(:attr, io)
+      |> foreach(comments, io, &write_string/3)
+      |> write_string("@#{kind} #{Macro.to_string(signature)} :: #{Macro.to_string(defn)}", io)
+  end
+
   defp write_form(context, %Erl2ex.ExMacro{signature: signature, expr: expr, comments: comments}, io) do
     context
       |> write_comment_list(comments, :func_header, io)

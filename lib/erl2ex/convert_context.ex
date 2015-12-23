@@ -17,6 +17,7 @@ defmodule Erl2ex.Convert.Context do
 
 
   defstruct funcs: HashDict.new,
+            types: HashDict.new,
             macros: HashDict.new,
             records: HashDict.new,
             used_func_names: HashSet.new,
@@ -26,6 +27,10 @@ defmodule Erl2ex.Convert.Context do
   defmodule FuncInfo do
     defstruct func_name: nil,
               arities: HashDict.new  # Map of arity to exported flag
+  end
+
+  defmodule TypeInfo do
+    defstruct arities: HashDict.new  # Map of arity to exported flag
   end
 
   defmodule MacroInfo do
@@ -46,6 +51,7 @@ defmodule Erl2ex.Convert.Context do
     context = Enum.reduce(erl_module.forms, context, &collect_func_info/2)
     context = Enum.reduce(context.funcs, context, &assign_strange_func_names/2)
     context = Enum.reduce(erl_module.exports, context, &collect_exports/2)
+    context = Enum.reduce(erl_module.type_exports, context, &collect_type_exports/2)
     context = Enum.reduce(erl_module.forms, context, &collect_attr_info/2)
     context = Enum.reduce(erl_module.forms, context, &collect_record_info/2)
     context = Enum.reduce(erl_module.forms, context, &collect_macro_info/2)
@@ -64,6 +70,12 @@ defmodule Erl2ex.Convert.Context do
 
   def is_exported?(context, name, arity) do
     info = Dict.get(context.funcs, name, %FuncInfo{})
+    Dict.get(info.arities, arity, false)
+  end
+
+
+  def is_type_exported?(context, name, arity) do
+    info = Dict.get(context.types, name, %TypeInfo{})
     Dict.get(info.arities, arity, false)
   end
 
@@ -172,6 +184,17 @@ defmodule Erl2ex.Convert.Context do
     }
   end
   defp assign_strange_func_names(_, context), do: context
+
+
+  def collect_type_exports({name, arity}, context) do
+    type_info = Dict.get(context.types, name, %TypeInfo{})
+    type_info = %TypeInfo{type_info |
+      arities: Dict.put(type_info.arities, arity, true)
+    }
+    %Context{context |
+      types: Dict.put(context.types, name, type_info)
+    }
+  end
 
 
   def collect_exports({name, arity}, context) do

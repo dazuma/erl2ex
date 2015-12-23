@@ -157,6 +157,27 @@ defmodule Erl2ex.Convert do
     }
   end
 
+  defp formp(context, %Erl2ex.ErlType{line: line, kind: kind, name: name, params: params, defn: defn, comments: comments}) do
+    {main_comments, inline_comments} = split_comments(comments, line)
+
+    ex_kind = cond do
+      kind == :opaque ->
+        :opaque
+      Context.is_type_exported?(context, name, Enum.count(params)) ->
+        :type
+      true ->
+        :typep
+    end
+
+    %Erl2ex.ExType{
+      kind: ex_kind,
+      signature: {name, [], list(context, params)},
+      defn: expr(context, defn),
+      comments: main_comments |> convert_comments,
+      inline_comments: inline_comments |> convert_comments
+    }
+  end
+
 
   # Expression rules
 
@@ -307,6 +328,68 @@ defmodule Erl2ex.Convert do
 
   defp expr(context, {:record_field, _, record, name, field}), do:
     {Context.record_function_name(context, name), [], [expr(context, record), expr(context, field)]}
+
+  defp expr(context, {:type, _, type, params}), do:
+    type(context, type, params)
+
+
+  defp type(_context, :tuple, :any), do:
+    {:tuple, [], []}
+
+  defp type(context, :tuple, params), do:
+    {:{}, [], list(context, params)}
+
+  defp type(_context, :list, []), do:
+    {:list, [], []}
+
+  defp type(context, :list, [type]), do:
+    {:list, [], [expr(context, type)]}
+
+  defp type(_context, nil, []), do:
+    []
+
+  defp type(context, :range, [from, to]), do:
+    {:.., @import_kernel_metadata, [expr(context, from), expr(context, to)]}
+
+  defp type(_context, :binary, [{:integer, _, 0}, {:integer, _, 0}]), do:
+    {:<<>>, [], []}
+
+  defp type(context, :binary, [m, {:integer, _, 0}]), do:
+    {:<<>>, [], [{:::, [], [{:_, [], Elixir}, expr(context, m)]}]}
+
+  defp type(context, :binary, [{:integer, _, 0}, n]), do:
+    {:<<>>, [], [{:::, [], [{:_, [], Elixir}, {:*, @import_kernel_metadata, [{:_, [], Elixir}, expr(context, n)]}]}]}
+
+  defp type(context, :binary, [m, n]), do:
+    {:<<>>, [], [{:::, [], [{:_, [], Elixir}, expr(context, m)]}, {:::, [], [{:_, [], Elixir}, {:*, @import_kernel_metadata, [{:_, [], Elixir}, expr(context, n)]}]}]}
+
+  defp type(context, :fun, [{:type, _, :any}, result]), do:
+    [{:->, [], [[{:..., [], Elixir}], expr(context, result)]}]
+
+  defp type(context, :fun, [{:type, _, :product, args}, result]), do:
+    [{:->, [], [list(context, args), expr(context, result)]}]
+
+  defp type(_context, :map, :any), do:
+    {:map, [], []}
+
+  defp type(context, :map, assocs), do:
+    {:%{}, [], list(context, assocs)}
+
+  defp type(context, :map_field_assoc, [key, value]), do:
+    {expr(context, key), expr(context, value)}
+
+  defp type(context, :union, args), do:
+    union(context, args)
+
+  defp type(context, name, params), do:
+    {name, [], list(context, params)}
+
+
+  defp union(context, [h | []]), do:
+    expr(context, h)
+
+  defp union(context, [h | t]), do:
+    {:|, [], [expr(context, h), union(context, t)]}
 
 
   defp record_field_list(context, record_name, fields) do

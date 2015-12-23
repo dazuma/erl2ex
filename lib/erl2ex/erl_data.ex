@@ -50,6 +50,18 @@ defmodule Erl2ex.ErlRecord do
 end
 
 
+defmodule Erl2ex.ErlType do
+
+  defstruct line: nil,
+            kind: nil,
+            name: nil,
+            params: [],
+            defn: nil,
+            comments: []
+
+end
+
+
 defmodule Erl2ex.ErlFunc do
 
   defstruct name: nil,
@@ -65,6 +77,7 @@ defmodule Erl2ex.ErlModule do
   defstruct name: nil,
             comments: [],
             exports: [],
+            type_exports: [],
             imports: [],
             forms: []
 
