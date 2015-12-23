@@ -2,9 +2,9 @@
 
 [![Build Status](https://travis-ci.org/dazuma/erl2ex.svg?branch=master)](https://travis-ci.org/dazuma/erl2ex)
 
-An Erlang to Elixir transpiler.
+An Erlang to Elixir transpiler. Converts Erlang source code to equivalent Elixir source.
 
-This software is still experimental and under development. See the [TODO](TODO.md) file for a list of incomplete capabilities.
+This software is still experimental and under development. See the [TODO](TODO.md) file for a list of caveats.
 
 ## License
 

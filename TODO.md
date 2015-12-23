@@ -1,27 +1,31 @@
 # TODO List
 
-This is a (certainly partial) list of language features remaining to be implemented.
+This is a (certainly partial) list of known issues and missing capabilities.
 
-## Syntax/expressions/preprocessor/etc.
+## Language
 
-*   Expand list of Kernel functions
-*   Bit/binary expressions with complex size/type specifiers
-*   Try, catch and throw
-*   Escape string interpolation syntax and check escape sequences for support
-*   behaviour and callback attributes
-*   Allow defining macros from env variables (e.g. debug)
-*   Make sure defined_* attributes are properly initialized
-*   spec attributes
-*   Support type info in records
-*   File inclusion
-*   Invoking const macros as functions
-*   Stringifying macro arguments (e.g. ??Arg)
-*   Register module attributes
-*   Check that macro defines work with guard fragments (examples in elixir/src/elixir_tokenizer.erl)
+*   Support try, catch and throw (P1)
+*   Support spec attribute (P1)
+*   Support behaviour and callback attributes (P1)
+*   Escape string interpolation syntax and check escape sequences for support (P1)
+*   Support type info in records (P2)
+*   Register module attributes (P2)
+*   Expand list of known Kernel functions (P2)
+*   Support bit/binary expressions with complex size/type specifiers (P3)
+
+## Preprocessor
+
+*   Support file inclusion (P1)
+*   Check that macro defines work with guard fragments. See examples in elixir/src/elixir_tokenizer.erl (P1)
+*   Allow defining macros from env variables, e.g. debug (P2)
+*   Make sure defined_* attributes are properly initialized (P2)
+*   Invoking const macros as functions (P2)
+*   Stringifying macro arguments, e.g. ??Arg (P2)
 
 ## Other features, comments, tooling
 
-*   Transform doc comments
-*   Handle inline comments
-*   Option to elixirize module names
-*   Nicer error reporting
+*   Write tool documentation (P1)
+*   Transform doc comments (P1)
+*   Handle inline comments (P2)
+*   Option to elixirize module names (P2)
+*   Nicer error reporting (P2)
