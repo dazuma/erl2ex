@@ -329,8 +329,18 @@ defmodule Erl2ex.Convert do
   defp expr(context, {:record_field, _, record, name, field}), do:
     {Context.record_function_name(context, name), [], [expr(context, record), expr(context, field)]}
 
+  defp expr(context, {:type, _, type}), do:
+    type(context, type)
+
   defp expr(context, {:type, _, type, params}), do:
     type(context, type, params)
+
+  defp expr(context, {:type, _, type, param1, param2}), do:
+    type(context, type, param1, param2)
+
+
+  defp type(_context, :any), do:
+    [{:..., [], Elixir}]
 
 
   defp type(_context, :tuple, :any), do:
@@ -363,11 +373,11 @@ defmodule Erl2ex.Convert do
   defp type(context, :binary, [m, n]), do:
     {:<<>>, [], [{:::, [], [{:_, [], Elixir}, expr(context, m)]}, {:::, [], [{:_, [], Elixir}, {:*, @import_kernel_metadata, [{:_, [], Elixir}, expr(context, n)]}]}]}
 
-  defp type(context, :fun, [{:type, _, :any}, result]), do:
-    [{:->, [], [[{:..., [], Elixir}], expr(context, result)]}]
+  defp type(context, :fun, [args, result]), do:
+    [{:->, [], [expr(context, args), expr(context, result)]}]
 
-  defp type(context, :fun, [{:type, _, :product, args}, result]), do:
-    [{:->, [], [list(context, args), expr(context, result)]}]
+  defp type(context, :product, args), do:
+    list(context, args)
 
   defp type(_context, :map, :any), do:
     {:map, [], []}
@@ -383,6 +393,10 @@ defmodule Erl2ex.Convert do
 
   defp type(context, name, params), do:
     {name, [], list(context, params)}
+
+
+  defp type(context, :map_field_assoc, key, value), do:
+    {expr(context, key), expr(context, value)}
 
 
   defp union(context, [h | []]), do:
