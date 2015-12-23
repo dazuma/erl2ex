@@ -22,6 +22,24 @@ defmodule ExpressionTest do
   end
 
 
+  test "String escaping" do
+    input = """
+      foo() ->
+        "hi\#{1}",
+        "\\n\\s".
+      """
+
+    expected = """
+      defp foo() do
+        'hi\\\#{1}'
+        '\\n '
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
   test "Variable case conversion" do
     input = """
       foo(_A, __B, _) -> 1.

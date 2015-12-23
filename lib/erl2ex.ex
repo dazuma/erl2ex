@@ -13,6 +13,10 @@ defmodule Erl2ex do
 
   require Logger
 
+  alias Erl2ex.ErlParse
+  alias Erl2ex.Convert
+  alias Erl2ex.ExWrite
+
 
   @type options :: list
 
@@ -28,9 +32,9 @@ defmodule Erl2ex do
 
   def convert_str(source, opts \\ []) do
     source
-      |> Erl2ex.ErlParse.from_str(opts)
-      |> Erl2ex.Convert.module(opts)
-      |> Erl2ex.ExWrite.to_str(opts)
+      |> ErlParse.from_str(opts)
+      |> Convert.module(opts)
+      |> ExWrite.to_str(opts)
   end
 
 
@@ -49,9 +53,9 @@ defmodule Erl2ex do
       dest_path = "#{Path.rootname(source_path)}.ex"
     end
     source_path
-      |> Erl2ex.ErlParse.from_file(opts)
-      |> Erl2ex.Convert.module(opts)
-      |> Erl2ex.ExWrite.to_file(dest_path, opts)
+      |> ErlParse.from_file(opts)
+      |> Convert.module(opts)
+      |> ExWrite.to_file(dest_path, opts)
     Logger.info("Converted #{source_path} -> #{dest_path}")
     :ok
   end
