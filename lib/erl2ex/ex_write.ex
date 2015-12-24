@@ -92,11 +92,11 @@ defmodule Erl2ex.ExWrite do
       end)
   end
 
-  defp write_form(context, %Erl2ex.ExAttr{name: name, tracking_name: tracking_name, arg: arg, comments: comments}, io) do
+  defp write_form(context, %Erl2ex.ExAttr{name: name, tracking_name: tracking_name, register: register, arg: arg, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
-      |> write_raw_attr(name, tracking_name, arg, io)
+      |> write_raw_attr(name, tracking_name, register, arg, io)
   end
 
   defp write_form(context, %Erl2ex.ExDirective{directive: directive, name: name, comments: comments}, io) do
@@ -155,7 +155,11 @@ defmodule Erl2ex.ExWrite do
   end
 
 
-  defp write_raw_attr(context, name, tracking_name, arg, io) do
+  defp write_raw_attr(context, name, tracking_name, register, arg, io) do
+    if register do
+      context = context
+        |> write_string("Module.register_attribute(__MODULE__, #{Macro.to_string(name)}, persist: true, accumulate: true)", io)
+    end
     context = context
       |> write_string("@#{name} #{Macro.to_string(arg)}", io)
     if tracking_name != nil do

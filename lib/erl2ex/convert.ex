@@ -60,6 +60,8 @@ defmodule Erl2ex.Convert do
     is_atom: :is_atom
   ] |> Enum.into(HashDict.new)
 
+  @auto_registered_attrs [:vsn, :compile, :on_load]
+
 
   defp conv_form(context, %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do
     mapped_name = Context.local_function_name(context, name)
@@ -92,9 +94,11 @@ defmodule Erl2ex.Convert do
   defp conv_form(_context, %Erl2ex.ErlAttr{name: name, line: line, arg: arg, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
     {name, arg} = conv_attr(name, arg)
+    register = not name in @auto_registered_attrs
 
     %Erl2ex.ExAttr{
       name: name,
+      register: register,
       arg: arg,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments

@@ -151,6 +151,7 @@ defmodule PreprocessorTest do
       """
 
     expected = """
+      Module.register_attribute(__MODULE__, :erlmacro_vsn, persist: true, accumulate: true)
       @erlmacro_vsn 1
 
       @erlmacro2_vsn 2
@@ -174,6 +175,7 @@ defmodule PreprocessorTest do
       """
 
     expected = """
+      Module.register_attribute(__MODULE__, :defined_vsn, persist: true, accumulate: true)
       @defined_vsn 1
 
       @erlmacro_vsn 2

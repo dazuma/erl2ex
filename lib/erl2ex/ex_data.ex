@@ -4,6 +4,7 @@ defmodule Erl2ex.ExAttr do
 
   defstruct name: nil,
             tracking_name: nil,
+            register: false,
             arg: nil,
             comments: [],
             inline_comments: []

@@ -8,7 +8,6 @@ This is a (certainly partial) list of known issues and missing capabilities.
 *   Support spec attribute (P1)
 *   Support behaviour and callback attributes (P1)
 *   Support type info in records (P2)
-*   Register module attributes (P2)
 *   Expand list of known Kernel functions (P2)
 *   Support bit/binary expressions with complex size/type specifiers (P3)
 
