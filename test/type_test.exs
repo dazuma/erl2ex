@@ -242,4 +242,17 @@ defmodule TypeTest do
   end
 
 
+  test "Records" do
+    input = """
+      -type type1() :: #myrecord{field1 :: any(), field2 :: atom() | integer()}.
+      """
+
+    expected = """
+      @typep type1() :: record(:myrecord, field1: any(), field2: atom() | integer())
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
 end

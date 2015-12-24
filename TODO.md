@@ -7,9 +7,7 @@ This is a (certainly partial) list of known issues and missing capabilities.
 *   Support try, catch and throw (P1)
 *   Support spec attribute (P1)
 *   Support behaviour and callback attributes (P1)
-*   Support type info in records (P2)
 *   Expand list of known Kernel functions (P2)
-*   Support bit/binary expressions with complex size/type specifiers (P3)
 
 ## Preprocessor
 
@@ -19,6 +17,11 @@ This is a (certainly partial) list of known issues and missing capabilities.
 *   Make sure defined_* attributes are properly initialized (P2)
 *   Invoking const macros as functions (P2)
 *   Stringifying macro arguments, e.g. ??Arg (P2)
+
+## Suspected limitations in Elixir's language support
+
+*   Record declarations with type info, e.g. -record(foo, {field1 :: integer}). Currently the converter drops the types.
+*   Binary expressions with complex or combination size/type specs. Currently the converter crashes.
 
 ## Other features, comments, tooling
 

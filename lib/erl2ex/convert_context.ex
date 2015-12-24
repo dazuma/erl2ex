@@ -291,6 +291,8 @@ defmodule Erl2ex.Convert.Context do
   defp collect_macro_info(_, context), do: context
 
 
+  defp extract_record_field_name({:typed_record_field, record_field, _type}), do:
+    extract_record_field_name(record_field)
   defp extract_record_field_name({:record_field, _, {:atom, _, name}}), do: name
   defp extract_record_field_name({:record_field, _, {:atom, _, name}, _}), do: name
 

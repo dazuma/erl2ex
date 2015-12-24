@@ -337,6 +337,10 @@ defmodule Erl2ex.Convert do
   defp conv_expr(context, {:record_field, _, record, name, field}), do:
     {Context.record_function_name(context, name), [], [conv_expr(context, record), conv_expr(context, field)]}
 
+  # Elixir doesn't seem to support typed fields in record declarations
+  defp conv_expr(context, {:typed_record_field, record_field, _type}), do:
+    conv_expr(context, record_field)
+
   defp conv_expr(context, {:type, _, type}), do:
     conv_type(context, type)
 
@@ -395,6 +399,12 @@ defmodule Erl2ex.Convert do
 
   defp conv_type(context, :map_field_assoc, [key, value]), do:
     {conv_expr(context, key), conv_expr(context, value)}
+
+  defp conv_type(context, :record, [name | fields]), do:
+    {:record, [], [conv_expr(context, name), conv_list(context, fields)]}
+
+  defp conv_type(context, :field_type, [name, type]), do:
+    {conv_expr(context, name), conv_expr(context, type)}
 
   defp conv_type(context, :union, args), do:
     conv_union(context, args)
