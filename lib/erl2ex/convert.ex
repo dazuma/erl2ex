@@ -55,9 +55,36 @@ defmodule Erl2ex.Convert do
 
   @autoimport_map [
     abs: :abs,
+    apply: :apply,
     bit_size: :bit_size,
     byte_size: :byte_size,
-    is_atom: :is_atom
+    hd: :hd,
+    is_atom: :is_atom,
+    is_binary: :is_binary,
+    is_bitstring: :is_bitstring,
+    is_boolean: :is_boolean,
+    is_float: :is_float,
+    is_function: :is_function,
+    is_integer: :is_integer,
+    is_list: :is_list,
+    is_map: :is_map,
+    is_number: :is_number,
+    is_pid: :is_pid,
+    is_port: :is_port,
+    is_reference: :is_reference,
+    is_tuple: :is_tuple,
+    length: :length,
+    make_ref: :make_ref,
+    map_size: :map_size,
+    max: :max,
+    min: :min,
+    node: :node,
+    round: :round,
+    self: :self,
+    throw: :throw,
+    tl: :tl,
+    trunc: :trunc,
+    tuple_size: :tuple_size
   ] |> Enum.into(HashDict.new)
 
   @auto_registered_attrs [:vsn, :compile, :on_load, :behaviour, :behavior]
