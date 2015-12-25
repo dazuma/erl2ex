@@ -83,9 +83,10 @@ defmodule Erl2ex.ExWrite do
     context
   end
 
-  defp write_form(context, %Erl2ex.ExFunc{comments: comments, clauses: [first_clause | remaining_clauses], public: public}, io) do
+  defp write_form(context, %Erl2ex.ExFunc{comments: comments, clauses: [first_clause | remaining_clauses], public: public, specs: specs}, io) do
     context
       |> write_comment_list(comments, :func_header, io)
+      |> write_func_specs(specs, io)
       |> write_func_clause(public, first_clause, :func_clause_first, io)
       |> foreach(remaining_clauses, fn (ctx, clause) ->
         write_func_clause(ctx, public, clause, :func_clause, io)
@@ -204,6 +205,16 @@ defmodule Erl2ex.ExWrite do
   end
 
 
+  defp write_func_specs(context, [], _io), do: context
+  defp write_func_specs(context, specs, io) do
+    context
+      |> skip_lines(:func_specs, io)
+      |> foreach(specs, fn(ctx, spec) ->
+        write_string(ctx, "@spec #{Macro.to_string(spec)}", io)
+      end)
+  end
+
+
   defp write_func_clause(context, public, clause, form_type, io) do
     decl = if public, do: "def", else: "defp"
     context
@@ -251,7 +262,9 @@ defmodule Erl2ex.ExWrite do
   defp calc_skip_lines(:module_comments, :module_begin), do: 1
   defp calc_skip_lines(:module_begin, _), do: 1
   defp calc_skip_lines(_, :module_end), do: 1
+  defp calc_skip_lines(:func_header, :func_specs), do: 1
   defp calc_skip_lines(:func_header, :func_clause_first), do: 1
+  defp calc_skip_lines(:func_specs, :func_clause_first), do: 1
   defp calc_skip_lines(:func_clause_first, :func_clause), do: 1
   defp calc_skip_lines(:func_clause, :func_clause), do: 1
   defp calc_skip_lines(:attr, :attr), do: 1

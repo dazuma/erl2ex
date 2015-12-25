@@ -86,6 +86,7 @@ defmodule Erl2ex.ExFunc do
   defstruct name: nil,
             arity: nil,
             public: false,
+            specs: [],
             clauses: [],
             comments: []
 

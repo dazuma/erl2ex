@@ -70,11 +70,15 @@ defmodule Erl2ex.Convert do
     {main_comments, clause_comments} = split_comments(comments, first_line)
     {ex_clauses, _} = clauses
       |> Enum.map_reduce(clause_comments, &(clause(context, &1, &2, mapped_name)))
+    spec_info = Context.specs_for_func(context, name)
+    main_comments = spec_info.comments ++ main_comments
+    specs = spec_info.clauses |> Enum.map(&(conv_spec_clause(context, mapped_name, &1)))
 
     %Erl2ex.ExFunc{
       name: mapped_name,
       arity: arity,
       public: is_exported,
+      specs: specs,
       comments: main_comments |> convert_comments,
       clauses: ex_clauses
     }
@@ -350,6 +354,9 @@ defmodule Erl2ex.Convert do
   defp conv_expr(context, {:type, _, type, param1, param2}), do:
     conv_type(context, type, param1, param2)
 
+  defp conv_expr(context, {:ann_type, _, [var, type]}), do:
+    conv_expr(context, type)
+
 
   defp conv_type(_context, :any), do:
     [{:..., [], Elixir}]
@@ -555,6 +562,16 @@ defmodule Erl2ex.Convert do
 
   defp conv_list(context, list) when is_list(list), do:
     list |> Enum.map(&(conv_expr(context, &1)))
+
+
+  defp conv_spec_clause(context, name, {:type, _, :fun, [args, result]}), do:
+    {:::, [], [{name, [], conv_expr(context, args)}, conv_expr(context, result)]}
+
+  defp conv_spec_clause(context, name, {:type, _, :bounded_fun, [func, constraints]}), do:
+    {:when, [], [conv_spec_clause(context, name, func), Enum.map(constraints, &(conv_spec_constraint(context, &1)))]}
+
+  defp conv_spec_constraint(context, {:type, _, :constraint, [{:atom, _, :is_subtype}, [{:var, _, var}, type]]}), do:
+    {lower_atom(var), conv_expr(context, type)}
 
 
   defp clause(context, {:clause, line, args, guards, exprs}, comments, name) do

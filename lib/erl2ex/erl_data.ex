@@ -68,6 +68,17 @@ defmodule Erl2ex.ErlType do
 end
 
 
+defmodule Erl2ex.ErlSpec do
+  @moduledoc false
+
+  defstruct line: nil,
+            name: nil,
+            clauses: [],
+            comments: []
+
+end
+
+
 defmodule Erl2ex.ErlFunc do
   @moduledoc false
 
@@ -87,6 +98,7 @@ defmodule Erl2ex.ErlModule do
             exports: [],
             type_exports: [],
             imports: [],
+            specs: [],
             forms: []
 
 end

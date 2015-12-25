@@ -253,4 +253,60 @@ defmodule FunctionTest do
   end
 
 
+  test "Simple specs" do
+    input = """
+      -spec foo(A :: atom(), integer()) -> boolean()
+        ; (A :: integer(), B :: atom()) -> 'hello' | boolean().
+      foo(A, B) -> true.
+      """
+
+    expected = """
+      @spec foo(atom(), integer()) :: boolean()
+      @spec foo(integer(), atom()) :: :hello | boolean()
+
+      defp foo(a, b) do
+        true
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Specs with variables" do
+    input = """
+      -spec foo(A, B) -> A | B.
+      foo(A, B) -> A.
+      """
+
+    expected = """
+      @spec foo(a, b) :: a | b
+
+      defp foo(a, b) do
+        a
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Specs with guards" do
+    input = """
+      -spec foo(A, B) -> A | B when A :: tuple(), B :: atom().
+      foo(A, B) -> A.
+      """
+
+    expected = """
+      @spec foo(a, b) :: a | b when a: tuple(), b: atom()
+
+      defp foo(a, b) do
+        a
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
 end

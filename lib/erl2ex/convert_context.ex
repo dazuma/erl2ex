@@ -24,6 +24,7 @@ defmodule Erl2ex.Convert.Context do
             records: HashDict.new,
             used_func_names: HashSet.new,
             used_attr_names: HashSet.new,
+            specs: HashDict.new,
             quoted_variables: []
 
   defmodule FuncInfo do
@@ -61,6 +62,7 @@ defmodule Erl2ex.Convert.Context do
     context = Enum.reduce(erl_module.forms, context, &collect_attr_info/2)
     context = Enum.reduce(erl_module.forms, context, &collect_record_info/2)
     context = Enum.reduce(erl_module.forms, context, &collect_macro_info/2)
+    context = Enum.reduce(erl_module.specs, context, &collect_specs/2)
     context
   end
 
@@ -143,6 +145,11 @@ defmodule Erl2ex.Convert.Context do
 
   def tracking_attr_name(context, name) do
     Dict.fetch!(context.macros, name).define_tracker
+  end
+
+
+  def specs_for_func(context, name) do
+    Dict.get(context.specs, name, %Erl2ex.ErlSpec{name: name})
   end
 
 
@@ -289,6 +296,10 @@ defmodule Erl2ex.Convert.Context do
   end
 
   defp collect_macro_info(_, context), do: context
+
+
+  defp collect_specs(spec = %Erl2ex.ErlSpec{name: name}, context), do:
+    %Context{context | specs: HashDict.put(context.specs, name, spec)}
 
 
   defp extract_record_field_name({:typed_record_field, record_field, _type}), do:
