@@ -149,6 +149,11 @@ defmodule Erl2ex.ErlParse do
     %Erl2ex.ErlModule{module | specs: [spec | module.specs]}
   end
 
+  defp add_form(module, {:attribute, line, :callback, {{name, _}, clauses}}, comments, _context) do
+    callback = %Erl2ex.ErlSpec{line: line, name: name, clauses: clauses, comments: comments}
+    %Erl2ex.ErlModule{module | forms: [callback | module.forms]}
+  end
+
   defp add_form(module, {:attribute, line, :record, {recname, fields}}, comments, _context) do
     record = %Erl2ex.ErlRecord{line: line, name: recname, fields: fields, comments: comments}
     %Erl2ex.ErlModule{module | forms: [record | module.forms]}

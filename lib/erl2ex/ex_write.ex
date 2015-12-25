@@ -128,6 +128,15 @@ defmodule Erl2ex.ExWrite do
       |> write_string("@#{kind} #{Macro.to_string(signature)} :: #{Macro.to_string(defn)}", io)
   end
 
+  defp write_form(context, %Erl2ex.ExCallback{specs: specs, comments: comments}, io) do
+    context
+      |> skip_lines(:attr, io)
+      |> foreach(comments, io, &write_string/3)
+      |> foreach(specs, fn(ctx, spec) ->
+        write_string(ctx, "@callback #{Macro.to_string(spec)}", io)
+      end)
+  end
+
   defp write_form(context, %Erl2ex.ExMacro{signature: signature, expr: expr, comments: comments}, io) do
     context
       |> write_comment_list(comments, :func_header, io)

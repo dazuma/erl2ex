@@ -70,6 +70,17 @@ defmodule Erl2ex.ExType do
 end
 
 
+defmodule Erl2ex.ExCallback do
+  @moduledoc false
+
+  defstruct name: nil,
+            specs: [],
+            comments: [],
+            inline_comments: []
+
+end
+
+
 defmodule Erl2ex.ExHeader do
   @moduledoc false
 

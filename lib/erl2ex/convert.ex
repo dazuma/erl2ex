@@ -60,7 +60,7 @@ defmodule Erl2ex.Convert do
     is_atom: :is_atom
   ] |> Enum.into(HashDict.new)
 
-  @auto_registered_attrs [:vsn, :compile, :on_load]
+  @auto_registered_attrs [:vsn, :compile, :on_load, :behaviour, :behavior]
 
 
   defp conv_form(context, %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do
@@ -189,8 +189,21 @@ defmodule Erl2ex.Convert do
     }
   end
 
+  defp conv_form(context, %Erl2ex.ErlSpec{line: line, name: name, clauses: clauses, comments: comments}) do
+    {main_comments, inline_comments} = split_comments(comments, line)
+    specs = clauses |> Enum.map(&(conv_spec_clause(context, name, &1)))
+
+    %Erl2ex.ExCallback{
+      name: name,
+      specs: specs,
+      comments: main_comments |> convert_comments,
+      inline_comments: inline_comments |> convert_comments
+    }
+  end
+
 
   defp conv_attr(:on_load, {name, 0}), do: {:on_load, name}
+  defp conv_attr(:behavior, behaviour), do: {:behaviour, behaviour}
   defp conv_attr(attr, val), do: {attr, val}
 
 
@@ -354,7 +367,7 @@ defmodule Erl2ex.Convert do
   defp conv_expr(context, {:type, _, type, param1, param2}), do:
     conv_type(context, type, param1, param2)
 
-  defp conv_expr(context, {:ann_type, _, [var, type]}), do:
+  defp conv_expr(context, {:ann_type, _, [_var, type]}), do:
     conv_expr(context, type)
 
 

@@ -84,4 +84,48 @@ defmodule StructureTest do
     assert Erl2ex.convert_str(input) == expected
   end
 
+
+  test "behaviour attribute (british spelling)" do
+    input = """
+      -behaviour(gen_server).
+      """
+
+    expected = """
+      @behaviour :gen_server
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "behavior attribute (american spelling)" do
+    input = """
+      -behavior(gen_server).
+      """
+
+    expected = """
+      @behaviour :gen_server
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "callback attributes" do
+    input = """
+      -callback foo(A :: atom(), integer()) -> boolean()
+        ; (A :: integer(), B :: atom()) -> 'hello' | boolean().
+      -callback bar(A, B) -> A | B when A :: tuple(), B :: atom().
+      """
+
+    expected = """
+      @callback foo(atom(), integer()) :: boolean()
+      @callback foo(integer(), atom()) :: :hello | boolean()
+
+      @callback bar(a, b) :: a | b when a: tuple(), b: atom()
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
 end

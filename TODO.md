@@ -5,8 +5,6 @@ This is a (certainly partial) list of known issues and missing capabilities.
 ## Language
 
 *   Support try, catch and throw (P1)
-*   Support spec attribute (P1)
-*   Support behaviour and callback attributes (P1)
 *   Expand list of known Kernel functions (P2)
 
 ## Preprocessor
