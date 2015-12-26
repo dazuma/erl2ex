@@ -200,7 +200,7 @@ defmodule Erl2ex.Convert.Context do
   defp assign_strange_func_names(_, context), do: context
 
 
-  def collect_type_exports({name, arity}, context) do
+  defp collect_type_exports({name, arity}, context) do
     type_info = Dict.get(context.types, name, %TypeInfo{})
     type_info = %TypeInfo{type_info |
       arities: Dict.put(type_info.arities, arity, true)
@@ -211,7 +211,7 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def collect_exports({name, arity}, context) do
+  defp collect_exports({name, arity}, context) do
     func_info = Dict.fetch!(context.funcs, name)
     func_info = %FuncInfo{func_info |
       arities: Dict.put(func_info.arities, arity, true)

@@ -327,11 +327,17 @@ defmodule Erl2ex.Convert do
   defp conv_expr(context, {:b_generate, _, {:bin, _, elems}, arg}), do:
     bin_generator(context, elems, arg)
 
-  defp conv_expr(context, {:lc, _, expression, qualifiers}), do:
-    {:for, [], conv_list(context, qualifiers) ++ [[into: [], do: conv_expr(context, expression)]]}
+  defp conv_expr(context, {:lc, _, expr, qualifiers}), do:
+    {:for, [], conv_list(context, qualifiers) ++ [[into: [], do: conv_expr(context, expr)]]}
 
-  defp conv_expr(context, {:bc, _, expression, qualifiers}), do:
-    {:for, [], conv_list(context, qualifiers) ++ [[into: "", do: conv_expr(context, expression)]]}
+  defp conv_expr(context, {:bc, _, expr, qualifiers}), do:
+    {:for, [], conv_list(context, qualifiers) ++ [[into: "", do: conv_expr(context, expr)]]}
+
+  defp conv_expr(context, {:try, _, expr, of_clauses, catches, after_expr}), do:
+    conv_try(context, expr, of_clauses, catches, after_expr)
+
+  defp conv_expr(context, {:catch, _, expr}), do:
+    conv_catch(context, expr)
 
   defp conv_expr(context, {:map_field_assoc, _, lhs, rhs}), do:
     {conv_expr(context, lhs), conv_expr(context, rhs)}
@@ -396,6 +402,45 @@ defmodule Erl2ex.Convert do
 
   defp conv_expr(context, {:ann_type, _, [_var, type]}), do:
     conv_expr(context, type)
+
+
+  defp conv_try(context, expr, of_clauses, catches, after_expr) do
+    try_elems = [do: conv_block(context, expr)]
+    catch_clauses = catches |> Enum.map(&(catch_clause(context, &1)))
+    if not Enum.empty?(catch_clauses) do
+      try_elems = try_elems ++ [catch: catch_clauses]
+    end
+    if not Enum.empty?(after_expr) do
+      try_elems = try_elems ++ [after: conv_block(context, after_expr)]
+    end
+    if not Enum.empty?(of_clauses) do
+      try_elems = try_elems ++ [else: conv_list(context, of_clauses)]
+    end
+    {:try, [], [try_elems]}
+  end
+
+
+  defp conv_catch(context, expr) do
+    catch_clauses = [
+      {:->, [], [[:throw, {:term, [], Elixir}], {:term, [], Elixir}]},
+      {:->, [], [[:exit, {:reason, [], Elixir}], {:EXIT, {:reason, [], Elixir}}]},
+      {:->, [], [[:error, {:reason, [], Elixir}], {:EXIT, {{:reason, [], Elixir}, {{:., [], [:erlang, :get_stacktrace]}, [], []}}}]}
+    ]
+    {:try, [], [[do: conv_expr(context, expr), catch: catch_clauses]]}
+  end
+
+
+  defp catch_clause(context, {:clause, _, params, [], arg}) do
+    {:"->", [], [catch_params(context, params), conv_block(context, arg)]}
+  end
+
+  defp catch_clause(context, {:clause, _, params, guards, arg}) do
+    {:"->", [], [[{:when, [], catch_params(context, params) ++ [guard_seq(context, guards, nil)]}], conv_block(context, arg)]}
+  end
+
+
+  defp catch_params(context, [{:tuple, _, [{:atom, _, kind}, pattern, {:var, _, :_}]}]), do:
+    [kind, conv_expr(context, pattern)]
 
 
   defp conv_type(_context, :any), do:
@@ -729,6 +774,9 @@ defmodule Erl2ex.Convert do
   defp header_check_clause(%Erl2ex.ExClause{exprs: exprs}, header), do:
     exprs |> Enum.reduce(header, &header_check_expr/2)
 
+  defp header_check_expr(expr, header) when is_tuple(expr) and tuple_size(expr) == 2, do:
+    header_check_expr(elem(expr, 1), header)
+
   defp header_check_expr(expr, header) when is_tuple(expr) and tuple_size(expr) >= 3 do
     if elem(expr, 1) == @import_bitwise_metadata do
       header = %Erl2ex.ExHeader{header | use_bitwise: true}
@@ -737,6 +785,10 @@ defmodule Erl2ex.Convert do
       |> Tuple.to_list
       |> Enum.reduce(header, &header_check_expr/2)
   end
+
+  defp header_check_expr(expr, header) when is_list(expr), do:
+    expr |> Enum.reduce(header, &header_check_expr/2)
+
   defp header_check_expr(_expr, header), do: header
 
 end

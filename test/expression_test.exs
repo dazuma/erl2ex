@@ -389,6 +389,7 @@ defmodule ExpressionTest do
   end
 
 
+  @tag :skip  # https://github.com/elixir-lang/elixir/issues/4116
   test "Binary comprehension with binary generator" do
     input = """
       foo() -> << <<B, A>> || <<A, B>> <= <<1, 2, 3, 4>> >>.
@@ -396,7 +397,7 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo() do
-        for(<<a, b <- <<1, 2, 3, 4>>>>, into: "", do: <<b, a>>)
+        for(<<a, b <- <<1, 2, 3, 4>> >>, into: "", do: <<b, a>>)
       end
       """
 
@@ -554,5 +555,76 @@ defmodule ExpressionTest do
 
     assert Erl2ex.convert_str(input) == expected
   end
+
+
+  test "Try with all features" do
+    input = """
+      foo() ->
+        try
+          X, Y
+        of
+          A -> A + 2
+        catch
+          throw:B when is_integer(B) -> B;
+          C -> C;
+          exit:D when D == 0 -> D;
+          error:badarith -> E
+        after
+          F, G
+        end.
+      """
+
+    expected = """
+      defp foo() do
+        try() do
+          x
+          y
+        catch
+          (:throw, b) when is_integer(b) ->
+            b
+          :throw, c ->
+            c
+          (:exit, d) when d == 0 ->
+            d
+          :error, :badarith ->
+            e
+        after
+          f
+          g
+        else
+          a ->
+            a + 2
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
+  test "Catch expression" do
+    input = """
+      foo() ->
+        catch A.
+      """
+
+    expected = """
+      defp foo() do
+        try() do
+          a
+        catch
+          :throw, term ->
+            term
+          :exit, reason ->
+            {:EXIT, reason}
+          :error, reason ->
+            {:EXIT, {reason, :erlang.get_stacktrace()}}
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
 
 end

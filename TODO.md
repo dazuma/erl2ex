@@ -4,7 +4,7 @@ This is a (certainly partial) list of known issues and missing capabilities.
 
 ## Language
 
-*   Support try, catch and throw (P1)
+*   Spec with module-qualified function name (P2)
 
 ## Preprocessor
 
