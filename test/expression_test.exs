@@ -397,7 +397,7 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo() do
-        for(<<a, b <- <<1, 2, 3, 4>> >>, into: "", do: <<b, a>>)
+        for(<<(a, b <- <<1, 2, 3, 4>>)>>, into: "", do: <<b, a>>)
       end
       """
 

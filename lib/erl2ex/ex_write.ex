@@ -137,12 +137,15 @@ defmodule Erl2ex.ExWrite do
       end)
   end
 
-  defp write_form(context, %Erl2ex.ExMacro{signature: signature, expr: expr, comments: comments}, io) do
+  defp write_form(context, %Erl2ex.ExMacro{signature: signature, stringifications: stringifications, expr: expr, comments: comments}, io) do
     context
       |> write_comment_list(comments, :func_header, io)
       |> skip_lines(:func_clause_first, io)
       |> write_string("defmacrop #{Macro.to_string(signature)} do", io)
       |> increment_indent
+      |> foreach(stringifications, fn(ctx, {var, str}) ->
+        write_string(ctx, "#{str} = Macro.to_string(quote do: unquote(#{var}))", io)
+      end)
       |> write_string("quote do", io)
       |> increment_indent
       |> write_string(Macro.to_string(expr), io)

@@ -150,10 +150,11 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp conv_form(context, %Erl2ex.ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}) do
+  defp conv_form(context, %Erl2ex.ErlDefine{line: line, name: name, args: args, stringifications: stringification_map, replacement: replacement, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
+    stringification_map = conv_stringification_map(stringification_map)
 
-    replacement_context = Context.set_quoted_variables(context, args)
+    replacement_context = Context.set_quoted_variables(context, args ++ HashDict.values(stringification_map))
     ex_args = args |> Enum.map(fn arg -> {lower_atom(arg), [], Elixir} end)
     mapped_name = Context.macro_function_name(context, name)
     tracking_name = Context.tracking_attr_name(context, name)
@@ -161,6 +162,7 @@ defmodule Erl2ex.Convert do
     %Erl2ex.ExMacro{
       signature: {mapped_name, [], ex_args},
       tracking_name: tracking_name,
+      stringifications: stringification_map,
       expr: conv_expr(replacement_context, replacement),
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
@@ -232,6 +234,20 @@ defmodule Erl2ex.Convert do
   defp conv_attr(:on_load, {name, 0}), do: {:on_load, name}
   defp conv_attr(:behavior, behaviour), do: {:behaviour, behaviour}
   defp conv_attr(attr, val), do: {attr, val}
+
+
+  defp conv_stringification_map(map) do
+    map
+      |> Enum.map(fn {var, str} ->
+        var = var
+          |> Atom.to_string
+          |> String.lstrip(??)
+          |> lower_str
+        str = lower_atom(str)
+        {var, str}
+      end)
+      |> Enum.into(HashDict.new)
+  end
 
 
   # Expression rules

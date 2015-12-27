@@ -27,6 +27,7 @@ defmodule Erl2ex.ErlDefine do
   defstruct line: nil,
             name: nil,
             args: nil,
+            stringifications: nil,
             replacement: nil,
             comments: []
 

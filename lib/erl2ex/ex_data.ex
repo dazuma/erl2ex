@@ -39,6 +39,7 @@ defmodule Erl2ex.ExMacro do
 
   defstruct signature: nil,
             tracking_name: nil,
+            stringifications: nil,
             expr: nil,
             comments: [],
             inline_comments: []
