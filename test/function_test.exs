@@ -253,6 +253,27 @@ defmodule FunctionTest do
   end
 
 
+  test "Variable and function name clash" do
+    input = """
+      foo() -> 1.
+      bar(Foo) -> foo() + Foo.
+      """
+
+    expected = """
+      defp foo() do
+        1
+      end
+
+
+      defp bar(var_foo) do
+        foo() + var_foo
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
   test "Simple specs" do
     input = """
       -spec foo(A :: atom(), integer()) -> boolean()

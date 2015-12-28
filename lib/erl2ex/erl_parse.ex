@@ -181,16 +181,10 @@ defmodule Erl2ex.ErlParse do
 
   defp add_form(module, {:define, line, macro, replacement}, comments, _context) do
     {name, args} = interpret_macro_expr(macro)
-    if args == nil do
-      stringification_map = nil
-    else
-      {stringification_map, replacement} = resolve_stringifications(replacement)
-    end
     define = %Erl2ex.ErlDefine{
       line: line,
       name: name,
       args: args,
-      stringifications: stringification_map,
       replacement: replacement,
       comments: comments
     }
@@ -212,83 +206,5 @@ defmodule Erl2ex.ErlParse do
 
   defp macro_name({:var, _, name}), do: name
   defp macro_name({:atom, _, name}), do: name
-
-
-  defp collect_variable_names({:var, _, var}, results), do:
-    HashSet.put(results, var)
-
-  defp collect_variable_names(tuple, results) when is_tuple(tuple), do:
-    collect_variable_names(Tuple.to_list(tuple), results)
-
-  defp collect_variable_names(list, results) when is_list(list), do:
-    list |> Enum.reduce(results, &collect_variable_names/2)
-
-  defp collect_variable_names(_, results), do: results
-
-
-  defp find_available_name(basename, used_names, prefix, val) do
-    suggestion = suggest_name(basename, prefix, val)
-    if Set.member?(used_names, suggestion) do
-      find_available_name(basename, used_names, prefix, val + 1)
-    else
-      suggestion
-    end
-  end
-
-  defp suggest_name(basename, prefix, 1), do:
-    String.to_atom("#{prefix}_#{basename}")
-  defp suggest_name(basename, prefix, val), do:
-    String.to_atom("#{prefix}#{val}_#{basename}")
-
-
-  defp lower_str("_"), do: "_"
-  defp lower_str(<< "_" :: utf8, rest :: binary >>), do:
-    << "_" :: utf8, lower_str(rest) :: binary >>
-  defp lower_str(<< first :: utf8, rest :: binary >>), do:
-    << String.downcase(<< first >>) :: binary, rest :: binary >>
-
-
-  defp map_stringification(stringified_arg, {stringification_map, all_vars}) do
-    mapped_name = stringified_arg
-      |> Atom.to_string
-      |> String.lstrip(??)
-      |> lower_str
-      |> find_available_name(all_vars, "str", 1)
-    updated_map = HashDict.put(stringification_map, stringified_arg, mapped_name)
-    updated_vars_set = HashSet.put(all_vars, mapped_name)
-    {updated_map, updated_vars_set}
-  end
-
-
-  defp modify_stringified_names({:var, line, var}, stringification_map), do:
-    {:var, line, HashDict.get(stringification_map, var, var)}
-
-  defp modify_stringified_names(tuple, stringification_map) when is_tuple(tuple), do:
-    tuple
-      |> Tuple.to_list
-      |> Enum.map(&(modify_stringified_names(&1, stringification_map)))
-      |> List.to_tuple
-
-  defp modify_stringified_names(list, stringification_map) when is_list(list), do:
-    list |> Enum.map(&(modify_stringified_names(&1, stringification_map)))
-
-  defp modify_stringified_names(expr, _stringification_map), do: expr
-
-
-  defp resolve_stringifications(replacement) do
-    {stringified_args, normal_vars} = replacement
-      |> collect_variable_names(HashSet.new)
-      |> Enum.partition(fn var ->
-        var
-          |> Atom.to_string
-          |> String.starts_with?("??")
-      end)
-    vars_set = normal_vars |> Enum.into(HashSet.new)
-    {stringification_map, _all_vars} = stringified_args
-      |> Enum.reduce({HashDict.new, vars_set}, &map_stringification/2)
-    updated_replacement = modify_stringified_names(replacement, stringification_map)
-    {stringification_map, updated_replacement}
-  end
-
 
 end

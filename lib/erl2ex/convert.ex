@@ -92,14 +92,17 @@ defmodule Erl2ex.Convert do
 
   defp conv_form(context, %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do
     mapped_name = Context.local_function_name(context, name)
+    spec_info = Context.specs_for_func(context, name)
     is_exported = Context.is_exported?(context, name, arity)
+
     first_line = clauses |> List.first |> elem(1)
     {main_comments, clause_comments} = split_comments(comments, first_line)
-    {ex_clauses, _} = clauses
-      |> Enum.map_reduce(clause_comments, &(clause(context, &1, &2, mapped_name)))
-    spec_info = Context.specs_for_func(context, name)
     main_comments = spec_info.comments ++ main_comments
-    specs = spec_info.clauses |> Enum.map(&(conv_spec_clause(context, mapped_name, &1)))
+
+    {ex_clauses, _} = clauses
+      |> Enum.map_reduce(clause_comments, &(conv_clause(context, &1, &2, mapped_name)))
+    specs = spec_info.clauses
+      |> Enum.map(&(conv_spec_clause(context, mapped_name, &1)))
 
     %Erl2ex.ExFunc{
       name: mapped_name,
@@ -150,12 +153,13 @@ defmodule Erl2ex.Convert do
     }
   end
 
-  defp conv_form(context, %Erl2ex.ErlDefine{line: line, name: name, args: args, stringifications: stringification_map, replacement: replacement, comments: comments}) do
+  defp conv_form(context, %Erl2ex.ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
-    stringification_map = conv_stringification_map(stringification_map)
+    {variable_map, stringification_map} = Erl2ex.Convert.VarRenamer.compute_var_maps(replacement, args)
 
-    replacement_context = Context.set_quoted_variables(context, args ++ HashDict.values(stringification_map))
-    ex_args = args |> Enum.map(fn arg -> {lower_atom(arg), [], Elixir} end)
+    replacement_context = context
+      |> Context.set_variable_maps(variable_map, args, stringification_map)
+    ex_args = args |> Enum.map(fn arg -> {Erl2ex.Utils.lower_atom(arg), [], Elixir} end)
     mapped_name = Context.macro_function_name(context, name)
     tracking_name = Context.tracking_attr_name(context, name)
 
@@ -199,6 +203,9 @@ defmodule Erl2ex.Convert do
 
   defp conv_form(context, %Erl2ex.ErlType{line: line, kind: kind, name: name, params: params, defn: defn, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
+    {variable_map, _stringification_map} = Erl2ex.Convert.VarRenamer.compute_var_maps([params, defn])
+    context = context
+      |> Context.set_variable_maps(variable_map, [], HashDict.new)
 
     ex_kind = cond do
       kind == :opaque ->
@@ -234,20 +241,6 @@ defmodule Erl2ex.Convert do
   defp conv_attr(:on_load, {name, 0}), do: {:on_load, name}
   defp conv_attr(:behavior, behaviour), do: {:behaviour, behaviour}
   defp conv_attr(attr, val), do: {attr, val}
-
-
-  defp conv_stringification_map(map) do
-    map
-      |> Enum.map(fn {var, str} ->
-        var = var
-          |> Atom.to_string
-          |> String.lstrip(??)
-          |> lower_str
-        str = lower_atom(str)
-        {var, str}
-      end)
-      |> Enum.into(HashDict.new)
-  end
 
 
   # Expression rules
@@ -286,7 +279,7 @@ defmodule Erl2ex.Convert do
     [{:|, [], [conv_expr(context, head), conv_expr(context, tail)]}]
 
   defp conv_expr(context, {:var, _, name}) when is_atom(name), do:
-    generalized_var(context, name, Atom.to_string(name))
+    conv_generalized_var(context, Atom.to_string(name))
 
   defp conv_expr(context, {:match, _, lhs, rhs}), do:
     {:=, [], [conv_expr(context, lhs), conv_expr(context, rhs)]}
@@ -592,12 +585,20 @@ defmodule Erl2ex.Convert do
   defp update_map(_context, base_map, []), do: base_map
 
 
-  defp generalized_var(context, _atom_name, << "?" :: utf8, name :: binary >>), do:
+  defp conv_generalized_var(context, name = << "??" :: binary, _ :: binary >>), do:
+    conv_normal_var(context, String.to_atom(name))
+
+  defp conv_generalized_var(context, << "?" :: utf8, name :: binary >>), do:
     conv_const(context, String.to_atom(name))
 
-  defp generalized_var(context, atom_name, str_name) do
-    var = {str_name |> lower_str |> String.to_atom, [], Elixir}
-    if Context.is_quoted_var?(context, atom_name) do
+  defp conv_generalized_var(context, name), do:
+    conv_normal_var(context, String.to_atom(name))
+
+
+  defp conv_normal_var(context, name) do
+    mapped_name = Context.map_variable_name(context, name)
+    var = {mapped_name, [], Elixir}
+    if Context.is_quoted_var?(context, mapped_name) do
       {:unquote, [], [var]}
     else
       var
@@ -665,17 +666,31 @@ defmodule Erl2ex.Convert do
     list |> Enum.map(&(conv_expr(context, &1)))
 
 
-  defp conv_spec_clause(context, name, {:type, _, :fun, [args, result]}), do:
+  defp conv_spec_clause(context, name, clause) do
+    {variable_map, _stringification_map} = Erl2ex.Convert.VarRenamer.compute_var_maps(clause)
+    context
+      |> Context.set_variable_maps(variable_map, [], HashDict.new)
+      |> conv_var_mapped_spec_clause(name, clause)
+  end
+
+  defp conv_var_mapped_spec_clause(context, name, {:type, _, :fun, [args, result]}), do:
     {:::, [], [{name, [], conv_expr(context, args)}, conv_expr(context, result)]}
 
-  defp conv_spec_clause(context, name, {:type, _, :bounded_fun, [func, constraints]}), do:
+  defp conv_var_mapped_spec_clause(context, name, {:type, _, :bounded_fun, [func, constraints]}), do:
     {:when, [], [conv_spec_clause(context, name, func), Enum.map(constraints, &(conv_spec_constraint(context, &1)))]}
 
   defp conv_spec_constraint(context, {:type, _, :constraint, [{:atom, _, :is_subtype}, [{:var, _, var}, type]]}), do:
-    {lower_atom(var), conv_expr(context, type)}
+    {Erl2ex.Utils.lower_atom(var), conv_expr(context, type)}
 
 
-  defp clause(context, {:clause, line, args, guards, exprs}, comments, name) do
+  defp conv_clause(context, clause, comments, name) do
+    {variable_map, _stringification_map} = Erl2ex.Convert.VarRenamer.compute_var_maps(clause)
+    context
+      |> Context.set_variable_maps(variable_map, [], HashDict.new)
+      |> conv_var_mapped_clause(clause, comments, name)
+  end
+
+  defp conv_var_mapped_clause(context, {:clause, line, args, guards, exprs}, comments, name) do
     lines = line_range(exprs, line..line)
     {head_comments, comments} = split_comments(comments, lines.first)
     {inline_comments, remaining_comments} = split_comments(comments, lines.last)
@@ -747,16 +762,6 @@ defmodule Erl2ex.Convert do
 
   defp add_range(nil, line), do: line..line
   defp add_range(a.._b, line), do: a..line
-
-
-  defp lower_str("_"), do: "_"
-  defp lower_str(<< "_" :: utf8, rest :: binary >>), do:
-    << "_" :: utf8, lower_str(rest) :: binary >>
-  defp lower_str(<< first :: utf8, rest :: binary >>), do:
-    << String.downcase(<< first >>) :: binary, rest :: binary >>
-
-  defp lower_atom(atom), do:
-    atom |> Atom.to_string |> lower_str |> String.to_atom
 
 
   defp split_comments(comments, line), do:

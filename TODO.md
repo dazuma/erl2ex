@@ -4,7 +4,6 @@ This is a (certainly partial) list of known issues and missing capabilities.
 
 ## Language
 
-*   Bug: Variable names can shadow unqualified function calls (P1)
 *   Spec with module-qualified function name (P2)
 
 ## Preprocessor

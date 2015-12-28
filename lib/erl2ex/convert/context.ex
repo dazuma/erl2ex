@@ -25,6 +25,7 @@ defmodule Erl2ex.Convert.Context do
             used_func_names: HashSet.new,
             used_attr_names: HashSet.new,
             specs: HashDict.new,
+            variable_map: HashDict.new,
             quoted_variables: []
 
   defmodule FuncInfo do
@@ -72,8 +73,14 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def set_quoted_variables(context, vars), do:
-    %Context{context | quoted_variables: vars}
+  def set_variable_maps(context, variable_map, args, stringification_map) do
+    quoted_vars = args
+      |> Enum.map(&(HashDict.fetch!(variable_map, &1)))
+    %Context{context |
+      quoted_variables: quoted_vars ++ HashDict.values(stringification_map),
+      variable_map: variable_map
+    }
+  end
 
 
   def is_exported?(context, name, arity) do
@@ -153,6 +160,11 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  def map_variable_name(context, name) do
+    Dict.get(context.variable_map, name, {})
+  end
+
+
   defp ensure_exists(x) when x != nil, do: x
 
 
@@ -190,7 +202,7 @@ defmodule Erl2ex.Convert.Context do
   defp assign_strange_func_names({name, info = %FuncInfo{func_name: nil}}, context) do
     mangled_name = Regex.replace(~r/\W/, Atom.to_string(name), "_")
     elixir_name = mangled_name
-      |> find_available_name(context.used_func_names, "func")
+      |> Erl2ex.Utils.find_available_name(context.used_func_names, "func")
     info = %FuncInfo{info | func_name: elixir_name}
     %Context{context |
       funcs: Dict.put(context.funcs, name, info),
@@ -231,7 +243,7 @@ defmodule Erl2ex.Convert.Context do
 
 
   defp collect_record_info(%Erl2ex.ErlRecord{name: name, fields: fields}, context) do
-    macro_name = find_available_name(name, context.used_func_names, "erlrecord")
+    macro_name = Erl2ex.Utils.find_available_name(name, context.used_func_names, "erlrecord")
     record_info = %RecordInfo{
       func_name: macro_name,
       fields: fields |> Enum.map(&extract_record_field_name/1)
@@ -247,7 +259,7 @@ defmodule Erl2ex.Convert.Context do
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: nil}, context) do
     macro = Dict.get(context.macros, name, %MacroInfo{})
     if macro.const_name == nil do
-      macro_name = find_available_name(name, context.used_attr_names, "erlmacro")
+      macro_name = Erl2ex.Utils.find_available_name(name, context.used_attr_names, "erlmacro")
       nmacro = %MacroInfo{macro |
         const_name: macro_name,
         requires_init: update_requires_init(macro.requires_init, false)
@@ -264,7 +276,7 @@ defmodule Erl2ex.Convert.Context do
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name}, context) do
     macro = Dict.get(context.macros, name, %MacroInfo{})
     if macro.func_name == nil do
-      macro_name = find_available_name(name, context.used_func_names, "erlmacro")
+      macro_name = Erl2ex.Utils.find_available_name(name, context.used_func_names, "erlmacro")
       nmacro = %MacroInfo{macro |
         func_name: macro_name,
         requires_init: update_requires_init(macro.requires_init, false)
@@ -281,7 +293,7 @@ defmodule Erl2ex.Convert.Context do
   defp collect_macro_info(%Erl2ex.ErlDirective{name: name}, context) when name != nil do
     macro = Dict.get(context.macros, name, %MacroInfo{})
     if macro.define_tracker == nil do
-      tracker_name = find_available_name(name, context.used_attr_names, "defined")
+      tracker_name = Erl2ex.Utils.find_available_name(name, context.used_attr_names, "defined")
       nmacro = %MacroInfo{macro |
         define_tracker: tracker_name,
         requires_init: update_requires_init(macro.requires_init, true)
@@ -310,25 +322,6 @@ defmodule Erl2ex.Convert.Context do
 
   defp update_requires_init(nil, nval), do: nval
   defp update_requires_init(oval, _nval), do: oval
-
-
-  defp find_available_name(basename, used_names, prefix), do:
-    find_available_name(to_string(basename), used_names, prefix, 1)
-
-  defp find_available_name(basename, used_names, prefix, val) do
-    suggestion = suggest_name(basename, prefix, val)
-    if Set.member?(used_names, suggestion) do
-      find_available_name(basename, used_names, prefix, val + 1)
-    else
-      suggestion
-    end
-  end
-
-  defp suggest_name(basename, _, 0), do: basename
-  defp suggest_name(basename, prefix, 1), do:
-    String.to_atom("#{prefix}_#{basename}")
-  defp suggest_name(basename, prefix, val), do:
-    String.to_atom("#{prefix}#{val}_#{basename}")
 
 
 end

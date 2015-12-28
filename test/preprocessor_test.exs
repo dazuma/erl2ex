@@ -89,6 +89,30 @@ defmodule PreprocessorTest do
   end
 
 
+  test "Arg stringification name collides with function name" do
+    input = """
+      -define(hello(X), ??X ++ str_x()).
+      str_x() -> "hi".
+      """
+
+    expected = """
+      defmacrop erlmacro_hello(x) do
+        str2_x = Macro.to_string(quote do: unquote(x))
+        quote do
+          unquote(str2_x) ++ str_x()
+        end
+      end
+
+
+      defp str_x() do
+        'hi'
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
   test "Macro function collides with function name" do
     input = """
       -define(Foo(X), X + 1).
