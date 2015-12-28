@@ -32,7 +32,7 @@ defmodule Erl2ex.Mixfile do
 
   defp docs do
     [
-      extras: ["README.md", "LICENSE.md", "TODO.md"]
+      extras: ["README.md", "LICENSE.md"]
     ]
   end
 
