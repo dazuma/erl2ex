@@ -3,6 +3,17 @@ defmodule Erl2ex.ExWrite do
 
   @moduledoc false
 
+  alias Erl2ex.ExAttr
+  alias Erl2ex.ExCallback
+  alias Erl2ex.ExDirective
+  alias Erl2ex.ExFunc
+  alias Erl2ex.ExHeader
+  alias Erl2ex.ExImport
+  alias Erl2ex.ExMacro
+  alias Erl2ex.ExModule
+  alias Erl2ex.ExRecord
+  alias Erl2ex.ExType
+
 
   def to_file(module, path, opts \\ []) do
     File.open!(path, [:write], fn io ->
@@ -47,12 +58,12 @@ defmodule Erl2ex.ExWrite do
   end
 
 
-  defp write_module(context, %Erl2ex.ExModule{name: nil, forms: forms}, io) do
+  defp write_module(context, %ExModule{name: nil, forms: forms}, io) do
     context
       |> foreach(forms, io, &write_form/3)
   end
 
-  defp write_module(context, %Erl2ex.ExModule{name: name, forms: forms, comments: comments}, io) do
+  defp write_module(context, %ExModule{name: name, forms: forms, comments: comments}, io) do
     context
       |> write_comment_list(comments, :module_comments, io)
       |> skip_lines(:module_begin, io)
@@ -65,7 +76,7 @@ defmodule Erl2ex.ExWrite do
   end
 
 
-  defp write_form(context, header = %Erl2ex.ExHeader{}, io) do
+  defp write_form(context, header = %ExHeader{}, io) do
     if header.use_bitwise do
       context = context
         |> skip_lines(:attr, io)
@@ -83,7 +94,7 @@ defmodule Erl2ex.ExWrite do
     context
   end
 
-  defp write_form(context, %Erl2ex.ExFunc{comments: comments, clauses: [first_clause | remaining_clauses], public: public, specs: specs}, io) do
+  defp write_form(context, %ExFunc{comments: comments, clauses: [first_clause | remaining_clauses], public: public, specs: specs}, io) do
     context
       |> write_comment_list(comments, :func_header, io)
       |> write_func_specs(specs, io)
@@ -93,42 +104,42 @@ defmodule Erl2ex.ExWrite do
       end)
   end
 
-  defp write_form(context, %Erl2ex.ExAttr{name: name, tracking_name: tracking_name, register: register, arg: arg, comments: comments}, io) do
+  defp write_form(context, %ExAttr{name: name, tracking_name: tracking_name, register: register, arg: arg, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
       |> write_raw_attr(name, tracking_name, register, arg, io)
   end
 
-  defp write_form(context, %Erl2ex.ExDirective{directive: directive, name: name, comments: comments}, io) do
+  defp write_form(context, %ExDirective{directive: directive, name: name, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
       |> write_raw_directive(directive, name, io)
   end
 
-  defp write_form(context, %Erl2ex.ExImport{module: module, funcs: funcs, comments: comments}, io) do
+  defp write_form(context, %ExImport{module: module, funcs: funcs, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
       |> write_string("import #{Macro.to_string(module)}, only: #{Macro.to_string(funcs)}", io)
   end
 
-  defp write_form(context, %Erl2ex.ExRecord{tag: tag, macro: macro, fields: fields, comments: comments}, io) do
+  defp write_form(context, %ExRecord{tag: tag, macro: macro, fields: fields, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
       |> write_string("Record.defrecordp #{Macro.to_string(macro)}, #{Macro.to_string(tag)}, #{Macro.to_string(fields)}", io)
   end
 
-  defp write_form(context, %Erl2ex.ExType{kind: kind, signature: signature, defn: defn, comments: comments}, io) do
+  defp write_form(context, %ExType{kind: kind, signature: signature, defn: defn, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
       |> write_string("@#{kind} #{Macro.to_string(signature)} :: #{Macro.to_string(defn)}", io)
   end
 
-  defp write_form(context, %Erl2ex.ExCallback{specs: specs, comments: comments}, io) do
+  defp write_form(context, %ExCallback{specs: specs, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
@@ -137,7 +148,7 @@ defmodule Erl2ex.ExWrite do
       end)
   end
 
-  defp write_form(context, %Erl2ex.ExMacro{signature: signature, stringifications: stringifications, expr: expr, comments: comments}, io) do
+  defp write_form(context, %ExMacro{signature: signature, stringifications: stringifications, expr: expr, comments: comments}, io) do
     context
       |> write_comment_list(comments, :func_header, io)
       |> skip_lines(:func_clause_first, io)

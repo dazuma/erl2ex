@@ -3,6 +3,16 @@ defmodule Erl2ex.ErlParse do
 
   @moduledoc false
 
+  alias Erl2ex.ErlAttr
+  alias Erl2ex.ErlDefine
+  alias Erl2ex.ErlDirective
+  alias Erl2ex.ErlFunc
+  alias Erl2ex.ErlImport
+  alias Erl2ex.ErlModule
+  alias Erl2ex.ErlRecord
+  alias Erl2ex.ErlSpec
+  alias Erl2ex.ErlType
+
 
   def from_file(path, opts \\ []) do
     path
@@ -99,96 +109,96 @@ defmodule Erl2ex.ErlParse do
 
   defp build_module(form_stream, context) do
     module = form_stream
-      |> Enum.reduce(%Erl2ex.ErlModule{},
+      |> Enum.reduce(%ErlModule{},
         fn ({ast, comments}, module) -> add_form(module, ast, comments, context) end)
-    %Erl2ex.ErlModule{module | forms: Enum.reverse(module.forms)}
+    %ErlModule{module | forms: Enum.reverse(module.forms)}
   end
 
 
   defp add_form(module, {:function, _line, name, arity, clauses}, comments, _context) do
-    func = %Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}
-    %Erl2ex.ErlModule{module | forms: [func | module.forms]}
+    func = %ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}
+    %ErlModule{module | forms: [func | module.forms]}
   end
 
   defp add_form(module, {:attribute, _line, :module, arg}, comments, _context) do
-    %Erl2ex.ErlModule{module |
+    %ErlModule{module |
       name: arg,
       comments: module.comments ++ comments
     }
   end
 
   defp add_form(module, {:attribute, _line, :export, arg}, comments, _context) do
-    %Erl2ex.ErlModule{module |
+    %ErlModule{module |
       exports: module.exports ++ arg,
       comments: module.comments ++ comments
     }
   end
 
   defp add_form(module, {:attribute, _line, :export_type, arg}, _comments, _context) do
-    %Erl2ex.ErlModule{module |
+    %ErlModule{module |
       type_exports: module.type_exports ++ arg
     }
   end
 
   defp add_form(module, {:attribute, line, :import, {modname, funcs}}, comments, _context) do
-    attribute = %Erl2ex.ErlImport{line: line, module: modname, funcs: funcs, comments: comments}
-    %Erl2ex.ErlModule{module |
+    attribute = %ErlImport{line: line, module: modname, funcs: funcs, comments: comments}
+    %ErlModule{module |
       imports: module.imports ++ funcs,
       forms: [attribute | module.forms]
     }
   end
 
   defp add_form(module, {:attribute, line, :type, {name, defn, params}}, comments, _context) do
-    type = %Erl2ex.ErlType{line: line, kind: :type, name: name, params: params, defn: defn, comments: comments}
-    %Erl2ex.ErlModule{module | forms: [type | module.forms]}
+    type = %ErlType{line: line, kind: :type, name: name, params: params, defn: defn, comments: comments}
+    %ErlModule{module | forms: [type | module.forms]}
   end
 
   defp add_form(module, {:attribute, line, :opaque, {name, defn, params}}, comments, _context) do
-    type = %Erl2ex.ErlType{line: line, kind: :opaque, name: name, params: params, defn: defn, comments: comments}
-    %Erl2ex.ErlModule{module | forms: [type | module.forms]}
+    type = %ErlType{line: line, kind: :opaque, name: name, params: params, defn: defn, comments: comments}
+    %ErlModule{module | forms: [type | module.forms]}
   end
 
   defp add_form(module, {:attribute, line, :spec, {{name, _}, clauses}}, comments, _context) do
-    spec = %Erl2ex.ErlSpec{line: line, name: name, clauses: clauses, comments: comments}
-    %Erl2ex.ErlModule{module | specs: [spec | module.specs]}
+    spec = %ErlSpec{line: line, name: name, clauses: clauses, comments: comments}
+    %ErlModule{module | specs: [spec | module.specs]}
   end
 
   defp add_form(module, {:attribute, line, :callback, {{name, _}, clauses}}, comments, _context) do
-    callback = %Erl2ex.ErlSpec{line: line, name: name, clauses: clauses, comments: comments}
-    %Erl2ex.ErlModule{module | forms: [callback | module.forms]}
+    callback = %ErlSpec{line: line, name: name, clauses: clauses, comments: comments}
+    %ErlModule{module | forms: [callback | module.forms]}
   end
 
   defp add_form(module, {:attribute, line, :record, {recname, fields}}, comments, _context) do
-    record = %Erl2ex.ErlRecord{line: line, name: recname, fields: fields, comments: comments}
-    %Erl2ex.ErlModule{module | forms: [record | module.forms]}
+    record = %ErlRecord{line: line, name: recname, fields: fields, comments: comments}
+    %ErlModule{module | forms: [record | module.forms]}
   end
 
   defp add_form(module, {:attribute, line, directive}, comments, _context) do
-    form = %Erl2ex.ErlDirective{line: line, directive: directive, comments: comments}
-    %Erl2ex.ErlModule{module | forms: [form | module.forms]}
+    form = %ErlDirective{line: line, directive: directive, comments: comments}
+    %ErlModule{module | forms: [form | module.forms]}
   end
 
   defp add_form(module, {:attribute, line, directive, name}, comments, _context)
       when directive == :ifdef or directive == :ifndef or directive == :undef do
-    form = %Erl2ex.ErlDirective{line: line, directive: directive, name: name, comments: comments}
-    %Erl2ex.ErlModule{module | forms: [form | module.forms]}
+    form = %ErlDirective{line: line, directive: directive, name: name, comments: comments}
+    %ErlModule{module | forms: [form | module.forms]}
   end
 
   defp add_form(module, {:attribute, line, attr, arg}, comments, _context) do
-    attribute = %Erl2ex.ErlAttr{line: line, name: attr, arg: arg, comments: comments}
-    %Erl2ex.ErlModule{module | forms: [attribute | module.forms]}
+    attribute = %ErlAttr{line: line, name: attr, arg: arg, comments: comments}
+    %ErlModule{module | forms: [attribute | module.forms]}
   end
 
   defp add_form(module, {:define, line, macro, replacement}, comments, _context) do
     {name, args} = interpret_macro_expr(macro)
-    define = %Erl2ex.ErlDefine{
+    define = %ErlDefine{
       line: line,
       name: name,
       args: args,
       replacement: replacement,
       comments: comments
     }
-    %Erl2ex.ErlModule{module | forms: [define | module.forms]}
+    %ErlModule{module | forms: [define | module.forms]}
   end
 
 

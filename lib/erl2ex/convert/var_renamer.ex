@@ -3,6 +3,8 @@ defmodule Erl2ex.Convert.VarRenamer do
 
   @moduledoc false
 
+  alias Erl2ex.Convert.Utils
+
 
   def compute_var_maps(expr, extras \\ []) do
     {var_names, func_names} = expr
@@ -13,7 +15,7 @@ defmodule Erl2ex.Convert.VarRenamer do
     all_names = func_names
     {variables_map, all_names} = normal_vars
       |> Enum.reduce({HashDict.new, all_names}, &map_variables/2)
-    {stringification_map, variables_map, all_names} = stringified_args
+    {stringification_map, variables_map, _all_names} = stringified_args
       |> Enum.reduce({HashDict.new, variables_map, all_names}, &map_stringification/2)
     {variables_map, stringification_map}
   end
@@ -33,7 +35,7 @@ defmodule Erl2ex.Convert.VarRenamer do
   defp collect_variable_names(list, results) when is_list(list), do:
     list |> Enum.reduce(results, &collect_variable_names/2)
 
-  defp collect_variable_names(hi, results), do: results
+  defp collect_variable_names(_, results), do: results
 
 
   defp classify_var_names(var_names) do
@@ -62,7 +64,7 @@ defmodule Erl2ex.Convert.VarRenamer do
         |> String.to_atom
       mapped_arg = HashDict.fetch!(variables_map, arg_name)
       mangled_name = mapped_arg
-        |> Erl2ex.Utils.find_available_name(all_names, "str")
+        |> Utils.find_available_name(all_names, "str")
       variables_map = HashDict.put(variables_map, stringified_arg, mangled_name)
       stringification_map = HashDict.put(stringification_map, mapped_arg, mangled_name)
       all_names = HashSet.put(all_names, mangled_name)
@@ -75,8 +77,8 @@ defmodule Erl2ex.Convert.VarRenamer do
     if not HashDict.has_key?(variables_map, var_name) do
       mapped_name = var_name
         |> Atom.to_string
-        |> Erl2ex.Utils.lower_str
-        |> Erl2ex.Utils.find_available_name(all_names, "var", 0)
+        |> Utils.lower_str
+        |> Utils.find_available_name(all_names, "var", 0)
       variables_map = HashDict.put(variables_map, var_name, mapped_name)
       all_names = HashSet.put(all_names, mapped_name)
     end

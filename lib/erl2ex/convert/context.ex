@@ -4,6 +4,7 @@ defmodule Erl2ex.Convert.Context do
   @moduledoc false
 
   alias Erl2ex.Convert.Context
+  alias Erl2ex.Convert.Utils
 
 
   # These are not allowed as names of functions
@@ -202,7 +203,7 @@ defmodule Erl2ex.Convert.Context do
   defp assign_strange_func_names({name, info = %FuncInfo{func_name: nil}}, context) do
     mangled_name = Regex.replace(~r/\W/, Atom.to_string(name), "_")
     elixir_name = mangled_name
-      |> Erl2ex.Utils.find_available_name(context.used_func_names, "func")
+      |> Utils.find_available_name(context.used_func_names, "func")
     info = %FuncInfo{info | func_name: elixir_name}
     %Context{context |
       funcs: Dict.put(context.funcs, name, info),
@@ -243,7 +244,7 @@ defmodule Erl2ex.Convert.Context do
 
 
   defp collect_record_info(%Erl2ex.ErlRecord{name: name, fields: fields}, context) do
-    macro_name = Erl2ex.Utils.find_available_name(name, context.used_func_names, "erlrecord")
+    macro_name = Utils.find_available_name(name, context.used_func_names, "erlrecord")
     record_info = %RecordInfo{
       func_name: macro_name,
       fields: fields |> Enum.map(&extract_record_field_name/1)
@@ -259,7 +260,7 @@ defmodule Erl2ex.Convert.Context do
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: nil}, context) do
     macro = Dict.get(context.macros, name, %MacroInfo{})
     if macro.const_name == nil do
-      macro_name = Erl2ex.Utils.find_available_name(name, context.used_attr_names, "erlmacro")
+      macro_name = Utils.find_available_name(name, context.used_attr_names, "erlmacro")
       nmacro = %MacroInfo{macro |
         const_name: macro_name,
         requires_init: update_requires_init(macro.requires_init, false)
@@ -276,7 +277,7 @@ defmodule Erl2ex.Convert.Context do
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name}, context) do
     macro = Dict.get(context.macros, name, %MacroInfo{})
     if macro.func_name == nil do
-      macro_name = Erl2ex.Utils.find_available_name(name, context.used_func_names, "erlmacro")
+      macro_name = Utils.find_available_name(name, context.used_func_names, "erlmacro")
       nmacro = %MacroInfo{macro |
         func_name: macro_name,
         requires_init: update_requires_init(macro.requires_init, false)
@@ -293,7 +294,7 @@ defmodule Erl2ex.Convert.Context do
   defp collect_macro_info(%Erl2ex.ErlDirective{name: name}, context) when name != nil do
     macro = Dict.get(context.macros, name, %MacroInfo{})
     if macro.define_tracker == nil do
-      tracker_name = Erl2ex.Utils.find_available_name(name, context.used_attr_names, "defined")
+      tracker_name = Utils.find_available_name(name, context.used_attr_names, "defined")
       nmacro = %MacroInfo{macro |
         define_tracker: tracker_name,
         requires_init: update_requires_init(macro.requires_init, true)
