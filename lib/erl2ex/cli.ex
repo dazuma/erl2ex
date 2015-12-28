@@ -19,13 +19,15 @@ defmodule Erl2ex.Cli do
       OptionParser.parse(argv,
         strict: [
           output: :string,
-          verbose: :boolean,
-          help: :boolean
+          verbose: [:boolean, :keep],
+          help: :boolean,
+          include_dir: [:string, :keep]
         ],
         aliases: [
           v: :verbose,
           "?": :help,
-          o: :output
+          o: :output,
+          "I": :include_dir
         ]
       )
 
