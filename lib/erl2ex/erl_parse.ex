@@ -17,7 +17,7 @@ defmodule Erl2ex.ErlParse do
   def from_file(path, opts \\ []) do
     path
       |> File.read!
-      |> from_str([{:i, Path.dirname(path)} | opts])
+      |> from_str([{:cur_file_dir, Path.dirname(path)} | opts])
   end
 
 
@@ -42,14 +42,42 @@ defmodule Erl2ex.ErlParse do
 
   defmodule Context do
     @moduledoc false
-    defstruct include_path: []
+    defstruct include_path: [],
+              cur_file_dir: nil,
+              reverse_forms: false
   end
 
 
   defp build_context(opts) do
+    include_path = opts
+      |> Keyword.get_values(:include_dir)
+      |> Enum.uniq
     %Context{
-      include_path: Keyword.get_values(opts, :i)
+      include_path: include_path,
+      cur_file_dir: Keyword.get(opts, :cur_file_dir, nil),
+      reverse_forms: Keyword.get(opts, :reverse_forms, false)
     }
+  end
+
+
+  defp build_opts_for_include(context) do
+    context.include_path
+      |> Enum.map(&({:include_dir, &1}))
+      |> Keyword.put(:reverse_forms, true)
+  end
+
+
+  defp find_file(context, path) do
+    include_path = context.include_path
+    if context.cur_file_dir != nil do
+      include_path = [context.cur_file_dir | include_path]
+    end
+    include_path = [File.cwd!() | include_path]
+    include_path
+      |> Enum.find_value(fn dir ->
+        full_path = Path.expand(path, dir)
+        if File.regular?(full_path), do: full_path, else: false
+      end)
   end
 
 
@@ -111,7 +139,10 @@ defmodule Erl2ex.ErlParse do
     module = form_stream
       |> Enum.reduce(%ErlModule{},
         fn ({ast, comments}, module) -> add_form(module, ast, comments, context) end)
-    %ErlModule{module | forms: Enum.reverse(module.forms)}
+    if not context.reverse_forms do
+      module = %ErlModule{module | forms: Enum.reverse(module.forms)}
+    end
+    module
   end
 
 
@@ -124,6 +155,15 @@ defmodule Erl2ex.ErlParse do
     %ErlModule{module |
       name: arg,
       comments: module.comments ++ comments
+    }
+  end
+
+  defp add_form(module, {:attribute, _line, :include, path}, _comments, context) do
+    file_path = find_file(context, path)
+    opts = build_opts_for_include(context)
+    included_module = from_file(file_path, opts)
+    %ErlModule{module |
+      forms: included_module.forms ++ module.forms
     }
   end
 

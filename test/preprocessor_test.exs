@@ -263,4 +263,22 @@ defmodule PreprocessorTest do
   end
 
 
+  test "File includes injecting forms inline" do
+    input = """
+      -include("test/files/include1.hrl").
+      -include("include3.hrl").
+      """
+
+    expected = """
+      @erlmacro_INCLUDE1_CONST 1
+
+      @erlmacro_INCLUDE2_CONST 2
+
+      @erlmacro_INCLUDE3_CONST 3
+      """
+
+    assert Erl2ex.convert_str(input, include_dir: "test/files") == expected
+  end
+
+
 end

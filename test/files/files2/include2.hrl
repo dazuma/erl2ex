@@ -1,0 +1,1 @@
+-define(INCLUDE2_CONST, 2).

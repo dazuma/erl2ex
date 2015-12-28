@@ -1,0 +1,1 @@
+-define(INCLUDE3_CONST, 3).

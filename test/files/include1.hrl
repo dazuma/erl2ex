@@ -1,0 +1,2 @@
+-define(INCLUDE1_CONST, 1).
+-include("files2/include2.hrl").

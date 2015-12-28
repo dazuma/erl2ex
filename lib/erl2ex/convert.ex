@@ -30,6 +30,9 @@ defmodule Erl2ex.Convert do
   alias Erl2ex.Convert.VarRenamer
 
 
+  @auto_registered_attrs [:vsn, :compile, :on_load, :behaviour, :behavior]
+
+
   def module(erl_module, opts \\ []) do
     context = Context.build(erl_module, opts)
     forms = erl_module.forms |> Enum.map(&(conv_form(context, &1)))
@@ -40,9 +43,6 @@ defmodule Erl2ex.Convert do
       forms: forms
     }
   end
-
-
-  @auto_registered_attrs [:vsn, :compile, :on_load, :behaviour, :behavior]
 
 
   defp conv_form(context, %ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}) do

@@ -8,7 +8,6 @@ This is a (certainly partial) list of known issues and missing capabilities.
 
 ## Preprocessor
 
-*   Support file inclusion (P1)
 *   Check that macro defines work with guard fragments. See examples in elixir/src/elixir_tokenizer.erl (P1)
 *   Allow defining macros from env variables, e.g. debug (P2)
 *   Make sure defined_* attributes are properly initialized (P2)

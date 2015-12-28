@@ -12,9 +12,6 @@ defmodule Erl2ex.Convert.Headers do
   alias Erl2ex.Convert.Context
 
 
-  @import_bitwise_metadata [context: Elixir, import: Bitwise]
-
-
   def build_header(context, forms) do
     header = forms
       |> Enum.reduce(%ExHeader{}, &header_check_form/2)
@@ -42,7 +39,8 @@ defmodule Erl2ex.Convert.Headers do
     header_check_expr(elem(expr, 1), header)
 
   defp header_check_expr(expr, header) when is_tuple(expr) and tuple_size(expr) >= 3 do
-    if elem(expr, 1) == @import_bitwise_metadata do
+    imported = expr |> elem(1) |> Keyword.get(:import, nil)
+    if imported == Bitwise do
       header = %ExHeader{header | use_bitwise: true}
     end
     expr
