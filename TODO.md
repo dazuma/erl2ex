@@ -4,7 +4,7 @@ This is a (certainly partial) list of known issues and missing capabilities.
 
 ## Language
 
-*   Spec with module-qualified function name (P2)
+(no known issues)
 
 ## Preprocessor
 
@@ -12,6 +12,7 @@ This is a (certainly partial) list of known issues and missing capabilities.
 *   Allow defining macros from env variables, e.g. debug (P2)
 *   Make sure defined_* attributes are properly initialized (P2)
 *   Invoking const macros as functions (P2)
+*   Support translating includes into separate modules (P2)
 
 ## Suspected limitations in Elixir's language support
 

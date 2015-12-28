@@ -330,4 +330,28 @@ defmodule FunctionTest do
   end
 
 
+  test "Specs with module qualifiers" do
+    input = """
+      -module(mod).
+      -spec mod:foo(atom()) -> boolean().
+      -spec mod2:foo(integer()) -> boolean().
+      foo(A) -> true.
+      """
+
+    expected = """
+      defmodule :mod do
+
+        @spec foo(atom()) :: boolean()
+
+        defp foo(a) do
+          true
+        end
+
+      end
+      """
+
+    assert Erl2ex.convert_str(input) == expected
+  end
+
+
 end

@@ -203,6 +203,15 @@ defmodule Erl2ex.ErlParse do
     %ErlModule{module | specs: [spec | module.specs]}
   end
 
+  defp add_form(module, {:attribute, line, :spec, {{spec_mod, name, _}, clauses}}, comments, _context) do
+    if spec_mod == module.name do
+      spec = %ErlSpec{line: line, name: name, clauses: clauses, comments: comments}
+      %ErlModule{module | specs: [spec | module.specs]}
+    else
+      module
+    end
+  end
+
   defp add_form(module, {:attribute, line, :callback, {{name, _}, clauses}}, comments, _context) do
     callback = %ErlSpec{line: line, name: name, clauses: clauses, comments: comments}
     %ErlModule{module | forms: [callback | module.forms]}
