@@ -4,7 +4,7 @@ defmodule Erl2ex.Mixfile do
   def project do
     [
       app: :erl2ex,
-      version: "0.0.1",
+      version: "0.0.2",
       elixir: "~> 1.1",
       name: "Erl2ex",
       source_url: "https://github.com/dazuma/erl2ex",
@@ -32,7 +32,7 @@ defmodule Erl2ex.Mixfile do
 
   defp docs do
     [
-      extras: ["README.md", "LICENSE.md"]
+      extras: ["README.md", "LICENSE.md", "CHANGELOG.md"]
     ]
   end
 
@@ -48,6 +48,7 @@ defmodule Erl2ex.Mixfile do
 
   defp package do
     [
+      files: ["lib", "mix.exs", "README.md", "LICENSE.md", "CHANGELOG.md"],
       maintainers: ["Daniel Azuma"],
       licenses: ["BSD"],
       links: %{"GitHub" => "https://github.com/dazuma/erl2ex"}

@@ -12,6 +12,12 @@ The vision and end goal is automated conversion of major Erlang code bases (such
 
 Erl2ex may be run as a mix task or as a standalone escript.
 
+### Requirements
+
+Erl2ex recognizes Erlang source that is compatible with Erlang 18.x. The generated Elixir source currently requires Elixir 1.1, but in the near future it will require Elixir 1.2.
+
+The Erl2ex tool itself currently requires Elixir 1.1 or later, but in the near future it will require Elixir 1.2.
+
 ### Installing the mix task
 
 To run the mix task, first add Erl2ex as a dependency to your existing Elixir project:

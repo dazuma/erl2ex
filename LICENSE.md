@@ -1,3 +1,5 @@
+# License
+
 Copyright 2015 Daniel Azuma
 
 All rights reserved.
