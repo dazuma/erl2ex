@@ -6,7 +6,7 @@ An Erlang to Elixir transpiler. Converts Erlang source code to equivalent Elixir
 
 This software is currently highly experimental. Some capabilities are not yet complete, and so far it has been tested only on small code fragments. See also the Caveats section for a list of known issues and incomplete features.
 
-The vision and end goal is automated conversion of major Erlang code bases (such as potentially Elixir itself) to correct and functional (if not necessarily fully idiomatic) Elixir. It could be used as the first step in doing a port.
+The vision and end goal is automated conversion of major Erlang code bases (such as potentially Elixir itself) to correct and functional (though not necessarily fully idiomatic) Elixir. It could be used as the first step in doing a port.
 
 ## Installing
 

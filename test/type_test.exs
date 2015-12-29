@@ -18,7 +18,7 @@ defmodule TypeTest do
       @typep private_type() :: integer()
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -46,7 +46,7 @@ defmodule TypeTest do
       @typep type6() :: float()
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -65,7 +65,7 @@ defmodule TypeTest do
       @typep type3() :: :"123"
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -87,7 +87,7 @@ defmodule TypeTest do
       @typep type4() :: -1 .. 10
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -103,7 +103,7 @@ defmodule TypeTest do
       @typep type2() :: 42
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -131,7 +131,7 @@ defmodule TypeTest do
       @typep type6() :: []
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -153,7 +153,7 @@ defmodule TypeTest do
       @typep type4() :: {integer(), atom(), :hello}
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -181,7 +181,7 @@ defmodule TypeTest do
       @typep type6() :: <<_ :: 10, _ :: _ * 8>>
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -203,7 +203,7 @@ defmodule TypeTest do
       @typep type4() :: (atom(), atom() -> integer())
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -222,7 +222,7 @@ defmodule TypeTest do
       @typep type3() :: %{atom() => integer()}
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -238,7 +238,7 @@ defmodule TypeTest do
       @typep type2() :: true | false | nil
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -251,7 +251,7 @@ defmodule TypeTest do
       @typep type1() :: record(:myrecord, field1: any(), field2: atom() | integer())
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 

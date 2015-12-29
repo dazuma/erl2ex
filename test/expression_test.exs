@@ -18,7 +18,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -36,7 +36,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -51,7 +51,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -66,7 +66,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -81,7 +81,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -104,7 +104,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -134,7 +134,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -166,7 +166,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -195,7 +195,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -222,7 +222,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -249,7 +249,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -276,7 +276,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -303,7 +303,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -318,7 +318,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -333,7 +333,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -355,7 +355,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -370,7 +370,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -385,7 +385,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -401,7 +401,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -417,7 +417,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -432,7 +432,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -447,7 +447,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -462,7 +462,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -477,7 +477,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -492,7 +492,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -507,7 +507,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -522,7 +522,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -538,7 +538,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -553,7 +553,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -598,7 +598,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -623,7 +623,7 @@ defmodule ExpressionTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 

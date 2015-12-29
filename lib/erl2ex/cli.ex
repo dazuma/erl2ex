@@ -34,11 +34,7 @@ defmodule Erl2ex.Cli do
     verbose_count = options
       |> Keyword.get_values(:verbose)
       |> Enum.count
-    case verbose_count do
-      0 -> Logger.configure(level: :warn)
-      1 -> Logger.configure(level: :info)
-      _ -> Logger.configure(level: :debug)
-    end
+    options = Keyword.put(options, :verbosity, verbose_count)
 
     cond do
       not Enum.empty?(errors) ->
@@ -71,17 +67,18 @@ defmodule Erl2ex.Cli do
       |> IO.read
       |> Erl2ex.convert_str(options)
       |> IO.write
+    0
   end
 
   defp run_conversion([path], options) do
     output = Keyword.get(options, :output)
     cond do
       File.dir?(path) ->
-        Erl2ex.convert_dir(path, output, options)
-        0
+        result = Erl2ex.convert_dir(path, output, options)
+        handle_result(result)
       File.regular?(path) ->
-        Erl2ex.convert_file(path, output, options)
-        0
+        result = Erl2ex.convert_file(path, output, options)
+        handle_result(result)
       true ->
         IO.puts(:stderr, "Could not find input: #{path}")
         1
@@ -91,6 +88,13 @@ defmodule Erl2ex.Cli do
   defp run_conversion(paths, _) do
     IO.puts(:stderr, "Got too many input paths: #{inspect(paths)}\n")
     display_help
+    1
+  end
+
+
+  defp handle_result({:ok, _}), do: 0
+  defp handle_result({:error, {file, line, description}}) do
+    IO.puts(:stderr, "Error converting #{file}, line #{line}: #{description}")
     1
   end
 
@@ -129,6 +133,7 @@ defmodule Erl2ex.Cli do
       which must also be a directory. If no output path is provided, the
       results are written in the same directories as the input files.
       """
+    0
   end
 
 end

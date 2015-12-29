@@ -17,7 +17,7 @@ defmodule Erl2ex.ErlParse do
   def from_file(path, opts \\ []) do
     path
       |> File.read!
-      |> from_str([{:cur_file_dir, Path.dirname(path)} | opts])
+      |> from_str([{:cur_file_path, path} | opts])
   end
 
 
@@ -30,20 +30,21 @@ defmodule Erl2ex.ErlParse do
 
 
   def from_str(str, opts \\ []) do
+    context = build_context(opts)
     str
       |> to_char_list
       |> generate_token_group_stream
       |> Stream.map(&separate_comments/1)
       |> Stream.map(&preprocess_tokens/1)
-      |> Stream.map(&parse_form/1)
-      |> build_module(build_context(opts))
+      |> Stream.map(&(parse_form(context, &1)))
+      |> build_module(context)
   end
 
 
   defmodule Context do
     @moduledoc false
     defstruct include_path: [],
-              cur_file_dir: nil,
+              cur_file_path: nil,
               reverse_forms: false
   end
 
@@ -54,7 +55,7 @@ defmodule Erl2ex.ErlParse do
       |> Enum.uniq
     %Context{
       include_path: include_path,
-      cur_file_dir: Keyword.get(opts, :cur_file_dir, nil),
+      cur_file_path: Keyword.get(opts, :cur_file_path, nil),
       reverse_forms: Keyword.get(opts, :reverse_forms, false)
     }
   end
@@ -69,8 +70,8 @@ defmodule Erl2ex.ErlParse do
 
   defp find_file(context, path) do
     include_path = context.include_path
-    if context.cur_file_dir != nil do
-      include_path = [context.cur_file_dir | include_path]
+    if context.cur_file_path != nil do
+      include_path = [Path.dirname(context.cur_file_path) | include_path]
     end
     include_path = [File.cwd!() | include_path]
     include_path
@@ -79,6 +80,13 @@ defmodule Erl2ex.ErlParse do
         if File.regular?(full_path), do: full_path, else: false
       end)
   end
+
+
+  defp cur_file_path_for_display(%Context{cur_file_path: nil}), do:
+    "(Unknown source file)"
+
+  defp cur_file_path_for_display(%Context{cur_file_path: path}), do:
+    path
 
 
   defp generate_token_group_stream(str) do
@@ -118,21 +126,37 @@ defmodule Erl2ex.ErlParse do
     preprocess_tokens(tail, [tok | result])
 
 
-  defp parse_form({[{:-, line} | defn_tokens = [{:atom, _, :define} | _]], comment_tokens}) do
-    {:ok, [{:call, _, {:atom, _, :define}, [macro, replacement]}]} = :erl_parse.parse_exprs(defn_tokens)
+  defp parse_form(context, {[{:-, line} | defn_tokens = [{:atom, _, :define} | _]], comment_tokens}) do
+    [{:call, _, {:atom, _, :define}, [macro, replacement]}] =
+      defn_tokens |> :erl_parse.parse_exprs |> handle_parse_result(context)
     ast = {:define, line, macro, replacement}
     {ast, comment_tokens}
   end
 
-  defp parse_form({[{:-, line}, {:atom, _, directive}, {:dot, _}], comment_tokens}) do
+  defp parse_form(_context, {[{:-, line}, {:atom, _, directive}, {:dot, _}], comment_tokens}) do
     ast = {:attribute, line, directive}
     {ast, comment_tokens}
   end
 
-  defp parse_form({form_tokens, comment_tokens}) do
-    {:ok, ast} = :erl_parse.parse_form(form_tokens)
+  defp parse_form(context, {form_tokens, comment_tokens}) do
+    ast = form_tokens |> :erl_parse.parse_form |> handle_parse_result(context)
     {ast, comment_tokens}
   end
+
+
+  defp handle_parse_result({:error, {line, :erl_parse, messages}}, context) when is_list(messages), do:
+    raise SyntaxError,
+      file: cur_file_path_for_display(context),
+      line: line,
+      description: Enum.join(messages)
+
+  defp handle_parse_result({:ok, ast}, _context), do: ast
+
+  defp handle_parse_result(info, context), do:
+    raise SyntaxError,
+      file: cur_file_path_for_display(context),
+      line: :unknown,
+      description: "Unknown error: #{inspect(info)}"
 
 
   defp build_module(form_stream, context) do
@@ -248,6 +272,20 @@ defmodule Erl2ex.ErlParse do
       comments: comments
     }
     %ErlModule{module | forms: [define | module.forms]}
+  end
+
+  defp add_form(_module, expr, _comments, context) when is_tuple(expr) and tuple_size(expr) >= 3 do
+    raise SyntaxError,
+      file: cur_file_path_for_display(context),
+      line: elem(expr, 1),
+      description: "Unrecognized Erlang form ast: #{inspect(expr)}"
+  end
+
+  defp add_form(_module, expr, _comments, context) do
+    raise SyntaxError,
+      file: cur_file_path_for_display(context),
+      line: :unknown,
+      description: "Unrecognized Erlang form ast: #{inspect(expr)}"
   end
 
 

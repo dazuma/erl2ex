@@ -26,7 +26,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -60,7 +60,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -85,7 +85,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -109,7 +109,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -141,7 +141,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -187,7 +187,7 @@ defmodule PreprocessorTest do
       @defined_debug false
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -211,7 +211,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -235,7 +235,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -259,7 +259,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str(input) == expected
+    assert Erl2ex.convert_str!(input) == expected
   end
 
 
@@ -277,7 +277,7 @@ defmodule PreprocessorTest do
       @erlmacro_INCLUDE3_CONST 3
       """
 
-    assert Erl2ex.convert_str(input, include_dir: "test/files") == expected
+    assert Erl2ex.convert_str!(input, include_dir: "test/files") == expected
   end
 
 
