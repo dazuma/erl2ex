@@ -209,10 +209,16 @@ defmodule Erl2ex.Convert do
     {:::, [], [{name, [], Expressions.conv_expr(context, args)}, Expressions.conv_expr(context, result)]}
 
   defp conv_var_mapped_spec_clause(context, name, {:type, _, :bounded_fun, [func, constraints]}), do:
-    {:when, [], [conv_spec_clause(context, name, func), Enum.map(constraints, &(conv_spec_constraint(context, &1)))]}
+    {:when, [], [conv_spec_clause(context, name, func), Enum.map(constraints, &(conv_spec_constraint(context, name, &1)))]}
 
-  defp conv_spec_constraint(context, {:type, _, :constraint, [{:atom, _, :is_subtype}, [{:var, _, var}, type]]}), do:
+  defp conv_var_mapped_spec_clause(context, name, expr), do:
+    Utils.handle_error(context, expr, "in spec for #{name}")
+
+  defp conv_spec_constraint(context, _name, {:type, _, :constraint, [{:atom, _, :is_subtype}, [{:var, _, var}, type]]}), do:
     {Utils.lower_atom(var), Expressions.conv_expr(context, type)}
+
+  defp conv_spec_constraint(context, name, expr), do:
+    Utils.handle_error(context, expr, "in spec constraint for #{name}")
 
 
   defp conv_clause(context, clause, comments, name) do

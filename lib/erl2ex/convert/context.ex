@@ -19,7 +19,8 @@ defmodule Erl2ex.Convert.Context do
   ] |> Enum.into(HashSet.new)
 
 
-  defstruct funcs: HashDict.new,
+  defstruct cur_file_path: nil,
+            funcs: HashDict.new,
             types: HashDict.new,
             macros: HashDict.new,
             records: HashDict.new,
@@ -69,8 +70,10 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def build(_opts) do
-    %Context{}
+  def build(opts) do
+    %Context{
+      cur_file_path: Keyword.get(opts, :cur_file_path, nil),
+    }
   end
 
 

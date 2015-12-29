@@ -243,9 +243,15 @@ defmodule Erl2ex.Convert.Expressions do
   def conv_expr(context, {:ann_type, _, [_var, type]}), do:
     conv_expr(context, type)
 
+  def conv_expr(context, expr), do:
+    Utils.handle_error(context, expr)
+
 
   def conv_list(context, list) when is_list(list), do:
     list |> Enum.map(&(conv_expr(context, &1)))
+
+  def conv_list(context, expr), do:
+    Utils.handle_error(context, expr, "when expecting a list")
 
 
   def guard_seq(_context, [], result), do:
@@ -289,9 +295,15 @@ defmodule Erl2ex.Convert.Expressions do
     {:"->", [], [[{:when, [], catch_params(context, params) ++ [guard_seq(context, guards, nil)]}], conv_block(context, arg)]}
   end
 
+  defp catch_clause(context, expr), do:
+    Utils.handle_error(context, expr, "in a catch clause")
+
 
   defp catch_params(context, [{:tuple, _, [{:atom, _, kind}, pattern, {:var, _, :_}]}]), do:
     [kind, conv_expr(context, pattern)]
+
+  defp catch_params(context, expr), do:
+    Utils.handle_error(context, expr, "in the set of catch params")
 
 
   defp conv_type(_context, :any), do:

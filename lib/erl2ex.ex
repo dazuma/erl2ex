@@ -91,7 +91,7 @@ defmodule Erl2ex do
     end
     source_path
       |> ErlParse.from_file(opts)
-      |> Convert.module(opts)
+      |> Convert.module([{:cur_file_path, source_path} | opts])
       |> ExWrite.to_file(dest_path, opts)
     if Keyword.get(opts, :verbosity, 0) > 0 do
       IO.puts(:stderr, "Converted #{source_path} -> #{dest_path}")

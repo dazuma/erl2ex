@@ -144,11 +144,17 @@ defmodule Erl2ex.ErlParse do
   end
 
 
-  defp handle_parse_result({:error, {line, :erl_parse, messages}}, context) when is_list(messages), do:
+  defp handle_parse_result({:error, {line, :erl_parse, messages = [h | _]}}, context) when is_list(h), do:
     raise SyntaxError,
       file: cur_file_path_for_display(context),
       line: line,
       description: Enum.join(messages)
+
+  defp handle_parse_result({:error, {line, :erl_parse, messages}}, context), do:
+    raise SyntaxError,
+      file: cur_file_path_for_display(context),
+      line: line,
+      description: inspect(messages)
 
   defp handle_parse_result({:ok, ast}, _context), do: ast
 
@@ -274,17 +280,11 @@ defmodule Erl2ex.ErlParse do
     %ErlModule{module | forms: [define | module.forms]}
   end
 
-  defp add_form(_module, expr, _comments, context) when is_tuple(expr) and tuple_size(expr) >= 3 do
-    raise SyntaxError,
-      file: cur_file_path_for_display(context),
-      line: elem(expr, 1),
-      description: "Unrecognized Erlang form ast: #{inspect(expr)}"
-  end
-
   defp add_form(_module, expr, _comments, context) do
+    line = if is_tuple(expr) and tuple_size(expr) >= 3, do: elem(expr, 1), else: :unknown
     raise SyntaxError,
       file: cur_file_path_for_display(context),
-      line: :unknown,
+      line: line,
       description: "Unrecognized Erlang form ast: #{inspect(expr)}"
   end
 
