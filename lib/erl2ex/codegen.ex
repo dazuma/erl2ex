@@ -1,5 +1,5 @@
 
-defmodule Erl2ex.ExWrite do
+defmodule Erl2ex.Codegen do
 
   @moduledoc false
 

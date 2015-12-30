@@ -11,9 +11,9 @@ defmodule Erl2ex do
   This module provides the main entry points into Erl2ex.
   """
 
-  alias Erl2ex.ErlParse
+  alias Erl2ex.Parse
   alias Erl2ex.Convert
-  alias Erl2ex.ExWrite
+  alias Erl2ex.Codegen
 
 
   @type options :: list
@@ -48,9 +48,9 @@ defmodule Erl2ex do
 
   def convert_str!(source, opts \\ []) do
     source
-      |> ErlParse.from_str(opts)
+      |> Parse.from_str(opts)
       |> Convert.module(opts)
-      |> ExWrite.to_str(opts)
+      |> Codegen.to_str(opts)
   end
 
 
@@ -90,9 +90,9 @@ defmodule Erl2ex do
       dest_path = "#{Path.rootname(source_path)}.ex"
     end
     source_path
-      |> ErlParse.from_file(opts)
+      |> Parse.from_file(opts)
       |> Convert.module([{:cur_file_path, source_path} | opts])
-      |> ExWrite.to_file(dest_path, opts)
+      |> Codegen.to_file(dest_path, opts)
     if Keyword.get(opts, :verbosity, 0) > 0 do
       IO.puts(:stderr, "Converted #{source_path} -> #{dest_path}")
     end

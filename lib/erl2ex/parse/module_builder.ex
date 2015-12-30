@@ -1,7 +1,8 @@
 
-defmodule Erl2ex.ErlParse do
+defmodule Erl2ex.Parse.ModuleBuilder do
 
   @moduledoc false
+
 
   alias Erl2ex.ErlAttr
   alias Erl2ex.ErlDefine
@@ -13,159 +14,11 @@ defmodule Erl2ex.ErlParse do
   alias Erl2ex.ErlSpec
   alias Erl2ex.ErlType
 
-
-  def from_file(path, opts \\ []) do
-    path
-      |> File.read!
-      |> from_str([{:cur_file_path, path} | opts])
-  end
+  alias Erl2ex.Parse
+  alias Erl2ex.Parse.Context
 
 
-  def from_io(io, opts \\ []) do
-    io
-      |> IO.read(:all)
-      |> IO.chardata_to_string
-      |> from_str(opts)
-  end
-
-
-  def from_str(str, opts \\ []) do
-    context = build_context(opts)
-    str
-      |> to_char_list
-      |> generate_token_group_stream
-      |> Stream.map(&separate_comments/1)
-      |> Stream.map(&preprocess_tokens/1)
-      |> Stream.map(&(parse_form(context, &1)))
-      |> build_module(context)
-  end
-
-
-  defmodule Context do
-    @moduledoc false
-    defstruct include_path: [],
-              cur_file_path: nil,
-              reverse_forms: false
-  end
-
-
-  defp build_context(opts) do
-    include_path = opts
-      |> Keyword.get_values(:include_dir)
-      |> Enum.uniq
-    %Context{
-      include_path: include_path,
-      cur_file_path: Keyword.get(opts, :cur_file_path, nil),
-      reverse_forms: Keyword.get(opts, :reverse_forms, false)
-    }
-  end
-
-
-  defp build_opts_for_include(context) do
-    context.include_path
-      |> Enum.map(&({:include_dir, &1}))
-      |> Keyword.put(:reverse_forms, true)
-  end
-
-
-  defp find_file(context, path) do
-    include_path = context.include_path
-    if context.cur_file_path != nil do
-      include_path = [Path.dirname(context.cur_file_path) | include_path]
-    end
-    include_path = [File.cwd!() | include_path]
-    include_path
-      |> Enum.find_value(fn dir ->
-        full_path = Path.expand(path, dir)
-        if File.regular?(full_path), do: full_path, else: false
-      end)
-  end
-
-
-  defp cur_file_path_for_display(%Context{cur_file_path: nil}), do:
-    "(Unknown source file)"
-
-  defp cur_file_path_for_display(%Context{cur_file_path: path}), do:
-    path
-
-
-  defp generate_token_group_stream(str) do
-    {str, 1}
-      |> Stream.unfold(fn {ch, pos} ->
-        case :erl_scan.tokens([], ch, pos, [:return_comments]) do
-          {:done, {:ok, tokens, npos}, nch} -> {tokens, {nch, npos}}
-          _ -> nil
-        end
-      end)
-  end
-
-
-  defp separate_comments(tokens) do
-    tokens |> Enum.partition(fn
-      {:comment, _, _} -> false
-      _ -> true
-    end)
-  end
-
-
-  defp preprocess_tokens({form_tokens, comment_tokens}) do
-    {preprocess_tokens(form_tokens, []), comment_tokens}
-  end
-
-
-  defp preprocess_tokens([], result), do: Enum.reverse(result)
-  defp preprocess_tokens([{:"?", _}, {:"?", _}, {:atom, line, name} | tail], result), do:
-    preprocess_tokens(tail, [{:var, line, :"??#{name}"} | result])
-  defp preprocess_tokens([{:"?", _}, {:"?", _}, {:var, line, name} | tail], result), do:
-    preprocess_tokens(tail, [{:var, line, :"??#{name}"} | result])
-  defp preprocess_tokens([{:"?", _}, {:atom, line, name} | tail], result), do:
-    preprocess_tokens(tail, [{:var, line, :"?#{name}"} | result])
-  defp preprocess_tokens([{:"?", _}, {:var, line, name} | tail], result), do:
-    preprocess_tokens(tail, [{:var, line, :"?#{name}"} | result])
-  defp preprocess_tokens([tok | tail], result), do:
-    preprocess_tokens(tail, [tok | result])
-
-
-  defp parse_form(context, {[{:-, line} | defn_tokens = [{:atom, _, :define} | _]], comment_tokens}) do
-    [{:call, _, {:atom, _, :define}, [macro, replacement]}] =
-      defn_tokens |> :erl_parse.parse_exprs |> handle_parse_result(context)
-    ast = {:define, line, macro, replacement}
-    {ast, comment_tokens}
-  end
-
-  defp parse_form(_context, {[{:-, line}, {:atom, _, directive}, {:dot, _}], comment_tokens}) do
-    ast = {:attribute, line, directive}
-    {ast, comment_tokens}
-  end
-
-  defp parse_form(context, {form_tokens, comment_tokens}) do
-    ast = form_tokens |> :erl_parse.parse_form |> handle_parse_result(context)
-    {ast, comment_tokens}
-  end
-
-
-  defp handle_parse_result({:error, {line, :erl_parse, messages = [h | _]}}, context) when is_list(h), do:
-    raise SyntaxError,
-      file: cur_file_path_for_display(context),
-      line: line,
-      description: Enum.join(messages)
-
-  defp handle_parse_result({:error, {line, :erl_parse, messages}}, context), do:
-    raise SyntaxError,
-      file: cur_file_path_for_display(context),
-      line: line,
-      description: inspect(messages)
-
-  defp handle_parse_result({:ok, ast}, _context), do: ast
-
-  defp handle_parse_result(info, context), do:
-    raise SyntaxError,
-      file: cur_file_path_for_display(context),
-      line: :unknown,
-      description: "Unknown error: #{inspect(info)}"
-
-
-  defp build_module(form_stream, context) do
+  def build(form_stream, context) do
     module = form_stream
       |> Enum.reduce(%ErlModule{},
         fn ({ast, comments}, module) -> add_form(module, ast, comments, context) end)
@@ -189,9 +42,9 @@ defmodule Erl2ex.ErlParse do
   end
 
   defp add_form(module, {:attribute, _line, :include, path}, _comments, context) do
-    file_path = find_file(context, path)
-    opts = build_opts_for_include(context)
-    included_module = from_file(file_path, opts)
+    file_path = Context.find_file(context, path)
+    opts = Context.build_opts_for_include(context)
+    included_module = Parse.from_file(file_path, opts)
     %ErlModule{module |
       forms: included_module.forms ++ module.forms
     }
@@ -283,7 +136,7 @@ defmodule Erl2ex.ErlParse do
   defp add_form(_module, expr, _comments, context) do
     line = if is_tuple(expr) and tuple_size(expr) >= 3, do: elem(expr, 1), else: :unknown
     raise SyntaxError,
-      file: cur_file_path_for_display(context),
+      file: Context.cur_file_path_for_display(context),
       line: line,
       description: "Unrecognized Erlang form ast: #{inspect(expr)}"
   end

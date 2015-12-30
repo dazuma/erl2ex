@@ -61,7 +61,7 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Desired features
 
-*   Generate exdoc comments, probably based on heuristics the funtion comments.
+*   Generate exdoc comments, probably based on heuristics on the funtion comments.
 *   Do something reasonable with inline comments.
 *   Provide an option to elixirize module names (e.g. instead of generating `defmodule :my_erlang_module`, generate `defmodule MyErlangModule`)
 *   Provide (possibly optional) translation of include files (.hrl) to separate modules rather than copying into the including module, so the declarations can be shared after translation to Elixir.
