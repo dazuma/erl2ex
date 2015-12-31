@@ -135,7 +135,7 @@ defmodule Erl2ex.Parse.ModuleBuilder do
 
   defp add_form(_module, expr, _comments, context) do
     line = if is_tuple(expr) and tuple_size(expr) >= 3, do: elem(expr, 1), else: :unknown
-    raise SyntaxError,
+    raise CompileError,
       file: Context.cur_file_path_for_display(context),
       line: line,
       description: "Unrecognized Erlang form ast: #{inspect(expr)}"

@@ -1,3 +1,5 @@
+# Main entry points for erl2ex.
+
 defmodule Erl2ex do
 
   @moduledoc """
@@ -15,25 +17,42 @@ defmodule Erl2ex do
   alias Erl2ex.Convert
   alias Erl2ex.Codegen
 
+  @typedoc """
+  Options that may be provided to a conversion run.
 
-  @type options :: list
+  Recognized options are:
+  *   `:include_dir` Add a directory to the include path.
+  *   `:verbosity` Set the output verbosity level. (Default is 0, which
+      outputs only error messages. 1 outputs basic status information, and
+      2 outputs debug information.)
+  """
+  @type options :: [include_dir: Path.t, verbosity: integer]
 
-  @type result :: :ok | :error
+  @typedoc """
+  Information on an error that happened converting a piece of Erlang source.
+
+  The three tuple elements are: the path to the Erlang source file, the line
+  number (or `:unknown` if it could not be determined), and a text description
+  of the problem (which usually contains some token or AST information.)
+  """
+  @type source_error :: {Path.t, integer | :unknown, String.t}
 
 
   @doc """
-  Converts the source for an Erlang module, represented as a string, and
-  returns the Elixir source as a string.
+  Converts the source for an Erlang module, represented as a string.
+
+  If the conversion is successful, returns a tuple of {:ok, result}.
+  If an error occurs, returns a tuple of {:error, error_details}.
   """
 
   @spec convert_str(String.t, options) ::
-    {:ok, String.t} | {:error, {Path.t, integer | :unknown, String.t}}
+    {:ok, String.t} | {:error, source_error}
 
   def convert_str(source, opts \\ []) do
     try do
       {:ok, convert_str!(source, opts)}
     rescue
-      e in SyntaxError ->
+      e in CompileError ->
         {:error, {e.file, e.line, e.description}}
     end
   end
@@ -42,6 +61,8 @@ defmodule Erl2ex do
   @doc """
   Converts the source for an Erlang module, represented as a string, and
   returns the Elixir source as a string.
+
+  Raises a CompileError if an error occurs.
   """
 
   @spec convert_str!(String.t, options) :: String.t
@@ -55,32 +76,41 @@ defmodule Erl2ex do
 
 
   @doc """
-  Converts an Erlang source file, and writes the Elixir source to a new file.
+  Converts a single Erlang source file, and writes the generated Elixir code
+  to a new file.
 
   You must provide the relative or absolute path to the Erlang source. You may
   optionally provide a path to the Elixir destination. If the destination is
   not specified, the result will be written in the same directory as the source.
+
+  If the conversion is successful, returns a tuple of {:ok, path} where "path"
+  is the path to the generated Elixir file.
+  If an error occurs, returns a tuple of {:error, error_details}.
   """
 
   @spec convert_file(Path.t, Path.t, options) ::
-    {:ok, Path.t} | {:error, {Path.t, integer | :unknown, String.t}}
+    {:ok, Path.t} | {:error, source_error}
 
   def convert_file(source_path, dest_path \\ nil, opts \\ []) do
     try do
       {:ok, convert_file!(source_path, dest_path, opts)}
     rescue
-      e in SyntaxError ->
+      e in CompileError ->
         {:error, {e.file, e.line, e.description}}
     end
   end
 
 
   @doc """
-  Converts an Erlang source file, and writes the Elixir source to a new file.
+  Converts a single Erlang source file, and writes the generated Elixir code
+  to a new file.
 
   You must provide the relative or absolute path to the Erlang source. You may
   optionally provide a path to the Elixir destination. If the destination is
   not specified, the result will be written in the same directory as the source.
+
+  Returns the path to the generated Elixir file.
+  Raises a CompileError if an error occurs.
   """
 
   @spec convert_file!(Path.t, Path.t, options) :: Path.t
@@ -101,26 +131,41 @@ defmodule Erl2ex do
 
 
   @doc """
-  Searches a directory for Erlang source files, and writes Elixir soure files
-  for each module.
+  Searches a directory for Erlang source files, and writes corresponding
+  Elixir files for each module.
+
+  By default, the Elixir files will be written in the same directories as the
+  Erlang source files. You may optionally provide a different base directory
+  for the destination files.
+
+  If the conversion is successful, returns a tuple of {:ok, map} where the map
+  is from the Erlang source paths to the Elixir destination paths.
+  If an error occurs, returns a tuple of {:error, error_details}.
   """
 
   @spec convert_dir(Path.t, Path.t, options) ::
-    {:ok, %{Path.t => Path.t}} | {:error, {Path.t, integer | :unknown, String.t}}
+    {:ok, %{Path.t => Path.t}} | {:error, source_error}
 
   def convert_dir(source_dir, dest_dir \\ nil, opts \\ []) do
     try do
       {:ok, convert_dir!(source_dir, dest_dir, opts)}
     rescue
-      e in SyntaxError ->
+      e in CompileError ->
         {:error, {e.file, e.line, e.description}}
     end
   end
 
 
   @doc """
-  Searches a directory for Erlang source files, and writes Elixir soure files
-  for each module.
+  Searches a directory for Erlang source files, and writes corresponding
+  Elixir files for each module.
+
+  By default, the Elixir files will be written in the same directories as the
+  Erlang source files. You may optionally provide a different base directory
+  for the destination files.
+
+  Returns a map from the Erlang source paths to the Elixir destination paths.
+  Raises a CompileError if an error occurs.
   """
 
   @spec convert_dir!(Path.t, Path.t, options) :: %{Path.t => Path.t}

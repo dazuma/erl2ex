@@ -2,6 +2,10 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
+## v0.0.3 (????-??-??)
+
+* Updated and cleaned up ExDoc documentation.
+
 ## v0.0.2 (2015-12-31)
 
 *   Better reporting of parse and conversion errors.

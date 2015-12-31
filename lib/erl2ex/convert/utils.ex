@@ -39,7 +39,7 @@ defmodule Erl2ex.Convert.Utils do
 
   def handle_error(context, expr, ast_context \\ nil) do
     ast_context = if ast_context, do: " #{ast_context}", else: ""
-    raise SyntaxError,
+    raise CompileError,
       file: Context.cur_file_path_for_display(context),
       line: find_error_line(expr),
       description: "Unrecognized Erlang expression#{ast_context}: #{inspect(expr)}"

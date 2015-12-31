@@ -4,7 +4,7 @@ defmodule Erl2ex.Mixfile do
   def project do
     [
       app: :erl2ex,
-      version: "0.0.2",
+      version: "0.0.3",
       elixir: "~> 1.1",
       name: "Erl2ex",
       source_url: "https://github.com/dazuma/erl2ex",

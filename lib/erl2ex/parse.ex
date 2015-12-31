@@ -99,13 +99,13 @@ defmodule Erl2ex.Parse do
 
 
   defp handle_parse_result({:error, {line, :erl_parse, messages = [h | _]}}, context) when is_list(h), do:
-    raise SyntaxError,
+    raise CompileError,
       file: Context.cur_file_path_for_display(context),
       line: line,
       description: Enum.join(messages)
 
   defp handle_parse_result({:error, {line, :erl_parse, messages}}, context), do:
-    raise SyntaxError,
+    raise CompileError,
       file: Context.cur_file_path_for_display(context),
       line: line,
       description: inspect(messages)
@@ -113,7 +113,7 @@ defmodule Erl2ex.Parse do
   defp handle_parse_result({:ok, ast}, _context), do: ast
 
   defp handle_parse_result(info, context), do:
-    raise SyntaxError,
+    raise CompileError,
       file: Context.cur_file_path_for_display(context),
       line: :unknown,
       description: "Unknown error: #{inspect(info)}"

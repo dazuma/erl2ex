@@ -1,3 +1,4 @@
+# CLI implementation for erl2ex
 
 defmodule Erl2ex.Cli do
 
@@ -53,12 +54,50 @@ defmodule Erl2ex.Cli do
   OS result code.
   """
 
-  @spec main([String.t]) :: none
+  @spec main([String.t]) :: no_return
 
   def main(argv) do
     argv
       |> run
       |> System.halt
+  end
+
+
+  @doc """
+  Returns the usage documentation for the command line.
+
+  The argument specifies how to invoke the binary (e.g. "erl2ex" or
+  "mix erl2ex"). The returned text is in markdown form, but may be rendered
+  as plain text as well.
+  """
+
+  @spec usage_text(String.t) :: String.t
+
+  def usage_text(invocation \\ "erl2ex") do
+    """
+    #{invocation} [options] [input path]
+
+    Command line options:
+    *   --output, -o "path"      (Set the output file or directory path)
+    *   --include-dir, -I "dir"  (Add a directory to the include path)
+    *   --verbose, -v            (Display verbose status)
+    *   --help, -?               (Display help text)
+
+    erl2ex is a Erlang to Elixir transpiler.
+
+    When no input path is provided, erl2ex reads from stdin and writes to
+    stdout. Any output path is ignored.
+
+    When the input path is a file, erl2ex reads from the file and writes to
+    the specified output path. If no output path is present, erl2ex creates
+    an output file in the same directory as the input file.
+
+    When the input path is a directory, erl2ex recursively searches the
+    directory and reads from every Erlang (*.erl) file it finds. It writes
+    the results in the same directory structure under the given output path,
+    which must also be a directory. If no output path is provided, the
+    results are written in the same directories as the input files.
+    """
   end
 
 
@@ -111,29 +150,7 @@ defmodule Erl2ex.Cli do
 
 
   defp display_help do
-    IO.write :stderr, """
-      Usage: erl2ex [options] [input path]
-
-        --output, -o "path"  Set the output file or directory path
-        --verbose, -v        Display verbose status
-        --help, -?           Display help text
-
-      erl2ex is a Erlang to Elixir transpiler.
-
-      When no input path is provided, erl2ex reads from stdin and writes to
-      stdout. Any output path is ignored.
-
-      When the input path is a file, erl2ex reads from the file and writes to
-      the specified output path. If no output path is present, erl2ex creates
-      an output file in the same directory as the input file.
-
-      When the input path is a directory, erl2ex recursively searches the
-      directory and reads from every Erlang (*.erl) file it finds. It writes
-      the results in the same directory structure under the given output path,
-      which must also be a directory. If no output path is provided, the
-      results are written in the same directories as the input files.
-      """
-    0
+    IO.write(:stderr, usage_text("Usage: erl2ex"))
   end
 
 end
