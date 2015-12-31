@@ -38,12 +38,15 @@ defmodule Erl2ex.Convert.Utils do
 
 
   def handle_error(context, expr, ast_context \\ nil) do
-    line = if is_tuple(expr) and tuple_size(expr) >= 3, do: elem(expr, 1), else: :unknown
     ast_context = if ast_context, do: " #{ast_context}", else: ""
     raise SyntaxError,
       file: Context.cur_file_path_for_display(context),
-      line: line,
+      line: find_error_line(expr),
       description: "Unrecognized Erlang expression#{ast_context}: #{inspect(expr)}"
   end
+
+  defp find_error_line(expr) when is_tuple(expr) and tuple_size(expr) >= 3, do: elem(expr, 1)
+  defp find_error_line([expr | _]), do: find_error_line(expr)
+  defp find_error_line(_), do: :unknown
 
 end
