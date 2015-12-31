@@ -112,7 +112,7 @@ defmodule Erl2ex.Parse.ModuleBuilder do
 
   defp add_form(module, {:attribute, line, directive, name}, comments, _context)
       when directive == :ifdef or directive == :ifndef or directive == :undef do
-    form = %ErlDirective{line: line, directive: directive, name: name, comments: comments}
+    form = %ErlDirective{line: line, directive: directive, name: macro_name(name), comments: comments}
     %ErlModule{module | forms: [form | module.forms]}
   end
 
@@ -156,5 +156,6 @@ defmodule Erl2ex.Parse.ModuleBuilder do
 
   defp macro_name({:var, _, name}), do: name
   defp macro_name({:atom, _, name}), do: name
+  defp macro_name(name) when is_atom(name), do: name
 
 end

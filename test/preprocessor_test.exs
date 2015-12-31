@@ -191,6 +191,52 @@ defmodule PreprocessorTest do
   end
 
 
+  test "Basic directives with capitalized names" do
+    input = """
+      -define(DEBUG, 1).
+      -ifdef(DEBUG).
+      foo() -> 1.
+      -else.
+      -ifndef(DEBUG).
+      foo() -> 2.
+      -endif.
+      -endif.
+      -undef(DEBUG).
+      """
+
+    expected = """
+      @erlmacro_DEBUG 1
+      @defined_DEBUG true
+
+      if @defined_DEBUG do
+
+
+      defp foo() do
+        1
+      end
+
+
+      else
+
+      if not @defined_DEBUG do
+
+
+      defp foo() do
+        2
+      end
+
+
+      end
+
+      end
+
+      @defined_DEBUG false
+      """
+
+    assert Erl2ex.convert_str!(input) == expected
+  end
+
+
   test "Macro name collides with attribute name" do
     input = """
       -erlmacro_vsn(1).

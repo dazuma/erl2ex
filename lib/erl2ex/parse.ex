@@ -79,6 +79,14 @@ defmodule Erl2ex.Parse do
     {ast, comment_tokens}
   end
 
+  defp parse_form(context, {[{:-, line} | defn_tokens = [{:atom, _, directive} | _]], comment_tokens})
+      when directive == :ifdef or directive == :ifndef or directive == :undef do
+    [{:call, _, {:atom, _, ^directive}, [value]}] =
+      defn_tokens |> :erl_parse.parse_exprs |> handle_parse_result(context)
+    ast = {:attribute, line, directive, value}
+    {ast, comment_tokens}
+  end
+
   defp parse_form(_context, {[{:-, line}, {:atom, _, directive}, {:dot, _}], comment_tokens}) do
     ast = {:attribute, line, directive}
     {ast, comment_tokens}
