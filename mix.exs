@@ -40,9 +40,6 @@ defmodule Erl2ex.Mixfile do
     """
     Erl2ex is an Erlang to Elixir transpiler, converting well-formed Erlang
     source to Elixir source with equivalent functionality.
-    The goal is to produce correct, functioning, but not necessarily perfectly
-    idiomatic, Elixir code. This tool may be used as a starting point to port
-    code from Erlang to Elixir, but manual cleanup will likely be desired.
     """
   end
 

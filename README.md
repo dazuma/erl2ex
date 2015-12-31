@@ -2,11 +2,11 @@
 
 [![Build Status](https://travis-ci.org/dazuma/erl2ex.svg?branch=master)](https://travis-ci.org/dazuma/erl2ex)
 
-An Erlang to Elixir transpiler. Converts Erlang source code to equivalent Elixir source.
+Erl2ex is an Erlang to Elixir transpiler, converting well-formed Erlang source to Elixir source with equivalent functionality.
 
-This software is currently highly experimental. Some capabilities are not yet complete, and so far it has been tested only on small code fragments. See also the Caveats section for a list of known issues and incomplete features.
+The goal is to produce correct, functioning, but not necessarily perfectly idiomatic, Elixir code. This tool may be used as a starting point to port code from Erlang to Elixir, but manual cleanup will likely be desired.
 
-The vision and end goal is automated conversion of major Erlang code bases (such as potentially Elixir itself) to correct and functional (though not necessarily fully idiomatic) Elixir. It could be used as the first step in doing a port.
+This software is currently highly experimental and should be considered "pre-alpha". Some capabilities are not yet complete, and there are significant known issues. See the Caveats section for more information.
 
 ## Installing
 
@@ -24,11 +24,11 @@ To run the mix task, first add Erl2ex as a dependency to your existing Elixir pr
 
 ```elixir
 def deps do
-  [ {:erl2ex, ">= 0.0.1", only: :dev} ]
+  [ {:erl2ex, ">= 0.0.2", only: :dev} ]
 end
 ```
 
-After adding Erl2ex as a dependency, run `mix deps.get` followed by `mix deps.compile` to install it. An `erl2ex` will now be available. Run `mix help erl2ex` for help.
+After adding Erl2ex as a dependency, run `mix deps.get` followed by `mix deps.compile` to install it. An `erl2ex` task will now be available. Run `mix help erl2ex` for help.
 
 ### Building the escript
 
