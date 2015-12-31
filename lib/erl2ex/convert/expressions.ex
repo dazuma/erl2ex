@@ -207,11 +207,11 @@ defmodule Erl2ex.Convert.Expressions do
   def conv_expr(context, {:bin_element, _, val, size, :default}), do:
     {:::, [], [bin_element_expr(context, val), bin_element_size(context, size)]}
 
-  def conv_expr(context, {:bin_element, _, val, size, [:binary]}), do:
-    {:::, [], [bin_element_expr(context, val), bin_element_size(context, size)]}
-
   def conv_expr(context, {:bin_element, _, val, :default, [type]}), do:
     {:::, [], [bin_element_expr(context, val), {type, [], Elixir}]}
+
+  def conv_expr(context, {:bin_element, _, val, size, [:binary]}), do:
+    {:::, [], [bin_element_expr(context, val), bin_element_size(context, size)]}
 
   def conv_expr(context, {:record, _, name, fields}), do:
     {Context.record_function_name(context, name), [], [record_field_list(context, name, fields)]}

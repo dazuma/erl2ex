@@ -585,12 +585,12 @@ defmodule ExpressionTest do
 
   test "Bitstring pattern match" do
     input = """
-      foo(S) -> <<A, B:10, C:D, E/float>> = S.
+      foo(S) -> <<A, B:10, C:D, E/float, F/binary>> = S.
       """
 
     expected = """
       defp foo(s) do
-        <<a, b :: 10, c :: size(d), e :: float>> = s
+        <<a, b :: 10, c :: size(d), e :: float, f :: binary>> = s
       end
       """
 

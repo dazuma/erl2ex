@@ -53,6 +53,7 @@ This software is still under heavy development, and many capabilities are not ye
 ### Known issues
 
 *   After a name is defined in a function, references in match clauses aren't properly qualified with the caret operator.
+*   include_lib directive is not yet supported.
 *   Macro defines do not work with guard fragments, e.g. expressions delimited by commas or semicolons. See examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_tokenizer.erl.
 *   Some "defined_*" attributes (used for macro-based flow control) are not initialized properly.
 *   Invoking constant macros as function names is not working. e.g. if `-define(A, m:f).`, it should be legal to invoke `?A()`.
