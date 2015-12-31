@@ -4,10 +4,11 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 ## v0.0.2 (????-??-??)
 
-*   Much better reporting of parse and conversion errors
-*   Support for custom and remote types
-*   Support for receive with timeout
+*   Much better reporting of parse and conversion errors.
+*   Support for custom and remote types.
+*   Support for receive with timeout.
+*   Catch assumed the kind was an atom and didn't accept an expression. Fixed.
 
 ## v0.0.1 (2015-12-28)
 
-*   Initial release to hex
+*   Initial release to hex.

@@ -594,7 +594,8 @@ defmodule ExpressionTest do
           throw:B when is_integer(B) -> B;
           C -> C;
           exit:D when D == 0 -> D;
-          error:badarith -> E
+          error:badarith -> E;
+          Kind:H -> {Kind, H}
         after
           F, G
         end.
@@ -614,6 +615,8 @@ defmodule ExpressionTest do
             d
           :error, :badarith ->
             e
+          kind, h ->
+            {kind, h}
         after
           f
           g

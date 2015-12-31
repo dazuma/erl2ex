@@ -309,8 +309,8 @@ defmodule Erl2ex.Convert.Expressions do
     Utils.handle_error(context, expr, "in a catch clause")
 
 
-  defp catch_params(context, [{:tuple, _, [{:atom, _, kind}, pattern, {:var, _, :_}]}]), do:
-    [kind, conv_expr(context, pattern)]
+  defp catch_params(context, [{:tuple, _, [kind, pattern, {:var, _, :_}]}]), do:
+    [conv_expr(context, kind), conv_expr(context, pattern)]
 
   defp catch_params(context, expr), do:
     Utils.handle_error(context, expr, "in the set of catch params")
