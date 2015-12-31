@@ -150,6 +150,9 @@ defmodule Erl2ex.Convert.Expressions do
   def conv_expr(context, {:receive, _, clauses}) when is_list(clauses), do:
     {:receive, [], [[do: conv_list(context, clauses)]]}
 
+  def conv_expr(context, {:receive, _, clauses, timeout, ontimeout}) when is_list(clauses) and is_list(ontimeout), do:
+    {:receive, [], [[do: conv_list(context, clauses), after: [{:"->", [], [[conv_expr(context, timeout)], conv_block(context, ontimeout)]}]]]}
+
   def conv_expr(context, {:fun, _, {:clauses, clauses}}) when is_list(clauses), do:
     {:fn, [], conv_list(context, clauses)}
 

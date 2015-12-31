@@ -280,6 +280,32 @@ defmodule ExpressionTest do
   end
 
 
+  test "Receive with timeout" do
+    input = """
+      foo() ->
+        receive
+          A -> ok
+        after
+          100 -> err
+        end.
+      """
+
+    expected = """
+      defp foo() do
+        receive() do
+          a ->
+            :ok
+        after
+          100 ->
+            :err
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str!(input) == expected
+  end
+
+
   test "Simple fun" do
     input = """
       foo() ->
