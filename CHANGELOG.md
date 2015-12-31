@@ -9,6 +9,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   Support for receive with timeout.
 *   ifdef/ifndef/undef didn't handle capitalized macro names. Fixed.
 *   Catch assumed the kind was an atom and didn't accept an expression. Fixed.
+*   Recognize bitstring elements with an explicit value, explicit size, and binary type.
 
 ## v0.0.1 (2015-12-28)
 

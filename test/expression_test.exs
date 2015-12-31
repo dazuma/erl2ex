@@ -537,6 +537,21 @@ defmodule ExpressionTest do
   end
 
 
+  test "Bitstring literal with size expressions and explicit binary type" do
+    input = """
+      foo(A) -> <<1:10/binary, 2:A/binary>>.
+      """
+
+    expected = """
+      defp foo(a) do
+        <<1 :: 10, 2 :: size(a)>>
+      end
+      """
+
+    assert Erl2ex.convert_str!(input) == expected
+  end
+
+
   test "Bitstring literal with simple type specifiers" do
     input = """
       foo() -> <<1/integer, 2/float, "hello"/utf16>>.

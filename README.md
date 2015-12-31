@@ -52,10 +52,10 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
+*   After a name is defined in a function, references in match clauses aren't properly qualified with the caret operator.
 *   Macro defines do not work with guard fragments, e.g. expressions delimited by commas or semicolons. See examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_tokenizer.erl.
 *   Some "defined_*" attributes (used for macro-based flow control) are not initialized properly.
 *   Invoking constant macros as function names is not working. e.g. if `-define(A, m:f).`, it should be legal to invoke `?A()`.
-*   Errors during parsing typically get reported as almost completely incomprehensible pattern match errors out of the bowels of the converter.
 *   Record declarations with type info (e.g. `-record(foo, {field1 :: integer}).`) are not supported. Currently the converter drops the types. This seems to be a limitation of Elixir itself.
 *   Binary expressions with complex or combination size/type specs are not supported, and cause the converter to crash. An example is `<<1:16/integer-signed-native>>`. This also seems to be a limitation of Elixir itself.
 

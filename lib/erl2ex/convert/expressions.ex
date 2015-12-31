@@ -204,11 +204,11 @@ defmodule Erl2ex.Convert.Expressions do
   def conv_expr(context, {:bin_element, _, val, :default, :default}), do:
     bin_element_expr(context, val)
 
-  def conv_expr(context, {:bin_element, _, val, {:integer, _, size}, :default}), do:
-    {:::, [], [bin_element_expr(context, val), size]}
-
   def conv_expr(context, {:bin_element, _, val, size, :default}), do:
-    {:::, [], [bin_element_expr(context, val), {:size, [], [conv_expr(context, size)]}]}
+    {:::, [], [bin_element_expr(context, val), bin_element_size(context, size)]}
+
+  def conv_expr(context, {:bin_element, _, val, size, [:binary]}), do:
+    {:::, [], [bin_element_expr(context, val), bin_element_size(context, size)]}
 
   def conv_expr(context, {:bin_element, _, val, :default, [type]}), do:
     {:::, [], [bin_element_expr(context, val), {type, [], Elixir}]}
@@ -420,6 +420,10 @@ defmodule Erl2ex.Convert.Expressions do
 
   defp bin_element_expr(_context, {:string, _, str}), do: List.to_string(str)
   defp bin_element_expr(context, val), do: conv_expr(context, val)
+
+
+  defp bin_element_size(_context, {:integer, _, size}), do: size
+  defp bin_element_size(context, size), do: {:size, [], [conv_expr(context, size)]}
 
 
   defp update_map(context, base_map, assocs = [{:map_field_exact, _, _, _} | _]) do
