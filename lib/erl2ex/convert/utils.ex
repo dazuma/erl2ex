@@ -3,6 +3,10 @@ defmodule Erl2ex.Convert.Utils do
 
   @moduledoc false
 
+
+  alias Erl2ex.Convert.Context
+
+
   def find_available_name(basename, used_names, prefix), do:
     find_available_name(to_string(basename), used_names, prefix, 1)
 

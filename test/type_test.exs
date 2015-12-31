@@ -255,4 +255,33 @@ defmodule TypeTest do
   end
 
 
+  test "Custom type" do
+    input = """
+      -type type1() :: atom().
+      -type type2() :: type1() | integer().
+      """
+
+    expected = """
+      @typep type1() :: atom()
+
+      @typep type2() :: type1() | integer()
+      """
+
+    assert Erl2ex.convert_str!(input) == expected
+  end
+
+
+  test "Remote type" do
+    input = """
+      -type type1() :: supervisor:startchild_ret().
+      """
+
+    expected = """
+      @typep type1() :: :supervisor.startchild_ret()
+      """
+
+    assert Erl2ex.convert_str!(input) == expected
+  end
+
+
 end

@@ -4,6 +4,7 @@ defmodule Erl2ex.Convert.Expressions do
   @moduledoc false
 
   alias Erl2ex.Convert.Context
+  alias Erl2ex.Convert.Utils
 
 
   @import_kernel_metadata [context: Elixir, import: Kernel]
@@ -239,6 +240,12 @@ defmodule Erl2ex.Convert.Expressions do
 
   def conv_expr(context, {:type, _, type, param1, param2}), do:
     conv_type(context, type, param1, param2)
+
+  def conv_expr(context, {:user_type, _, type, params}), do:
+    conv_type(context, type, params)
+
+  def conv_expr(context, {:remote_type, _, [remote, type, params]}), do:
+    conv_type(context, {:., [], [conv_expr(context, remote), conv_expr(context, type)]}, params)
 
   def conv_expr(context, {:ann_type, _, [_var, type]}), do:
     conv_expr(context, type)

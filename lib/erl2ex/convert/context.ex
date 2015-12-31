@@ -169,6 +169,13 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  def cur_file_path_for_display(%Context{cur_file_path: nil}), do:
+    "(Unknown source file)"
+
+  def cur_file_path_for_display(%Context{cur_file_path: path}), do:
+    path
+
+
   defp ensure_exists(x) when x != nil, do: x
 
 

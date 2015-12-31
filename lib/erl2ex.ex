@@ -135,7 +135,7 @@ defmodule Erl2ex do
         dest_path = Path.relative_to(source_path, source_dir)
         dest_path = Path.join(dest_dir, dest_path)
         dest_path = "#{Path.rootname(dest_path)}.ex"
-        {source_path, convert_file(source_path, dest_path, opts)}
+        {source_path, convert_file!(source_path, dest_path, opts)}
       end)
       |> Enum.into(%{})
   end
