@@ -98,11 +98,12 @@ defmodule Erl2ex.Convert do
     {main_comments, inline_comments} = split_comments(comments, line)
     mapped_name = Context.macro_const_name(context, name)
     tracking_name = Context.tracking_attr_name(context, name)
+    {ex_arg, _} = Expressions.conv_expr(replacement, context)
 
     %ExAttr{
       name: mapped_name,
       tracking_name: tracking_name,
-      arg: Expressions.conv_expr(context, replacement),
+      arg: ex_arg,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
@@ -117,12 +118,13 @@ defmodule Erl2ex.Convert do
     ex_args = args |> Enum.map(fn arg -> {Utils.lower_atom(arg), [], Elixir} end)
     mapped_name = Context.macro_function_name(context, name)
     tracking_name = Context.tracking_attr_name(context, name)
+    {ex_expr, _} = Expressions.conv_expr(replacement, replacement_context)
 
     %ExMacro{
       signature: {mapped_name, [], ex_args},
       tracking_name: tracking_name,
       stringifications: stringification_map,
-      expr: Expressions.conv_expr(replacement_context, replacement),
+      expr: ex_expr,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
@@ -146,11 +148,12 @@ defmodule Erl2ex.Convert do
 
   defp conv_form(context, %ErlRecord{line: line, name: name, fields: fields, comments: comments}) do
     {main_comments, inline_comments} = split_comments(comments, line)
+    {ex_fields, _} = Expressions.conv_list(fields, context)
 
     %ExRecord{
       tag: name,
       macro: Context.record_function_name(context, name),
-      fields: Expressions.conv_list(context, fields),
+      fields: ex_fields,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
@@ -170,11 +173,13 @@ defmodule Erl2ex.Convert do
       true ->
         :typep
     end
+    {ex_params, _} = Expressions.conv_list(params, context)
+    {ex_defn, _} = Expressions.conv_expr(defn, context)
 
     %ExType{
       kind: ex_kind,
-      signature: {name, [], Expressions.conv_list(context, params)},
-      defn: Expressions.conv_expr(context, defn),
+      signature: {name, [], ex_params},
+      defn: ex_defn,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
@@ -205,17 +210,23 @@ defmodule Erl2ex.Convert do
       |> conv_var_mapped_spec_clause(name, clause)
   end
 
-  defp conv_var_mapped_spec_clause(context, name, {:type, _, :fun, [args, result]}), do:
-    {:::, [], [{name, [], Expressions.conv_expr(context, args)}, Expressions.conv_expr(context, result)]}
+  defp conv_var_mapped_spec_clause(context, name, {:type, _, :fun, [args, result]}) do
+    {ex_args, _} = Expressions.conv_expr(args, context)
+    {ex_result, _} = Expressions.conv_expr(result, context)
+    {:::, [], [{name, [], ex_args}, ex_result]}
+  end
 
-  defp conv_var_mapped_spec_clause(context, name, {:type, _, :bounded_fun, [func, constraints]}), do:
+  defp conv_var_mapped_spec_clause(context, name, {:type, _, :bounded_fun, [func, constraints]}) do
     {:when, [], [conv_spec_clause(context, name, func), Enum.map(constraints, &(conv_spec_constraint(context, name, &1)))]}
+  end
 
   defp conv_var_mapped_spec_clause(context, name, expr), do:
     Utils.handle_error(context, expr, "in spec for #{name}")
 
-  defp conv_spec_constraint(context, _name, {:type, _, :constraint, [{:atom, _, :is_subtype}, [{:var, _, var}, type]]}), do:
-    {Utils.lower_atom(var), Expressions.conv_expr(context, type)}
+  defp conv_spec_constraint(context, _name, {:type, _, :constraint, [{:atom, _, :is_subtype}, [{:var, _, var}, type]]}) do
+    {ex_type, _} = Expressions.conv_expr(type, context)
+    {Utils.lower_atom(var), ex_type}
+  end
 
   defp conv_spec_constraint(context, name, expr), do:
     Utils.handle_error(context, expr, "in spec constraint for #{name}")
@@ -232,9 +243,11 @@ defmodule Erl2ex.Convert do
     lines = line_range(exprs, line..line)
     {head_comments, comments} = split_comments(comments, lines.first)
     {inline_comments, remaining_comments} = split_comments(comments, lines.last)
+    {ex_exprs, _} = Expressions.conv_list(exprs, context)
+
     ex_clause = %ExClause{
       signature: clause_signature(context, name, args, guards),
-      exprs: Expressions.conv_list(context, exprs),
+      exprs: ex_exprs,
       comments: head_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
@@ -242,11 +255,15 @@ defmodule Erl2ex.Convert do
   end
 
 
-  defp clause_signature(context, name, params, []), do:
-    {name, [], Expressions.conv_list(context, params)}
+  defp clause_signature(context, name, params, []) do
+    {ex_params, _} = Expressions.conv_list(params, context)
+    {name, [], ex_params}
+  end
 
-  defp clause_signature(context, name, params, guards), do:
-    {:when, [], [clause_signature(context, name, params, []), Expressions.guard_seq(context, guards, nil)]}
+  defp clause_signature(context, name, params, guards) do
+    {ex_guards, _} = Expressions.guard_seq(guards, nil, context)
+    {:when, [], [clause_signature(context, name, params, []), ex_guards]}
+  end
 
 
   defp line_range([], range), do:
