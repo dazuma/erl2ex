@@ -407,7 +407,7 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo() do
-        for(<<a, b <- <<1, 2, 3, 4>>>>, into: [], do: a + b)
+        for(<<a, (b <- <<1, 2, 3, 4>>)>>, into: [], do: a + b)
       end
       """
 
@@ -529,7 +529,7 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo(a) do
-        <<1 :: 10, 2 :: size(a)>>
+        <<1::10, 2::size(a)>>
       end
       """
 
@@ -544,7 +544,7 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo(a) do
-        <<1 :: 10, 2 :: size(a)>>
+        <<1::10, 2::size(a)>>
       end
       """
 
@@ -559,7 +559,7 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo() do
-        <<1 :: integer, 2 :: float, "hello" :: utf16>>
+        <<1::integer, 2::float, "hello"::utf16>>
       end
       """
 
@@ -590,7 +590,7 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo(s) do
-        <<a, b :: 10, c :: size(d), e :: float, f :: binary>> = s
+        <<a, b::10, c::size(d), e::float, f::binary>> = s
       end
       """
 
@@ -669,6 +669,5 @@ defmodule ExpressionTest do
 
     assert Erl2ex.convert_str!(input) == expected
   end
-
 
 end

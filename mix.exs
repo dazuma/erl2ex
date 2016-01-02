@@ -5,7 +5,7 @@ defmodule Erl2ex.Mixfile do
     [
       app: :erl2ex,
       version: "0.0.3",
-      elixir: "~> 1.1",
+      elixir: "~> 1.2",
       name: "Erl2ex",
       source_url: "https://github.com/dazuma/erl2ex",
       build_embedded: Mix.env == :prod,

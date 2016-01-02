@@ -4,7 +4,10 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 ## v0.0.3 (????-??-??)
 
-* Updated and cleaned up ExDoc documentation.
+*   Requires Elixir 1.2.
+*   Updated and cleaned up ExDoc documentation.
+*   Repeated matches on the same variable weren't properly annotated with a caret. Fixed.
+*   Funs with no parameters incorrectly translated to a single nil parameter. Fixed.
 
 ## v0.0.2 (2015-12-31)
 

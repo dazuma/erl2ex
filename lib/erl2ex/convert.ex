@@ -243,10 +243,12 @@ defmodule Erl2ex.Convert do
     lines = line_range(exprs, line..line)
     {head_comments, comments} = split_comments(comments, lines.first)
     {inline_comments, remaining_comments} = split_comments(comments, lines.last)
+    context = Context.push_scope(context)
+    {ex_signature, context} = clause_signature(name, args, guards, context)
     {ex_exprs, _} = Expressions.conv_list(exprs, context)
 
     ex_clause = %ExClause{
-      signature: clause_signature(context, name, args, guards),
+      signature: ex_signature,
       exprs: ex_exprs,
       comments: head_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
@@ -255,14 +257,17 @@ defmodule Erl2ex.Convert do
   end
 
 
-  defp clause_signature(context, name, params, []) do
-    {ex_params, _} = Expressions.conv_list(params, context)
-    {name, [], ex_params}
+  defp clause_signature(name, params, [], context) do
+    context = Context.push_match_level(context, true)
+    {ex_params, context} = Expressions.conv_list(params, context)
+    context = Context.pop_match_level(context)
+    {{name, [], ex_params}, context}
   end
 
-  defp clause_signature(context, name, params, guards) do
-    {ex_guards, _} = Expressions.guard_seq(guards, nil, context)
-    {:when, [], [clause_signature(context, name, params, []), ex_guards]}
+  defp clause_signature(name, params, guards, context) do
+    {ex_guards, context} = Expressions.guard_seq(guards, context)
+    {sig_without_guards, context} = clause_signature(name, params, [], context)
+    {{:when, [], [sig_without_guards | ex_guards]}, context}
   end
 
 
@@ -272,17 +277,20 @@ defmodule Erl2ex.Convert do
   defp line_range([val | rest], range), do:
     line_range(rest, line_range(val, range))
 
-  defp line_range({_, line, val1}, range), do:
+  defp line_range({_, line, val1}, range) when is_integer(line), do:
     line_range(val1, range |> add_range(line))
 
-  defp line_range({_, line, _val1, val2}, range), do:
+  defp line_range({_, line, _val1, val2}, range) when is_integer(line), do:
     line_range(val2, add_range(range, line))
 
-  defp line_range({_, line, _val1, _val2, val3}, range), do:
+  defp line_range({_, line, _val1, _val2, val3}, range) when is_integer(line), do:
     line_range(val3, add_range(range, line))
 
-  defp line_range({_, line}, range), do:
+  defp line_range({_, line}, range) when is_integer(line), do:
     add_range(range, line)
+
+  defp line_range({_, list}, range) when is_list(list), do:
+    line_range(list, range)
 
   defp line_range(_, range), do:
     range

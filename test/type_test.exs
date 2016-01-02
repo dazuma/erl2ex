@@ -84,7 +84,7 @@ defmodule TypeTest do
 
       @typep type3() :: -42
 
-      @typep type4() :: -1 .. 10
+      @typep type4() :: -1..10
       """
 
     assert Erl2ex.convert_str!(input) == expected
@@ -174,11 +174,11 @@ defmodule TypeTest do
 
       @typep type3() :: <<>>
 
-      @typep type4() :: <<_ :: 10>>
+      @typep type4() :: <<_::10>>
 
-      @typep type5() :: <<_ :: _ * 8>>
+      @typep type5() :: <<_::_ * 8>>
 
-      @typep type6() :: <<_ :: 10, _ :: _ * 8>>
+      @typep type6() :: <<_::10, _::_ * 8>>
       """
 
     assert Erl2ex.convert_str!(input) == expected

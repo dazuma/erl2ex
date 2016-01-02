@@ -134,7 +134,9 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_expr({:match, _, lhs, rhs}, context) do
+    context = Context.push_match_level(context, false)
     {ex_lhs, context} = conv_expr(lhs, context)
+    context = Context.pop_match_level(context)
     {ex_rhs, context} = conv_expr(rhs, context)
     {{:=, [], [ex_lhs, ex_rhs]}, context}
   end
@@ -164,23 +166,8 @@ defmodule Erl2ex.Convert.Expressions do
     {{ex_op, metadata, [ex_arg1, ex_arg2]}, context}
   end
 
-  def conv_expr({:clause, _, [], guards, arg}, context) do
-    {ex_guards, context} = guard_seq(guards, nil, context)
-    {ex_arg, context} = conv_block(arg, context)
-    {{:"->", [], [[ex_guards], ex_arg]}, context}
-  end
-
-  def conv_expr({:clause, _, params, [], arg}, context) do
-    {ex_params, context} = conv_list(params, context)
-    {ex_arg, context} = conv_block(arg, context)
-    {{:"->", [], [ex_params, ex_arg]}, context}
-  end
-
   def conv_expr({:clause, _, params, guards, arg}, context) do
-    {ex_params, context} = conv_list(params, context)
-    {ex_guards, context} = guard_seq(guards, nil, context)
-    {ex_arg, context} = conv_block(arg, context)
-    {{:"->", [], [[{:when, [], ex_params ++ [ex_guards]}], ex_arg]}, context}
+    conv_clause(:normal, params, guards, arg, context)
   end
 
   def conv_expr({:case, _, val, clauses}, context) when is_list(clauses) do
@@ -207,7 +194,7 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_expr({:fun, _, {:clauses, clauses}}, context) when is_list(clauses) do
-    {ex_clauses, context} = conv_list(clauses, context)
+    {ex_clauses, context} = conv_clause_list(:fun, clauses, context)
     {{:fn, [], ex_clauses}, context}
   end
 
@@ -386,10 +373,77 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
 
-  def guard_seq([], result, context) do
+  defp conv_clause_list(type, clauses, context) do
+    Enum.map_reduce(clauses, context, fn
+      ({:clause, _, params, guards, arg}, context) ->
+        if type == :fun do
+          context = Context.push_scope(context)
+        end
+        {result, context} = conv_clause(type, params, guards, arg, context)
+        if type == :fun do
+          context = Context.pop_scope(context)
+        end
+        {result, context}
+    end)
+  end
+
+
+  defp conv_clause(:catch, [], _guards, _expr, context) do
+    Utils.handle_error(context, [], "in a catch clause (no params)")
+  end
+
+  defp conv_clause(_type, [], guards, expr, context) do
+    {ex_guards, context} = guard_seq(guards, context)
+    {ex_expr, context} = conv_block(expr, context)
+    {{:"->", [], [ex_guards, ex_expr]}, context}
+  end
+
+  defp conv_clause(type, params, [], expr, context) do
+    {ex_params, context} = conv_clause_params(type, params, context)
+    {ex_expr, context} = conv_block(expr, context)
+    {{:"->", [], [ex_params, ex_expr]}, context}
+  end
+
+  defp conv_clause(type, params, guards, expr, context) do
+    {ex_params, context} = conv_clause_params(type, params, context)
+    {ex_guards, context} = guard_seq(guards, context)
+    {ex_expr, context} = conv_block(expr, context)
+    {{:"->", [], [[{:when, [], ex_params ++ ex_guards}], ex_expr]}, context}
+  end
+
+
+  defp conv_clause_params(:catch, [{:tuple, _, [kind, pattern, {:var, _, :_}]}], context) do
+    context = Context.push_match_level(context, false)
+    {ex_kind, context} = conv_expr(kind, context)
+    {ex_pattern, context} = conv_expr(pattern, context)
+    context = Context.pop_match_level(context)
+    {[ex_kind, ex_pattern], context}
+  end
+
+  defp conv_clause_params(:catch, expr, context) do
+    Utils.handle_error(context, expr, "in the set of catch params")
+  end
+
+  defp conv_clause_params(type, expr, context) do
+    context = Context.push_match_level(context, type == :fun)
+    {ex_expr, context} = conv_list(expr, context)
+    context = Context.pop_match_level(context)
+    {ex_expr, context}
+  end
+
+
+  def guard_seq([], context) do
+    {[], context}
+  end
+  def guard_seq(guards, context) do
+    {result, context} = guard_seq(guards, nil, context)
+    {[result], context}
+  end
+
+  defp guard_seq([], result, context) do
     {result, context}
   end
-  def guard_seq([ghead | gtail], result, context) do
+  defp guard_seq([ghead | gtail], result, context) do
     {ex_ghead, context} = guard_elem(ghead, nil, context)
     guard_seq(gtail, guard_combine(result, ex_ghead, :or), context)
   end
@@ -408,7 +462,7 @@ defmodule Erl2ex.Convert.Expressions do
   defp conv_try(expr, of_clauses, catches, after_expr, context) do
     {ex_expr, context} = conv_block(expr, context)
     try_elems = [do: ex_expr]
-    {catch_clauses, context} = Enum.map_reduce(catches, context, &catch_clause/2)
+    {catch_clauses, context} = conv_clause_list(:catch, catches, context)
     if not Enum.empty?(catch_clauses) do
       try_elems = try_elems ++ [catch: catch_clauses]
     end
@@ -432,35 +486,6 @@ defmodule Erl2ex.Convert.Expressions do
     ]
     {ex_expr, context} = conv_expr(expr, context)
     {{:try, [], [[do: ex_expr, catch: catch_clauses]]}, context}
-  end
-
-
-  defp catch_clause({:clause, _, params, [], arg}, context) do
-    {ex_params, context} = catch_params(params, context)
-    {ex_arg, context} = conv_block(arg, context)
-    {{:"->", [], [ex_params, ex_arg]}, context}
-  end
-
-  defp catch_clause({:clause, _, params, guards, arg}, context) do
-    {ex_params, context} = catch_params(params, context)
-    {ex_guards, context} = guard_seq(guards, nil, context)
-    {ex_arg, context} = conv_block(arg, context)
-    {{:"->", [], [[{:when, [], ex_params ++ [ex_guards]}], ex_arg]}, context}
-  end
-
-  defp catch_clause(expr, context) do
-    Utils.handle_error(context, expr, "in a catch clause")
-  end
-
-
-  defp catch_params([{:tuple, _, [kind, pattern, {:var, _, :_}]}], context) do
-    {ex_kind, context} = conv_expr(kind, context)
-    {ex_pattern, context} = conv_expr(pattern, context)
-    {[ex_kind, ex_pattern], context}
-  end
-
-  defp catch_params(expr, context) do
-    Utils.handle_error(context, expr, "in the set of catch params")
   end
 
 
@@ -674,10 +699,15 @@ defmodule Erl2ex.Convert.Expressions do
 
 
   defp conv_normal_var(name, context) do
-    mapped_name = Context.map_variable_name(context, name)
+    {mapped_name, needs_caret, context} = Context.map_variable_name(context, name)
     var = {mapped_name, [], Elixir}
-    if Context.is_quoted_var?(context, mapped_name) do
-      var = {:unquote, [], [var]}
+    var = cond do
+      Context.is_quoted_var?(context, mapped_name) ->
+        {:unquote, [], [var]}
+      needs_caret ->
+        {:^, [], [var]}
+      true ->
+        var
     end
     {var, context}
   end

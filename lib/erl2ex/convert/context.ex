@@ -28,7 +28,11 @@ defmodule Erl2ex.Convert.Context do
             used_attr_names: HashSet.new,
             specs: HashDict.new,
             variable_map: HashDict.new,
-            quoted_variables: []
+            quoted_variables: [],
+            match_level: 0,
+            in_func_params: false,
+            new_vars: HashSet.new,
+            scopes: []
 
   defmodule FuncInfo do
     @moduledoc false
@@ -84,6 +88,40 @@ defmodule Erl2ex.Convert.Context do
       quoted_variables: quoted_vars ++ HashDict.values(stringification_map),
       variable_map: variable_map
     }
+  end
+
+
+  def push_match_level(context = %Context{match_level: old_match_level, in_func_params: old_in_func_params}, in_func_params) do
+    %Context{context |
+      match_level: old_match_level + 1,
+      in_func_params: old_in_func_params or in_func_params
+    }
+  end
+
+
+  def pop_match_level(context = %Context{scopes: scopes, new_vars: new_vars, match_level: old_match_level, in_func_params: in_func_params}) do
+    if old_match_level == 1 do
+      in_func_params = false
+      [top_scope | other_scopes] = scopes
+      scopes = [HashSet.union(top_scope, new_vars) | other_scopes]
+      new_vars = HashSet.new
+    end
+    %Context{context |
+      match_level: old_match_level - 1,
+      in_func_params: in_func_params,
+      scopes: scopes,
+      new_vars: new_vars
+    }
+  end
+
+
+  def push_scope(context = %Context{scopes: scopes}) do
+    %Context{context | scopes: [HashSet.new | scopes]}
+  end
+
+
+  def pop_scope(context = %Context{scopes: [_h | t]}) do
+    %Context{context | scopes: t}
   end
 
 
@@ -165,7 +203,17 @@ defmodule Erl2ex.Convert.Context do
 
 
   def map_variable_name(context, name) do
-    Dict.get(context.variable_map, name, {})
+    mapped_name = Dict.get(context.variable_map, name, {})
+    needs_caret = false
+    if context.match_level > 0 do
+      needs_caret = not context.in_func_params and variable_seen?(context.scopes, name)
+      if not needs_caret do
+        context = %Context{context |
+          new_vars: HashSet.put(context.new_vars, name)
+        }
+      end
+    end
+    {mapped_name, needs_caret, context}
   end
 
 
@@ -174,6 +222,16 @@ defmodule Erl2ex.Convert.Context do
 
   def cur_file_path_for_display(%Context{cur_file_path: path}), do:
     path
+
+
+  defp variable_seen?([], _name), do: false
+  defp variable_seen?([scopes_h | scopes_t], name) do
+    if HashSet.member?(scopes_h, name) do
+      true
+    else
+      variable_seen?(scopes_t, name)
+    end
+  end
 
 
   defp ensure_exists(x) when x != nil, do: x
@@ -186,12 +244,11 @@ defmodule Erl2ex.Convert.Context do
   defp collect_func_info(_, context), do: context
 
   defp add_func_info({name, arity}, context) do
+    func_name = nil
+    used_func_names = context.used_func_names
     if is_valid_elixir_func_name(name) do
       func_name = name
-      used_func_names = HashSet.put(context.used_func_names, name)
-    else
-      func_name = nil
-      used_func_names = context.used_func_names
+      used_func_names = HashSet.put(used_func_names, name)
     end
     func_info = Dict.get(context.funcs, name, %FuncInfo{func_name: func_name})
     func_info = %FuncInfo{func_info |

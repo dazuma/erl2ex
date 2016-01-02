@@ -14,9 +14,7 @@ Erl2ex may be run as a mix task or as a standalone escript.
 
 ### Requirements
 
-Erl2ex recognizes Erlang source that is compatible with Erlang 18.x. The generated Elixir source currently requires Elixir 1.1, but in the near future it will require Elixir 1.2.
-
-The Erl2ex tool itself currently requires Elixir 1.1 or later, but in the near future it will require Elixir 1.2.
+Erl2ex recognizes Erlang source that is compatible with Erlang 18.x. The generated Elixir source requires Elixir 1.2 or later. The Erl2ex tool itself also requires Elixir 1.2 or later.
 
 ### Installing the mix task
 
@@ -52,7 +50,6 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
-*   After a name is defined in a function, references in match clauses aren't properly qualified with the caret operator. Critical correctness issue.
 *   The include_lib directive is not yet supported.
 *   The include directive does not support environment variable interpolation.
 *   Macro defines do not work with guard fragments, i.e. expressions delimited by commas or semicolons. See examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_tokenizer.erl.
