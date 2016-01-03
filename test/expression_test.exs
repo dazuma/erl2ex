@@ -415,7 +415,6 @@ defmodule ExpressionTest do
   end
 
 
-  @tag :skip  # https://github.com/elixir-lang/elixir/issues/4116
   test "Binary comprehension with binary generator" do
     input = """
       foo() -> << <<B, A>> || <<A, B>> <= <<1, 2, 3, 4>> >>.
@@ -423,7 +422,7 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo() do
-        for(<<(a, b <- <<1, 2, 3, 4>>)>>, into: "", do: <<b, a>>)
+        for(<<a, (b <- <<1, 2, 3, 4>>)>>, into: "", do: <<b, a>>)
       end
       """
 

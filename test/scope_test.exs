@@ -163,4 +163,27 @@ defmodule ScopeTest do
   end
 
 
+  test "Underscore should never have a caret" do
+    input = """
+      foo(_, _) ->
+        _ = 3,
+        case 1 of
+          _ -> ok
+        end.
+      """
+
+    expected = """
+      defp foo(_, _) do
+        _ = 3
+        case(1) do
+          _ ->
+            :ok
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str!(input) == expected
+  end
+
+
 end

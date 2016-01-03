@@ -206,8 +206,8 @@ defmodule Erl2ex.Convert.Context do
     mapped_name = Map.fetch!(context.variable_map, name)
     needs_caret = false
     if context.match_level > 0 do
-      needs_caret = not context.in_func_params and variable_seen?(context.scopes, name)
-      if not needs_caret do
+      needs_caret = not context.in_func_params and name != :_ and variable_seen?(context.scopes, name)
+      if not needs_caret and name != :_ do
         context = %Context{context |
           new_vars: MapSet.put(context.new_vars, name)
         }

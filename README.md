@@ -59,11 +59,12 @@ This software is still under heavy development, and many capabilities are not ye
 *   Record declarations with type info (e.g. `-record(foo, {field1 :: integer}).`) are not supported. Currently the converter drops the types. This seems to be a limitation of Elixir itself.
 *   Binary expressions with complex or combination size/type specs are not supported, and cause the converter to crash. An example is `<<1:16/integer-signed-native>>`. This also seems to be a limitation of Elixir itself.
 
-### Desired features
+### Possibly desired features
 
 *   Generate exdoc comments, probably based on heuristics on the funtion comments.
 *   Do something reasonable with inline comments.
 *   Provide an option to elixirize module names (e.g. instead of generating `defmodule :my_erlang_module`, generate `defmodule MyErlangModule`)
+*   Provide an option to convert variable names from camelCase to snake_case.
 *   Provide (possibly optional) translation of include files (.hrl) to separate modules rather than copying into the including module, so the declarations can be shared after translation to Elixir.
 *   Provide the ability to define constants from the environment, similar to -D for other languages. Elixir doesn't have a preprocessor, but we might do this using environment variables and/or config.
 

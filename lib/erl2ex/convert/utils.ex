@@ -21,8 +21,12 @@ defmodule Erl2ex.Convert.Utils do
 
   defp suggest_name(basename, _, 0), do:
     String.to_atom(basename)
+  defp suggest_name(<< "_" :: utf8, basename :: binary >>, prefix, 1), do:
+    String.to_atom("_#{prefix}_#{basename}")
   defp suggest_name(basename, prefix, 1), do:
     String.to_atom("#{prefix}_#{basename}")
+  defp suggest_name(<< "_" :: utf8, basename :: binary >>, prefix, val), do:
+    String.to_atom("_#{prefix}#{val}_#{basename}")
   defp suggest_name(basename, prefix, val), do:
     String.to_atom("#{prefix}#{val}_#{basename}")
 
