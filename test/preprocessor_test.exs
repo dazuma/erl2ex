@@ -316,14 +316,45 @@ defmodule PreprocessorTest do
       """
 
     expected = """
+      # Begin included file: test/files/include1.hrl
+
+
       @erlmacro_INCLUDE1_CONST 1
+
+
+      # Begin included file: files2/include2.hrl
+
 
       @erlmacro_INCLUDE2_CONST 2
 
+
+      # End included file: files2/include2.hrl
+
+
+      # End included file: test/files/include1.hrl
+
+
+      # Begin included file: include3.hrl
+
+
       @erlmacro_INCLUDE3_CONST 3
+
+
+      # End included file: include3.hrl
       """
 
     assert Erl2ex.convert_str!(input, include_dir: "test/files") == expected
+  end
+
+
+  test "Library include" do
+    input = """
+      -include_lib("kernel/include/file.hrl").
+      """
+
+    output = Erl2ex.convert_str!(input)
+
+    assert String.contains?(output, "Record.defrecordp :erlrecord_file_info")
   end
 
 

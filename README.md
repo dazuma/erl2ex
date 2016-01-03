@@ -50,7 +50,6 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
-*   The include_lib directive is not yet supported.
 *   The include directive does not support environment variable interpolation.
 *   Macro defines do not work with guard fragments, i.e. expressions delimited by commas or semicolons. See examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_tokenizer.erl.
 *   Macro defines do not work when generating multiple (comma-delimited) lines of a function definition. Need to determine if this is a real thing we need to support.
@@ -59,7 +58,7 @@ This software is still under heavy development, and many capabilities are not ye
 *   Record declarations with type info (e.g. `-record(foo, {field1 :: integer}).`) are not supported. Currently the converter drops the types. This seems to be a limitation of Elixir itself.
 *   Binary expressions with complex or combination size/type specs are not supported, and cause the converter to crash. An example is `<<1:16/integer-signed-native>>`. This also seems to be a limitation of Elixir itself.
 
-### Possibly desired features
+### Incomplete features
 
 *   Generate exdoc comments, probably based on heuristics on the funtion comments.
 *   Do something reasonable with inline comments.

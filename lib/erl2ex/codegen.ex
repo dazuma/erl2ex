@@ -5,6 +5,7 @@ defmodule Erl2ex.Codegen do
 
   alias Erl2ex.ExAttr
   alias Erl2ex.ExCallback
+  alias Erl2ex.ExComment
   alias Erl2ex.ExDirective
   alias Erl2ex.ExFunc
   alias Erl2ex.ExHeader
@@ -92,6 +93,11 @@ defmodule Erl2ex.Codegen do
       end
     end
     context
+  end
+
+  defp write_form(context, %ExComment{comments: comments}, io) do
+    context
+      |> write_comment_list(comments, :structure_comments, io)
   end
 
   defp write_form(context, %ExFunc{comments: comments, clauses: [first_clause | remaining_clauses], public: public, specs: specs}, io) do

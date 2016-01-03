@@ -1,4 +1,12 @@
 
+defmodule Erl2ex.ErlComment do
+  @moduledoc false
+
+  defstruct comments: []
+
+end
+
+
 defmodule Erl2ex.ErlAttr do
   @moduledoc false
 

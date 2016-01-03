@@ -5,6 +5,7 @@ defmodule Erl2ex.Parse.ModuleBuilder do
 
 
   alias Erl2ex.ErlAttr
+  alias Erl2ex.ErlComment
   alias Erl2ex.ErlDefine
   alias Erl2ex.ErlDirective
   alias Erl2ex.ErlFunc
@@ -45,8 +46,34 @@ defmodule Erl2ex.Parse.ModuleBuilder do
     file_path = Context.find_file(context, path)
     opts = Context.build_opts_for_include(context)
     included_module = Parse.from_file(file_path, opts)
+    comment1 = %ErlComment{comments: ["% Begin included file: #{List.to_string(path)}"]}
+    comment2 = %ErlComment{comments: ["% End included file: #{List.to_string(path)}"]}
     %ErlModule{module |
-      forms: included_module.forms ++ module.forms
+      forms: [comment2 | included_module.forms] ++ [comment1 | module.forms]
+    }
+  end
+
+  defp add_form(module, {:attribute, line, :include_lib, path}, _comments, context) do
+    [lib_name | path_elems] = path
+      |> List.to_string
+      |> Path.relative
+      |> Path.split
+    rel_path = path_elems |> Path.join
+    lib_atom = lib_name |> String.to_atom
+    lib_path = lib_atom |> :code.lib_dir
+    if is_tuple(lib_path) do
+      raise CompileError,
+        file: Context.cur_file_path_for_display(context),
+        line: line,
+        description: "Could not find library: #{lib_name}"
+    end
+    file_path =  List.to_string(lib_path) <> "/" <> rel_path
+    opts = Context.build_opts_for_include(context)
+    included_module = Parse.from_file(file_path, opts)
+    comment1 = %ErlComment{comments: ["% Begin included file: #{rel_path} from library #{Atom.to_string(lib_atom)}"]}
+    comment2 = %ErlComment{comments: ["% End included file: #{rel_path} from library #{Atom.to_string(lib_atom)}"]}
+    %ErlModule{module |
+      forms: [comment2 | included_module.forms] ++ [comment1 | module.forms]
     }
   end
 

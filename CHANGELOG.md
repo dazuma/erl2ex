@@ -6,6 +6,8 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 *   Requires Elixir 1.2. Updated the source for 1.2 warnings and deprecations.
 *   Updated and cleaned up ExDoc documentation.
+*   Support include_lib directive.
+*   Generate comments around each inline included file.
 *   Repeated matches on the same variable weren't properly annotated with a caret. Fixed.
 *   Funs with no parameters incorrectly translated to a single nil parameter. Fixed.
 *   Variable name mangling did not preserve leading underscores. Fixed.

@@ -4,6 +4,7 @@ defmodule Erl2ex.Convert do
   @moduledoc false
 
   alias Erl2ex.ErlAttr
+  alias Erl2ex.ErlComment
   alias Erl2ex.ErlDefine
   alias Erl2ex.ErlDirective
   alias Erl2ex.ErlFunc
@@ -15,6 +16,7 @@ defmodule Erl2ex.Convert do
   alias Erl2ex.ExAttr
   alias Erl2ex.ExCallback
   alias Erl2ex.ExClause
+  alias Erl2ex.ExComment
   alias Erl2ex.ExDirective
   alias Erl2ex.ExFunc
   alias Erl2ex.ExImport
@@ -42,6 +44,11 @@ defmodule Erl2ex.Convert do
       comments: erl_module.comments |> convert_comments,
       forms: forms
     }
+  end
+
+
+  defp conv_form(_context, %ErlComment{comments: comments}) do
+    %ExComment{comments: comments |> convert_comments}
   end
 
 
@@ -305,9 +312,14 @@ defmodule Erl2ex.Convert do
 
 
   defp convert_comments(comments) do
-    comments |> Enum.map(fn {:comment, _, str} ->
-      Regex.replace(~r{^%}, to_string(str), "#")
+    comments |> Enum.map(fn
+      {:comment, _, str} -> convert_comment_str(str)
+      str when is_binary(str) -> convert_comment_str(str)
     end)
+  end
+
+  defp convert_comment_str(str) do
+    Regex.replace(~r{^%}, to_string(str), "#")
   end
 
 end
