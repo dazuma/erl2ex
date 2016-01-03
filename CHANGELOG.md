@@ -2,7 +2,7 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
-## v0.0.3 (????-??-??)
+## v0.0.3 (2016-01-03)
 
 *   Requires Elixir 1.2. Updated the source for 1.2 warnings and deprecations.
 *   Updated and cleaned up ExDoc documentation.
