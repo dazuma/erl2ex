@@ -40,7 +40,7 @@ defmodule Erl2ex.Convert.Expressions do
     bsl: {@import_bitwise_metadata, :<<<},
     bsr: {@import_bitwise_metadata, :>>>},
     bnot: {@import_bitwise_metadata, :~~~},
-  ] |> Enum.into(HashDict.new)
+  ] |> Enum.into(%{})
 
   @autoimport_map [
     abs: :abs,
@@ -74,7 +74,7 @@ defmodule Erl2ex.Convert.Expressions do
     tl: :tl,
     trunc: :trunc,
     tuple_size: :tuple_size
-  ] |> Enum.into(HashDict.new)
+  ] |> Enum.into(%{})
 
 
   def conv_expr({:atom, _, val}, context) when is_atom(val) do
@@ -154,13 +154,13 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_expr({:op, _, op, arg}, context) do
-    {metadata, ex_op} = Dict.fetch!(@op_map, op)
+    {metadata, ex_op} = Map.fetch!(@op_map, op)
     {ex_arg, context} = conv_expr(arg, context)
     {{ex_op, metadata, [ex_arg]}, context}
   end
 
   def conv_expr({:op, _, op, arg1, arg2}, context) do
-    {metadata, ex_op} = Dict.fetch!(@op_map, op)
+    {metadata, ex_op} = Map.fetch!(@op_map, op)
     {ex_arg1, context} = conv_expr(arg1, context)
     {ex_arg2, context} = conv_expr(arg2, context)
     {{ex_op, metadata, [ex_arg1, ex_arg2]}, context}
@@ -748,7 +748,7 @@ defmodule Erl2ex.Convert.Expressions do
     ex_expr = if Context.is_local_func?(context, func, arity) do
       Context.local_function_name(context, func)
     else
-      case Dict.get(@autoimport_map, func, nil) do
+      case Map.get(@autoimport_map, func, nil) do
         nil -> {:., [], [:erlang, func]}
         ex_name -> ex_name
       end

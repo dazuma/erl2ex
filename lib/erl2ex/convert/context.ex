@@ -16,33 +16,33 @@ defmodule Erl2ex.Convert.Context do
     :fn,
     :nil,
     :true,
-  ] |> Enum.into(HashSet.new)
+  ] |> Enum.into(MapSet.new)
 
 
   defstruct cur_file_path: nil,
-            funcs: HashDict.new,
-            types: HashDict.new,
-            macros: HashDict.new,
-            records: HashDict.new,
-            used_func_names: HashSet.new,
-            used_attr_names: HashSet.new,
-            specs: HashDict.new,
-            variable_map: HashDict.new,
+            funcs: %{},
+            types: %{},
+            macros: %{},
+            records: %{},
+            used_func_names: MapSet.new,
+            used_attr_names: MapSet.new,
+            specs: %{},
+            variable_map: %{},
             quoted_variables: [],
             match_level: 0,
             in_func_params: false,
-            new_vars: HashSet.new,
+            new_vars: MapSet.new,
             scopes: []
 
   defmodule FuncInfo do
     @moduledoc false
     defstruct func_name: nil,
-              arities: HashDict.new  # Map of arity to exported flag
+              arities: %{}  # Map of arity to exported flag
   end
 
   defmodule TypeInfo do
     @moduledoc false
-    defstruct arities: HashDict.new  # Map of arity to exported flag
+    defstruct arities: %{}  # Map of arity to exported flag
   end
 
   defmodule MacroInfo do
@@ -83,9 +83,9 @@ defmodule Erl2ex.Convert.Context do
 
   def set_variable_maps(context, variable_map, args, stringification_map) do
     quoted_vars = args
-      |> Enum.map(&(HashDict.fetch!(variable_map, &1)))
+      |> Enum.map(&(Map.fetch!(variable_map, &1)))
     %Context{context |
-      quoted_variables: quoted_vars ++ HashDict.values(stringification_map),
+      quoted_variables: quoted_vars ++ Map.values(stringification_map),
       variable_map: variable_map
     }
   end
@@ -103,8 +103,8 @@ defmodule Erl2ex.Convert.Context do
     if old_match_level == 1 do
       in_func_params = false
       [top_scope | other_scopes] = scopes
-      scopes = [HashSet.union(top_scope, new_vars) | other_scopes]
-      new_vars = HashSet.new
+      scopes = [MapSet.union(top_scope, new_vars) | other_scopes]
+      new_vars = MapSet.new
     end
     %Context{context |
       match_level: old_match_level - 1,
@@ -116,7 +116,7 @@ defmodule Erl2ex.Convert.Context do
 
 
   def push_scope(context = %Context{scopes: scopes}) do
-    %Context{context | scopes: [HashSet.new | scopes]}
+    %Context{context | scopes: [MapSet.new | scopes]}
   end
 
 
@@ -126,20 +126,20 @@ defmodule Erl2ex.Convert.Context do
 
 
   def is_exported?(context, name, arity) do
-    info = Dict.get(context.funcs, name, %FuncInfo{})
-    Dict.get(info.arities, arity, false)
+    info = Map.get(context.funcs, name, %FuncInfo{})
+    Map.get(info.arities, arity, false)
   end
 
 
   def is_type_exported?(context, name, arity) do
-    info = Dict.get(context.types, name, %TypeInfo{})
-    Dict.get(info.arities, arity, false)
+    info = Map.get(context.types, name, %TypeInfo{})
+    Map.get(info.arities, arity, false)
   end
 
 
   def is_local_func?(context, name, arity) do
-    info = Dict.get(context.funcs, name, %FuncInfo{})
-    Dict.has_key?(info.arities, arity)
+    info = Map.get(context.funcs, name, %FuncInfo{})
+    Map.has_key?(info.arities, arity)
   end
 
 
@@ -149,33 +149,33 @@ defmodule Erl2ex.Convert.Context do
 
 
   def local_function_name(context, name) do
-    Dict.fetch!(context.funcs, name).func_name
+    Map.fetch!(context.funcs, name).func_name
   end
 
 
   def macro_function_name(context, name) do
-    Dict.fetch!(context.macros, name).func_name |> ensure_exists
+    Map.fetch!(context.macros, name).func_name |> ensure_exists
   end
 
 
   def record_function_name(context, name) do
-    Dict.fetch!(context.records, name).func_name
+    Map.fetch!(context.records, name).func_name
   end
 
 
   def record_field_index(context, record_name, field_name) do
-    (Dict.fetch!(context.records, record_name).fields
+    (Map.fetch!(context.records, record_name).fields
       |> Enum.find_index(fn f -> f == field_name end)) + 1
   end
 
 
   def record_field_names(context, record_name) do
-    Dict.fetch!(context.records, record_name).fields
+    Map.fetch!(context.records, record_name).fields
   end
 
 
   def needs_record_info?(context) do
-    Dict.size(context.records) > 0 and not is_local_func?(context, :record_info, 2)
+    Map.size(context.records) > 0 and not is_local_func?(context, :record_info, 2)
   end
 
 
@@ -188,28 +188,28 @@ defmodule Erl2ex.Convert.Context do
 
 
   def macro_const_name(context, name) do
-    Dict.fetch!(context.macros, name).const_name |> ensure_exists
+    Map.fetch!(context.macros, name).const_name |> ensure_exists
   end
 
 
   def tracking_attr_name(context, name) do
-    Dict.fetch!(context.macros, name).define_tracker
+    Map.fetch!(context.macros, name).define_tracker
   end
 
 
   def specs_for_func(context, name) do
-    Dict.get(context.specs, name, %Erl2ex.ErlSpec{name: name})
+    Map.get(context.specs, name, %Erl2ex.ErlSpec{name: name})
   end
 
 
   def map_variable_name(context, name) do
-    mapped_name = Dict.get(context.variable_map, name, {})
+    mapped_name = Map.fetch!(context.variable_map, name)
     needs_caret = false
     if context.match_level > 0 do
       needs_caret = not context.in_func_params and variable_seen?(context.scopes, name)
       if not needs_caret do
         context = %Context{context |
-          new_vars: HashSet.put(context.new_vars, name)
+          new_vars: MapSet.put(context.new_vars, name)
         }
       end
     end
@@ -226,7 +226,7 @@ defmodule Erl2ex.Convert.Context do
 
   defp variable_seen?([], _name), do: false
   defp variable_seen?([scopes_h | scopes_t], name) do
-    if HashSet.member?(scopes_h, name) do
+    if MapSet.member?(scopes_h, name) do
       true
     else
       variable_seen?(scopes_t, name)
@@ -248,14 +248,14 @@ defmodule Erl2ex.Convert.Context do
     used_func_names = context.used_func_names
     if is_valid_elixir_func_name(name) do
       func_name = name
-      used_func_names = HashSet.put(used_func_names, name)
+      used_func_names = MapSet.put(used_func_names, name)
     end
-    func_info = Dict.get(context.funcs, name, %FuncInfo{func_name: func_name})
+    func_info = Map.get(context.funcs, name, %FuncInfo{func_name: func_name})
     func_info = %FuncInfo{func_info |
-      arities: Dict.put(func_info.arities, arity, false)
+      arities: Map.put(func_info.arities, arity, false)
     }
     %Context{context |
-      funcs: Dict.put(context.funcs, name, func_info),
+      funcs: Map.put(context.funcs, name, func_info),
       used_func_names: used_func_names
     }
   end
@@ -263,7 +263,7 @@ defmodule Erl2ex.Convert.Context do
 
   defp is_valid_elixir_func_name(name) do
     Regex.match?(~r/^[_a-z]\w*$/, Atom.to_string(name)) and
-      not HashSet.member?(@elixir_reserved_words, name)
+      not MapSet.member?(@elixir_reserved_words, name)
   end
 
 
@@ -273,38 +273,38 @@ defmodule Erl2ex.Convert.Context do
       |> Utils.find_available_name(context.used_func_names, "func")
     info = %FuncInfo{info | func_name: elixir_name}
     %Context{context |
-      funcs: Dict.put(context.funcs, name, info),
-      used_func_names: HashSet.put(context.used_func_names, elixir_name)
+      funcs: Map.put(context.funcs, name, info),
+      used_func_names: MapSet.put(context.used_func_names, elixir_name)
     }
   end
   defp assign_strange_func_names(_, context), do: context
 
 
   defp collect_type_exports({name, arity}, context) do
-    type_info = Dict.get(context.types, name, %TypeInfo{})
+    type_info = Map.get(context.types, name, %TypeInfo{})
     type_info = %TypeInfo{type_info |
-      arities: Dict.put(type_info.arities, arity, true)
+      arities: Map.put(type_info.arities, arity, true)
     }
     %Context{context |
-      types: Dict.put(context.types, name, type_info)
+      types: Map.put(context.types, name, type_info)
     }
   end
 
 
   defp collect_exports({name, arity}, context) do
-    func_info = Dict.fetch!(context.funcs, name)
+    func_info = Map.fetch!(context.funcs, name)
     func_info = %FuncInfo{func_info |
-      arities: Dict.put(func_info.arities, arity, true)
+      arities: Map.put(func_info.arities, arity, true)
     }
     %Context{context |
-      funcs: Dict.put(context.funcs, name, func_info)
+      funcs: Map.put(context.funcs, name, func_info)
     }
   end
 
 
   defp collect_attr_info(%Erl2ex.ErlAttr{name: name}, context) do
     %Context{context |
-      used_attr_names: HashSet.put(context.used_attr_names, name)
+      used_attr_names: MapSet.put(context.used_attr_names, name)
     }
   end
   defp collect_attr_info(_, context), do: context
@@ -317,15 +317,15 @@ defmodule Erl2ex.Convert.Context do
       fields: fields |> Enum.map(&extract_record_field_name/1)
     }
     %Context{context |
-      used_func_names: HashSet.put(context.used_func_names, macro_name),
-      records: HashDict.put(context.records, name, record_info)
+      used_func_names: MapSet.put(context.used_func_names, macro_name),
+      records: Map.put(context.records, name, record_info)
     }
   end
   defp collect_record_info(_, context), do: context
 
 
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: nil}, context) do
-    macro = Dict.get(context.macros, name, %MacroInfo{})
+    macro = Map.get(context.macros, name, %MacroInfo{})
     if macro.const_name == nil do
       macro_name = Utils.find_available_name(name, context.used_attr_names, "erlmacro")
       nmacro = %MacroInfo{macro |
@@ -333,8 +333,8 @@ defmodule Erl2ex.Convert.Context do
         requires_init: update_requires_init(macro.requires_init, false)
       }
       %Context{context |
-        macros: Dict.put(context.macros, name, nmacro),
-        used_attr_names: HashSet.put(context.used_attr_names, macro_name)
+        macros: Map.put(context.macros, name, nmacro),
+        used_attr_names: MapSet.put(context.used_attr_names, macro_name)
       }
     else
       context
@@ -342,7 +342,7 @@ defmodule Erl2ex.Convert.Context do
   end
 
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name}, context) do
-    macro = Dict.get(context.macros, name, %MacroInfo{})
+    macro = Map.get(context.macros, name, %MacroInfo{})
     if macro.func_name == nil do
       macro_name = Utils.find_available_name(name, context.used_func_names, "erlmacro")
       nmacro = %MacroInfo{macro |
@@ -350,8 +350,8 @@ defmodule Erl2ex.Convert.Context do
         requires_init: update_requires_init(macro.requires_init, false)
       }
       %Context{context |
-        macros: Dict.put(context.macros, name, nmacro),
-        used_func_names: HashSet.put(context.used_func_names, macro_name)
+        macros: Map.put(context.macros, name, nmacro),
+        used_func_names: MapSet.put(context.used_func_names, macro_name)
       }
     else
       context
@@ -359,7 +359,7 @@ defmodule Erl2ex.Convert.Context do
   end
 
   defp collect_macro_info(%Erl2ex.ErlDirective{name: name}, context) when name != nil do
-    macro = Dict.get(context.macros, name, %MacroInfo{})
+    macro = Map.get(context.macros, name, %MacroInfo{})
     if macro.define_tracker == nil do
       tracker_name = Utils.find_available_name(name, context.used_attr_names, "defined")
       nmacro = %MacroInfo{macro |
@@ -367,8 +367,8 @@ defmodule Erl2ex.Convert.Context do
         requires_init: update_requires_init(macro.requires_init, true)
       }
       %Context{context |
-        macros: Dict.put(context.macros, name, nmacro),
-        used_attr_names: HashSet.put(context.used_attr_names, tracker_name)
+        macros: Map.put(context.macros, name, nmacro),
+        used_attr_names: MapSet.put(context.used_attr_names, tracker_name)
       }
     else
       context
@@ -379,7 +379,7 @@ defmodule Erl2ex.Convert.Context do
 
 
   defp collect_specs(spec = %Erl2ex.ErlSpec{name: name}, context), do:
-    %Context{context | specs: HashDict.put(context.specs, name, spec)}
+    %Context{context | specs: Map.put(context.specs, name, spec)}
 
 
   defp extract_record_field_name({:typed_record_field, record_field, _type}), do:

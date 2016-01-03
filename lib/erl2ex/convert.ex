@@ -163,7 +163,7 @@ defmodule Erl2ex.Convert do
     {main_comments, inline_comments} = split_comments(comments, line)
     {variable_map, _stringification_map} = VarRenamer.compute_var_maps([params, defn])
     context = context
-      |> Context.set_variable_maps(variable_map, [], HashDict.new)
+      |> Context.set_variable_maps(variable_map, [], %{})
 
     ex_kind = cond do
       kind == :opaque ->
@@ -206,7 +206,7 @@ defmodule Erl2ex.Convert do
   defp conv_spec_clause(context, name, clause) do
     {variable_map, _stringification_map} = VarRenamer.compute_var_maps(clause)
     context
-      |> Context.set_variable_maps(variable_map, [], HashDict.new)
+      |> Context.set_variable_maps(variable_map, [], %{})
       |> conv_var_mapped_spec_clause(name, clause)
   end
 
@@ -235,7 +235,7 @@ defmodule Erl2ex.Convert do
   defp conv_clause(context, clause, comments, name) do
     {variable_map, _stringification_map} = VarRenamer.compute_var_maps(clause)
     context
-      |> Context.set_variable_maps(variable_map, [], HashDict.new)
+      |> Context.set_variable_maps(variable_map, [], %{})
       |> conv_var_mapped_clause(clause, comments, name)
   end
 
