@@ -1,6 +1,8 @@
 defmodule ScopeTest do
   use ExUnit.Case
 
+  @opts [emit_file_headers: false]
+
 
   test "Reference param var in toplevel function" do
     input = """
@@ -14,7 +16,7 @@ defmodule ScopeTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -32,7 +34,7 @@ defmodule ScopeTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -55,7 +57,7 @@ defmodule ScopeTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -78,7 +80,7 @@ defmodule ScopeTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -98,7 +100,7 @@ defmodule ScopeTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -113,7 +115,7 @@ defmodule ScopeTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -137,7 +139,7 @@ defmodule ScopeTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -159,7 +161,7 @@ defmodule ScopeTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -182,7 +184,7 @@ defmodule ScopeTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 

@@ -59,13 +59,15 @@ defmodule Erl2ex.Codegen do
   end
 
 
-  defp write_module(context, %ExModule{name: nil, forms: forms}, io) do
+  defp write_module(context, %ExModule{name: nil, forms: forms, file_comments: file_comments}, io) do
     context
+      |> write_comment_list(file_comments, :structure_comments, io)
       |> foreach(forms, io, &write_form/3)
   end
 
-  defp write_module(context, %ExModule{name: name, forms: forms, comments: comments}, io) do
+  defp write_module(context, %ExModule{name: name, forms: forms, file_comments: file_comments, comments: comments}, io) do
     context
+      |> write_comment_list(file_comments, :structure_comments, io)
       |> write_comment_list(comments, :module_comments, io)
       |> skip_lines(:module_begin, io)
       |> write_string("defmodule :#{to_string(name)} do", io)

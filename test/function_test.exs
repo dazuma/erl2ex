@@ -1,6 +1,8 @@
 defmodule FunctionTest do
   use ExUnit.Case
 
+  @opts [emit_file_headers: false]
+
 
   test "Single clause, single expr with no arguments or guards" do
     input = """
@@ -13,7 +15,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -28,7 +30,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -43,7 +45,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -65,7 +67,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -80,7 +82,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -95,7 +97,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -122,7 +124,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -153,7 +155,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -177,7 +179,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -228,7 +230,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -249,7 +251,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -270,7 +272,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -291,7 +293,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -311,7 +313,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -329,7 +331,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -347,7 +349,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -371,7 +373,7 @@ defmodule FunctionTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 

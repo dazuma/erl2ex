@@ -20,9 +20,10 @@ defmodule Erl2ex.Cli do
       OptionParser.parse(argv,
         strict: [
           output: :string,
+          include_dir: [:string, :keep],
+          emit_file_headers: :boolean,
           verbose: [:boolean, :keep],
-          help: :boolean,
-          include_dir: [:string, :keep]
+          help: :boolean
         ],
         aliases: [
           v: :verbose,
@@ -78,10 +79,11 @@ defmodule Erl2ex.Cli do
     #{invocation} [options] [input path]
 
     Command line options:
-    *   --output, -o "path"      (Set the output file or directory path)
-    *   --include-dir, -I "dir"  (Add a directory to the include path)
-    *   --verbose, -v            (Display verbose status)
-    *   --help, -?               (Display help text)
+    *   --output, -o "path"       (Set the output file or directory path)
+    *   --include-dir, -I "dir"   (Add a directory to the include path)
+    *   --[no-]emit-file-headers  (Emit a header comment in each file)
+    *   --verbose, -v             (Display verbose status)
+    *   --help, -?                (Display help text)
 
     erl2ex is a Erlang to Elixir transpiler.
 

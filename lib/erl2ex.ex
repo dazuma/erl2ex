@@ -22,11 +22,12 @@ defmodule Erl2ex do
 
   Recognized options are:
   *   `:include_dir` Add a directory to the include path.
+  *   `:emit_file_headers` Add a header comment to each file. Default is true.
   *   `:verbosity` Set the output verbosity level. (Default is 0, which
       outputs only error messages. 1 outputs basic status information, and
       2 outputs debug information.)
   """
-  @type options :: [include_dir: Path.t, verbosity: integer]
+  @type options :: [include_dir: Path.t, verbosity: integer, emit_file_headers: boolean]
 
   @typedoc """
   Information on an error that happened converting a piece of Erlang source.

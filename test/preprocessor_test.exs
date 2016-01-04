@@ -1,6 +1,8 @@
 defmodule PreprocessorTest do
   use ExUnit.Case
 
+  @opts [emit_file_headers: false]
+
 
   test "Macro constant defines with a nested define" do
     input = """
@@ -26,7 +28,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -60,7 +62,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -85,7 +87,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -109,7 +111,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -141,7 +143,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -187,7 +189,7 @@ defmodule PreprocessorTest do
       @defined_debug false
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -233,7 +235,7 @@ defmodule PreprocessorTest do
       @defined_DEBUG false
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -257,7 +259,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -281,7 +283,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -305,7 +307,7 @@ defmodule PreprocessorTest do
       end
       """
 
-    assert Erl2ex.convert_str!(input) == expected
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 
@@ -343,7 +345,7 @@ defmodule PreprocessorTest do
       # End included file: include3.hrl
       """
 
-    assert Erl2ex.convert_str!(input, include_dir: "test/files") == expected
+    assert Erl2ex.convert_str!(input, Keyword.merge(@opts, [include_dir: "test/files"])) == expected
   end
 
 

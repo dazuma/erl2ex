@@ -128,6 +128,7 @@ defmodule Erl2ex.ExModule do
   @moduledoc false
 
   defstruct name: nil,
+            file_comments: [],
             comments: [],
             forms: []
 
