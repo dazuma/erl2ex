@@ -336,7 +336,7 @@ defmodule Erl2ex.Convert do
   end
 
   defp convert_comment_str(str) do
-    Regex.replace(~r{^%}, to_string(str), "#")
+    Regex.replace(~r{^%+}, to_string(str), fn prefix -> String.replace(prefix, "%", "#") end)
   end
 
 end

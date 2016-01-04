@@ -4,6 +4,24 @@ defmodule StructureTest do
   @opts [emit_file_headers: false]
 
 
+  test "Module comments" do
+    input = """
+      %% This is an empty module.
+      -module(foo).
+      """
+
+    expected = """
+      ## This is an empty module.
+
+      defmodule :foo do
+
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Record operations" do
     input = """
       -record(foo, {field1, field2=123}).

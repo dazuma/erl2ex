@@ -4,7 +4,8 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 ## v0.0.4 (not yet released)
 
-*   Generate file comments by default
+*   Generate file comments by default.
+*   When a comment begins with multiple percent signs, convert all of them to hashes.
 
 ## v0.0.3 (2016-01-03)
 
