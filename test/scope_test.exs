@@ -38,22 +38,28 @@ defmodule ScopeTest do
   end
 
 
-  test "Reference var previously matched in a conditional" do
+  test "Reference vars previously matched in a conditional" do
     input = """
       foo(P) ->
-        if
-          P -> A = 3
+        case P of
+          1 -> A = 1, B = 1;
+          B -> A = 2
         end,
-        A = 2.
+        A = 0,
+        B = 0.
       """
 
     expected = """
       defp foo(p) do
-        cond() do
-          p ->
-            a = 3
+        case(p) do
+          1 ->
+            a = 1
+            b = 1
+          b ->
+            a = 2
         end
-        ^a = 2
+        ^a = 0
+        ^b = 0
       end
       """
 
@@ -65,16 +71,16 @@ defmodule ScopeTest do
     input = """
       foo(P) ->
         A = 2,
-        if
-          P -> A = 3
+        case P of
+          1 -> A = 3
         end.
       """
 
     expected = """
       defp foo(p) do
         a = 2
-        cond() do
-          p ->
+        case(p) do
+          1 ->
             ^a = 3
         end
       end
@@ -84,7 +90,7 @@ defmodule ScopeTest do
   end
 
 
-  test "Inner fun match does not leak outside unless already declared" do
+  test "Inner fun match does not export unless already declared in the surrounding scope" do
     input = """
       foo() ->
         fun () -> A = 1 end,
@@ -143,7 +149,33 @@ defmodule ScopeTest do
   end
 
 
-  test "Variable occurs multiple times within a match" do
+  test "Case statement clauses do not clash, but variables are exported" do
+    input = """
+      foo(P) ->
+        case P of
+          A -> 1;
+          {A} -> 2
+        end,
+        A = 3.
+      """
+
+    expected = """
+      defp foo(p) do
+        case(p) do
+          a ->
+            1
+          {a} ->
+            2
+        end
+        ^a = 3
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Variables can occur multiple times within a match" do
     input = """
       foo(A, A) ->
         A = 2,

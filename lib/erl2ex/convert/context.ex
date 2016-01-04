@@ -31,7 +31,7 @@ defmodule Erl2ex.Convert.Context do
             quoted_variables: [],
             match_level: 0,
             in_func_params: false,
-            new_vars: MapSet.new,
+            match_vars: MapSet.new,
             scopes: []
 
   defmodule FuncInfo do
@@ -99,29 +99,46 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def pop_match_level(context = %Context{scopes: scopes, new_vars: new_vars, match_level: old_match_level, in_func_params: in_func_params}) do
+  def pop_match_level(context = %Context{scopes: scopes, match_vars: match_vars, match_level: old_match_level, in_func_params: in_func_params}) do
     if old_match_level == 1 do
       in_func_params = false
-      [top_scope | other_scopes] = scopes
-      scopes = [MapSet.union(top_scope, new_vars) | other_scopes]
-      new_vars = MapSet.new
+      [{top_vars, top_exports} | other_scopes] = scopes
+      top_vars = MapSet.union(top_vars, match_vars)
+      scopes = [{top_vars, top_exports} | other_scopes]
+      match_vars = MapSet.new
     end
     %Context{context |
       match_level: old_match_level - 1,
       in_func_params: in_func_params,
       scopes: scopes,
-      new_vars: new_vars
+      match_vars: match_vars
     }
   end
 
 
   def push_scope(context = %Context{scopes: scopes}) do
-    %Context{context | scopes: [MapSet.new | scopes]}
+    %Context{context | scopes: [{MapSet.new, MapSet.new} | scopes]}
   end
 
 
-  def pop_scope(context = %Context{scopes: [_h | t]}) do
-    %Context{context | scopes: t}
+  def pop_scope(context = %Context{scopes: [_h]}) do
+    %Context{context | scopes: []}
+  end
+
+  def pop_scope(context = %Context{scopes: [{top_vars, _top_exports}, {next_vars, next_exports} | t]}) do
+    next_exports = MapSet.union(next_exports, top_vars)
+    %Context{context | scopes: [{next_vars, next_exports} | t]}
+  end
+
+
+  def clear_exports(context = %Context{scopes: [{top_vars, _top_exports} | t]}) do
+    %Context{context | scopes: [{top_vars, MapSet.new} | t]}
+  end
+
+
+  def apply_exports(context = %Context{scopes: [{top_vars, top_exports} | t]}) do
+    top_vars = MapSet.union(top_vars, top_exports)
+    %Context{context | scopes: [{top_vars, MapSet.new} | t]}
   end
 
 
@@ -209,7 +226,7 @@ defmodule Erl2ex.Convert.Context do
       needs_caret = not context.in_func_params and name != :_ and variable_seen?(context.scopes, name)
       if not needs_caret and name != :_ do
         context = %Context{context |
-          new_vars: MapSet.put(context.new_vars, name)
+          match_vars: MapSet.put(context.match_vars, name)
         }
       end
     end
@@ -225,7 +242,7 @@ defmodule Erl2ex.Convert.Context do
 
 
   defp variable_seen?([], _name), do: false
-  defp variable_seen?([scopes_h | scopes_t], name) do
+  defp variable_seen?([{scopes_h, _} | scopes_t], name) do
     if MapSet.member?(scopes_h, name) do
       true
     else

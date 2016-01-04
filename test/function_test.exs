@@ -86,6 +86,36 @@ defmodule FunctionTest do
   end
 
 
+  test "Remote function calls with an expression as the function name" do
+    input = """
+      foo(A, B) -> baz:A(B).
+      """
+
+    expected = """
+      defp foo(a, b) do
+        :erlang.apply(:baz, a, [b])
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Remote function calls with an expression as the module name" do
+    input = """
+      foo(A, B) -> A:baz(B).
+      """
+
+    expected = """
+      defp foo(a, b) do
+        a.baz(b)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Anonymous function calls" do
     input = """
       foo(A, B) -> B(A).

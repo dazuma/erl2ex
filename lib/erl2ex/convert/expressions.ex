@@ -148,9 +148,7 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_expr({:call, _, func, args}, context) when is_list(args) do
-    {ex_func, context} = func_spec(func, args, context)
-    {ex_args, context} = conv_list(args, context)
-    {{ex_func, [], ex_args}, context}
+    conv_call(func, args, context)
   end
 
   def conv_expr({:op, _, op, arg}, context) do
@@ -166,28 +164,24 @@ defmodule Erl2ex.Convert.Expressions do
     {{ex_op, metadata, [ex_arg1, ex_arg2]}, context}
   end
 
-  def conv_expr({:clause, _, params, guards, arg}, context) do
-    conv_clause(:normal, params, guards, arg, context)
-  end
-
   def conv_expr({:case, _, val, clauses}, context) when is_list(clauses) do
     {ex_val, context} = conv_expr(val, context)
-    {ex_clauses, context} = conv_list(clauses, context)
+    {ex_clauses, context} = conv_clause_list(:case, clauses, context)
     {{:case, [], [ex_val, [do: ex_clauses]]}, context}
   end
 
   def conv_expr({:if, _, clauses}, context) when is_list(clauses) do
-    {ex_clauses, context} = conv_list(clauses, context)
+    {ex_clauses, context} = conv_clause_list(:if, clauses, context)
     {{:cond, [], [[do: ex_clauses]]}, context}
   end
 
   def conv_expr({:receive, _, clauses}, context) when is_list(clauses) do
-    {ex_clauses, context} = conv_list(clauses, context)
+    {ex_clauses, context} = conv_clause_list(:receive, clauses, context)
     {{:receive, [], [[do: ex_clauses]]}, context}
   end
 
   def conv_expr({:receive, _, clauses, timeout, ontimeout}, context) when is_list(clauses) and is_list(ontimeout) do
-    {ex_clauses, context} = conv_list(clauses, context)
+    {ex_clauses, context} = conv_clause_list(:receive, clauses, context)
     {ex_timeout, context} = conv_expr(timeout, context)
     {ex_ontimeout, context} = conv_block(ontimeout, context)
     {{:receive, [], [[do: ex_clauses, after: [{:"->", [], [[ex_timeout], ex_ontimeout]}]]]}, context}
@@ -374,17 +368,20 @@ defmodule Erl2ex.Convert.Expressions do
 
 
   defp conv_clause_list(type, clauses, context) do
-    Enum.map_reduce(clauses, context, fn
+    if type == :case or type == :if or type == :receive do
+      context = Context.clear_exports(context)
+    end
+    {result, context} = Enum.map_reduce(clauses, context, fn
       ({:clause, _, params, guards, arg}, context) ->
-        if type == :fun do
-          context = Context.push_scope(context)
-        end
+        context = Context.push_scope(context)
         {result, context} = conv_clause(type, params, guards, arg, context)
-        if type == :fun do
-          context = Context.pop_scope(context)
-        end
+        context = Context.pop_scope(context)
         {result, context}
     end)
+    if type == :case or type == :if or type == :receive do
+      context = Context.apply_exports(context)
+    end
+    {result, context}
   end
 
 
@@ -471,7 +468,7 @@ defmodule Erl2ex.Convert.Expressions do
       try_elems = try_elems ++ [after: ex_after_expr]
     end
     if not Enum.empty?(of_clauses) do
-      {ex_of_clauses, context} = conv_list(of_clauses, context)
+      {ex_of_clauses, context} = conv_clause_list(:try_of, of_clauses, context)
       try_elems = try_elems ++ [else: ex_of_clauses]
     end
     {{:try, [], [try_elems]}, context}
@@ -736,6 +733,29 @@ defmodule Erl2ex.Convert.Expressions do
   defp conv_const(name, context) do
     macro_name = Context.macro_const_name(context, name)
     {{:@, @import_kernel_metadata, [{macro_name, [], Elixir}]}, context}
+  end
+
+
+  defp conv_call(func = {:remote, _, _, {:atom, _, _}}, args, context) do
+    conv_normal_call(func, args, context)
+  end
+
+  defp conv_call({:remote, _, module_expr, func_expr}, args, context) do
+    {ex_module, context} = conv_expr(module_expr, context)
+    {ex_func, context} = conv_expr(func_expr, context)
+    {ex_args, context} = conv_list(args, context)
+    {{{:., [], [:erlang, :apply]}, [], [ex_module, ex_func, ex_args]}, context}
+  end
+
+  defp conv_call(func, args, context) do
+    conv_normal_call(func, args, context)
+  end
+
+
+  defp conv_normal_call(func, args, context) do
+    {ex_func, context} = func_spec(func, args, context)
+    {ex_args, context} = conv_list(args, context)
+    {{ex_func, [], ex_args}, context}
   end
 
 
