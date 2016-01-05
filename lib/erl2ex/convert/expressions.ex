@@ -301,6 +301,7 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_expr({:record_index, _, name, field}, context) do
+    # TODO: consider using a semantic name for this.
     {ex_field, context} = conv_expr(field, context)
     {Context.record_field_index(context, name, ex_field), context}
   end
@@ -745,6 +746,19 @@ defmodule Erl2ex.Convert.Expressions do
     {ex_func, context} = conv_expr(func_expr, context)
     {ex_args, context} = conv_list(args, context)
     {{{:., [], [:erlang, :apply]}, [], [ex_module, ex_func, ex_args]}, context}
+  end
+
+  defp conv_call({:atom, _, :record_info}, [{:atom, _, :size}, {:atom, _, rec}], context) do
+    # TODO: consider using a semantic name for this.
+    size = context
+      |> Context.record_field_names(rec)
+      |> Enum.count
+    {size + 1, context}
+  end
+
+  defp conv_call({:atom, _, :record_info}, [{:atom, _, :fields}, {:atom, _, rec}], context) do
+    # TODO: consider using a semantic name for this.
+    {Context.record_field_names(context, rec), context}
   end
 
   defp conv_call(func, args, context) do

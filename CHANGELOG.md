@@ -8,6 +8,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   When a comment begins with multiple percent signs, convert all of them to hashes.
 *   Separate clauses within a case, receive, or catch leaked variable scopes to each other. Fixed.
 *   Support remote function calls with an expression as the function name.
+*   Evaluate record_info calls directly since creating a function doesn't seem to work.
 
 ## v0.0.3 (2016-01-03)
 

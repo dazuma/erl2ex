@@ -16,8 +16,7 @@ defmodule Erl2ex.Convert.Headers do
     header = forms
       |> Enum.reduce(%ExHeader{}, &header_check_form/2)
     %ExHeader{header |
-      records: Context.map_records(context, fn(name, fields) -> {name, fields} end),
-      record_info_available: not Context.is_local_func?(context, :record_info, 2)
+      records: Context.map_records(context, fn(name, fields) -> {name, fields} end)
     }
   end
 
