@@ -53,7 +53,6 @@ This software is still under heavy development, and many capabilities are not ye
 *   The include directive does not support environment variable interpolation.
 *   Macro defines do not work with guard fragments, i.e. expressions delimited by commas or semicolons. See examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_tokenizer.erl.
 *   Macro defines do not work when generating multiple (comma-delimited) lines of a function definition. Need to determine if this is a real thing we need to support.
-*   Some "defined_*" attributes (used for macro-based flow control) are not initialized properly. This happens if the ifdef comes lexically before any define.
 *   Invoking constant macros as function names is not working. e.g. if `-define(A, m:f).`, it should be legal to invoke `?A()`.
 *   Record declarations with type info (e.g. `-record(foo, {field1 :: integer}).`) are not supported. Currently the converter drops the types. This seems to be a limitation of Elixir itself.
 *   Binary expressions with complex or combination size/type specs are not supported, and cause the converter to crash. An example is `<<1:16/integer-signed-native>>`. This also seems to be a limitation of Elixir itself.
@@ -65,7 +64,6 @@ This software is still under heavy development, and many capabilities are not ye
 *   Provide an option to elixirize module names (e.g. instead of generating `defmodule :my_erlang_module`, generate `defmodule MyErlangModule`)
 *   Provide an option to convert variable names from camelCase to snake_case.
 *   Provide (possibly optional) translation of include files (.hrl) to separate modules rather than copying into the including module, so the declarations can be shared after translation to Elixir.
-*   Provide the ability to define constants from the environment, similar to -D for other languages. Elixir doesn't have a preprocessor, but we might do this using environment variables and/or config.
 
 ## Contributing
 

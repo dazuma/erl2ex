@@ -95,7 +95,7 @@ defmodule Erl2ex.ExHeader do
 
   defstruct use_bitwise: false,
             records: [],
-            record_info_available: false
+            init_macros: []
 
 end
 

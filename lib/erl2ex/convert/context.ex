@@ -191,11 +191,6 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def needs_record_info?(context) do
-    Map.size(context.records) > 0 and not is_local_func?(context, :record_info, 2)
-  end
-
-
   def map_records(context, func) do
     context.records |>
       Enum.map(fn {name, %RecordInfo{fields: fields}} ->
@@ -239,6 +234,18 @@ defmodule Erl2ex.Convert.Context do
 
   def cur_file_path_for_display(%Context{cur_file_path: path}), do:
     path
+
+
+  def macros_that_need_init(%Context{macros: macros}) do
+    macros |> Enum.filter_map(
+      fn
+        {_, %MacroInfo{requires_init: true}} -> true
+        _ -> false
+      end,
+      fn {name, %MacroInfo{const_name: const_name, define_tracker: define_tracker}} ->
+        {name, const_name, define_tracker}
+      end)
+  end
 
 
   defp variable_seen?([], _name), do: false

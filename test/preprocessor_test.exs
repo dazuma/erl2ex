@@ -287,6 +287,60 @@ defmodule PreprocessorTest do
   end
 
 
+  test "Macro tested before defined" do
+    input = """
+      -ifdef(TEST).
+      -endif.
+      """
+
+    expected = """
+      @defined_TEST System.get_env("DEFINE_TEST") != nil
+
+      if @defined_TEST do
+
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Macro tested before defined, with custom prefix" do
+    input = """
+      -ifdef(TEST).
+      -endif.
+      """
+
+    expected = """
+      @defined_TEST System.get_env("ERL_DEFINE_TEST") != nil
+
+      if @defined_TEST do
+
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, Keyword.merge(@opts, [define_prefix: "ERL_DEFINE_"])) == expected
+  end
+
+
+  test "Macro tested before defined, using config" do
+    input = """
+      -ifdef(TEST).
+      -endif.
+      """
+
+    expected = """
+      @defined_TEST Application.get_env(:erl2ex, :ERL_DEFINE_TEST) != nil
+
+      if @defined_TEST do
+
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, Keyword.merge(@opts, [defines_from_config: "erl2ex", define_prefix: "ERL_DEFINE_"])) == expected
+  end
+
+
   test "Predefined macros" do
     input = """
       foo() ->

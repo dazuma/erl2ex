@@ -9,6 +9,8 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   Separate clauses within a case, receive, or catch leaked variable scopes to each other. Fixed.
 *   Support remote function calls with an expression as the function name.
 *   Evaluate record_info calls directly since creating a function doesn't seem to work.
+*   Ensure "defined_*" attributes are initialized if the erlang source doesn't define them explicitly.
+*   Allow definition of constant macros from environment variables or application configs.
 
 ## v0.0.3 (2016-01-03)
 

@@ -42,12 +42,21 @@ defmodule Erl2ex.Codegen do
   defmodule Context do
     @moduledoc false
     defstruct indent: 0,
-              last_form: :start
+              last_form: :start,
+              define_prefix: "",
+              defines_from_config: nil
   end
 
 
-  defp build_context(_opts) do
-    %Context{}
+  defp build_context(opts) do
+    defines_from_config = Keyword.get(opts, :defines_from_config, nil)
+    if is_binary(defines_from_config) do
+      defines_from_config = String.to_atom(defines_from_config)
+    end
+    %Context{
+      define_prefix: Keyword.get(opts, :define_prefix, "DEFINE_"),
+      defines_from_config: defines_from_config
+    }
   end
 
   def increment_indent(context) do
@@ -85,6 +94,23 @@ defmodule Erl2ex.Codegen do
         |> skip_lines(:attr, io)
         |> write_string("use Bitwise, only_operators: true", io)
     end
+    context = context
+      |> foreach(header.init_macros, fn(ctx, {name, value_name, defined_name}) ->
+        ctx = ctx |> skip_lines(:attr, io)
+        env_name = ctx.define_prefix <> to_string(name)
+        get_env_syntax = if ctx.defines_from_config do
+          "Application.get_env(#{inspect(ctx.defines_from_config)}, #{env_name |> String.to_atom |> inspect})"
+        else
+          "System.get_env(#{inspect(env_name)})"
+        end
+        if value_name != nil do
+          ctx = ctx |> write_string("@#{value_name} #{get_env_syntax}", io)
+        end
+        if defined_name != nil do
+          ctx = ctx |> write_string("@#{defined_name} #{get_env_syntax} != nil", io)
+        end
+        ctx
+      end)
     if not Enum.empty?(header.records) do
       context = context
         |> skip_lines(:attr, io)
