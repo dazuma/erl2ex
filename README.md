@@ -22,7 +22,7 @@ To run the mix task, first add Erl2ex as a dependency to your existing Elixir pr
 
 ```elixir
 def deps do
-  [ {:erl2ex, ">= 0.0.3", only: :dev} ]
+  [ {:erl2ex, ">= 0.0.4", only: :dev} ]
 end
 ```
 
