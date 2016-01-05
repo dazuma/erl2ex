@@ -22,6 +22,8 @@ defmodule Erl2ex.Cli do
           output: :string,
           include_dir: [:string, :keep],
           emit_file_headers: :boolean,
+          define_prefix: :string,
+          defines_from_config: :string,
           verbose: [:boolean, :keep],
           help: :boolean
         ],
@@ -76,14 +78,16 @@ defmodule Erl2ex.Cli do
 
   def usage_text(invocation \\ "erl2ex") do
     """
-    #{invocation} [options] [input path]
+    Usage: `#{invocation} [options] [input path]`
 
     Command line options:
-    *   --output, -o "path"       (Set the output file or directory path)
-    *   --include-dir, -I "dir"   (Add a directory to the include path)
-    *   --[no-]emit-file-headers  (Emit a header comment in each file)
-    *   --verbose, -v             (Display verbose status)
-    *   --help, -?                (Display help text)
+        --output, -o "path"          (Set the output file or directory path)
+        --include-dir, -I "dir"      (Add a directory to the include path)
+        --[no-]emit-file-headers     (Emit a header comment in each file)
+        --define_prefix "prefix"     (Prefix for variables used to define macros)
+        --defines_from_config "app"  (Define macros from this application's config)
+        --verbose, -v                (Display verbose status)
+        --help, -?                   (Display help text)
 
     erl2ex is a Erlang to Elixir transpiler.
 
@@ -152,7 +156,7 @@ defmodule Erl2ex.Cli do
 
 
   defp display_help do
-    IO.write(:stderr, usage_text("Usage: erl2ex"))
+    IO.write(:stderr, usage_text("erl2ex"))
   end
 
 end

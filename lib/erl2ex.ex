@@ -17,17 +17,29 @@ defmodule Erl2ex do
   alias Erl2ex.Convert
   alias Erl2ex.Codegen
 
+
   @typedoc """
   Options that may be provided to a conversion run.
 
   Recognized options are:
   *   `:include_dir` Add a directory to the include path.
+  *   `:define_prefix` Prefix added to the environment variable or config key
+      names that are read to initialize macro definitions. Default: "DEFINE_".
+  *   `:defines_from_config` An application whose config should be used to
+      initialize macro definitions. If not specified or set to nil, system
+      environment variables will be used.
   *   `:emit_file_headers` Add a header comment to each file. Default is true.
   *   `:verbosity` Set the output verbosity level. (Default is 0, which
       outputs only error messages. 1 outputs basic status information, and
       2 outputs debug information.)
   """
-  @type options :: [include_dir: Path.t, verbosity: integer, emit_file_headers: boolean]
+  @type options :: [
+    include_dir: Path.t,
+    define_prefix: String.t,
+    defines_from_config: atom,
+    emit_file_headers: boolean,
+    verbosity: integer
+  ]
 
   @typedoc """
   Information on an error that happened converting a piece of Erlang source.
