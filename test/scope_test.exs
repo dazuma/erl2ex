@@ -125,6 +125,46 @@ defmodule ScopeTest do
   end
 
 
+  test "List comprehension param shadows external variable of the same name" do
+    input = """
+      foo() ->
+        [X || X <- [2,3]],
+        X = 1,
+        [X || X <- [2,3]].
+      """
+
+    expected = """
+      defp foo() do
+        for(x <- [2, 3], into: [], do: x)
+        x = 1
+        for(x <- [2, 3], into: [], do: x)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "String comprehension param shadows external variable of the same name" do
+    input = """
+      foo() ->
+        << <<X>> || <<X>> <= <<2,3>> >>,
+        X = 1,
+        << <<X>> || <<X>> <= <<2,3>> >>.
+      """
+
+    expected = """
+      defp foo() do
+        for(<<(x <- <<2, 3>>)>>, into: "", do: <<x>>)
+        x = 1
+        for(<<(x <- <<2, 3>>)>>, into: "", do: <<x>>)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Matches in case statement reference already declared variables" do
     input = """
       foo(A) ->
