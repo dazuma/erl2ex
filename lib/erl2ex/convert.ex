@@ -29,7 +29,6 @@ defmodule Erl2ex.Convert do
   alias Erl2ex.Convert.Expressions
   alias Erl2ex.Convert.Headers
   alias Erl2ex.Convert.Utils
-  alias Erl2ex.Convert.VarRenamer
 
 
   @auto_registered_attrs [:vsn, :compile, :on_load, :behaviour, :behavior]
@@ -128,10 +127,9 @@ defmodule Erl2ex.Convert do
   defp conv_form(%ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}, context) do
     if args == :nil, do: args = []
     {main_comments, inline_comments} = split_comments(comments, line)
-    {variable_map, stringification_map} = VarRenamer.compute_var_maps(replacement, args)
 
     replacement_context = context
-      |> Context.set_variable_maps(variable_map, args, stringification_map)
+      |> Context.set_variable_maps(replacement, args)
     ex_args = args |> Enum.map(fn arg -> {Utils.lower_atom(arg), [], Elixir} end)
     mapped_name = Context.macro_function_name(context, name)
     tracking_name = Context.tracking_attr_name(context, name)
@@ -140,7 +138,7 @@ defmodule Erl2ex.Convert do
     ex_macro = %ExMacro{
       signature: {mapped_name, [], ex_args},
       tracking_name: tracking_name,
-      stringifications: stringification_map,
+      stringifications: replacement_context.stringification_map,
       expr: ex_expr,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
@@ -181,9 +179,8 @@ defmodule Erl2ex.Convert do
 
   defp conv_form(%ErlType{line: line, kind: kind, name: name, params: params, defn: defn, comments: comments}, context) do
     {main_comments, inline_comments} = split_comments(comments, line)
-    {variable_map, _stringification_map} = VarRenamer.compute_var_maps([params, defn])
     context = context
-      |> Context.set_variable_maps(variable_map, [], %{})
+      |> Context.set_variable_maps([params, defn])
 
     ex_kind = cond do
       kind == :opaque ->
@@ -226,9 +223,8 @@ defmodule Erl2ex.Convert do
 
 
   defp conv_spec_clause(context, name, clause) do
-    {variable_map, _stringification_map} = VarRenamer.compute_var_maps(clause)
     context
-      |> Context.set_variable_maps(variable_map, [], %{})
+      |> Context.set_variable_maps(clause)
       |> conv_var_mapped_spec_clause(name, clause)
   end
 
@@ -255,9 +251,8 @@ defmodule Erl2ex.Convert do
 
 
   defp conv_clause(context, clause, comments, name) do
-    {variable_map, _stringification_map} = VarRenamer.compute_var_maps(clause)
     context
-      |> Context.set_variable_maps(variable_map, [], %{})
+      |> Context.set_variable_maps(clause)
       |> conv_var_mapped_clause(clause, comments, name)
   end
 

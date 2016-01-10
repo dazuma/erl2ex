@@ -28,6 +28,7 @@ defmodule Erl2ex.Convert.Context do
             used_attr_names: MapSet.new,
             specs: %{},
             variable_map: %{},
+            stringification_map: %{},
             quoted_variables: [],
             match_level: 0,
             in_func_params: false,
@@ -80,13 +81,17 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def set_variable_maps(context, variable_map, args, stringification_map) do
-    quoted_vars = args
+  def set_variable_maps(context, expr, extra_omits \\ []) do
+    {variable_map, stringification_map} = compute_var_maps(context, expr, extra_omits)
+
+    quoted_vars = extra_omits
       |> Enum.map(&(Map.fetch!(variable_map, &1)))
-    %Context{context |
+    context = %Context{context |
       quoted_variables: quoted_vars ++ Map.values(stringification_map),
-      variable_map: variable_map
+      variable_map: variable_map,
+      stringification_map: stringification_map
     }
+    context
   end
 
 
@@ -250,6 +255,81 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  defp compute_var_maps(context, expr, extra_omits) do
+    {normal_vars, _consts, stringified_args} = expr
+      |> collect_variable_names(MapSet.new)
+      |> MapSet.union(extra_omits |> Enum.into(MapSet.new))
+      |> classify_var_names()
+
+    all_names = context.used_func_names
+    {variables_map, all_names} = normal_vars
+      |> Enum.reduce({%{}, all_names}, &map_variables/2)
+    {stringification_map, variables_map, _all_names} = stringified_args
+      |> Enum.reduce({%{}, variables_map, all_names}, &map_stringification/2)
+    {variables_map, stringification_map}
+  end
+
+
+  defp collect_variable_names({:var, _, var}, var_names), do:
+    MapSet.put(var_names, var)
+
+  defp collect_variable_names(tuple, var_names) when is_tuple(tuple), do:
+    collect_variable_names(Tuple.to_list(tuple), var_names)
+
+  defp collect_variable_names(list, var_names) when is_list(list), do:
+    list |> Enum.reduce(var_names, &collect_variable_names/2)
+
+  defp collect_variable_names(_, var_names), do: var_names
+
+
+  defp classify_var_names(var_names) do
+    groups = var_names
+      |> Enum.group_by(fn var ->
+        name = var |> Atom.to_string
+        cond do
+          String.starts_with?(name, "??") -> :stringification
+          String.starts_with?(name, "?") -> :const
+          true -> :normal
+        end
+      end)
+    {
+      Map.get(groups, :normal, []),
+      Map.get(groups, :const, []),
+      Map.get(groups, :stringification, [])
+    }
+  end
+
+
+  defp map_stringification(stringified_arg, {stringification_map, variables_map, all_names}) do
+    if not Map.has_key?(stringification_map, stringified_arg) do
+      arg_name = stringified_arg
+        |> Atom.to_string
+        |> String.lstrip(??)
+        |> String.to_atom
+      mapped_arg = Map.fetch!(variables_map, arg_name)
+      mangled_name = mapped_arg
+        |> Utils.find_available_name(all_names, "str")
+      variables_map = Map.put(variables_map, stringified_arg, mangled_name)
+      stringification_map = Map.put(stringification_map, mapped_arg, mangled_name)
+      all_names = MapSet.put(all_names, mangled_name)
+    end
+    {stringification_map, variables_map, all_names}
+  end
+
+
+  defp map_variables(var_name, {variables_map, all_names}) do
+    if not Map.has_key?(variables_map, var_name) do
+      mapped_name = var_name
+        |> Atom.to_string
+        |> Utils.lower_str
+        |> Utils.find_available_name(all_names, "var", 0)
+      variables_map = Map.put(variables_map, var_name, mapped_name)
+      all_names = MapSet.put(all_names, mapped_name)
+    end
+    {variables_map, all_names}
+  end
+
+
   defp variable_seen?([], _name), do: false
   defp variable_seen?([{scopes_h, _} | scopes_t], name) do
     if MapSet.member?(scopes_h, name) do
@@ -263,10 +343,16 @@ defmodule Erl2ex.Convert.Context do
   defp ensure_exists(x) when x != nil, do: x
 
 
-  defp collect_func_info(%Erl2ex.ErlFunc{name: name, arity: arity}, context), do:
-    add_func_info({name, arity}, context)
-  defp collect_func_info(%Erl2ex.ErlImport{funcs: funcs}, context), do:
+  defp collect_func_info(%Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses}, context) do
+    context = add_func_info({name, arity}, context)
+    collect_func_ref_names(clauses, context)
+  end
+  defp collect_func_info(%Erl2ex.ErlDefine{replacement: replacement}, context) do
+    collect_func_ref_names(replacement, context)
+  end
+  defp collect_func_info(%Erl2ex.ErlImport{funcs: funcs}, context) do
     Enum.reduce(funcs, context, &add_func_info/2)
+  end
   defp collect_func_info(_, context), do: context
 
   defp add_func_info({name, arity}, context) do
@@ -285,6 +371,20 @@ defmodule Erl2ex.Convert.Context do
       used_func_names: used_func_names
     }
   end
+
+  defp collect_func_ref_names({:call, _, {:atom, _, name}, args}, context) do
+    context = collect_func_ref_names(args, context)
+    %Context{context |
+      used_func_names: MapSet.put(context.used_func_names, name)
+    }
+  end
+  defp collect_func_ref_names(tuple, context) when is_tuple(tuple) do
+    collect_func_ref_names(Tuple.to_list(tuple), context)
+  end
+  defp collect_func_ref_names(list, context) when is_list(list) do
+    list |> Enum.reduce(context, &collect_func_ref_names/2)
+  end
+  defp collect_func_ref_names(_, context), do: context
 
 
   defp is_valid_elixir_func_name(name) do

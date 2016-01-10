@@ -327,6 +327,27 @@ defmodule FunctionTest do
   end
 
 
+  test "Function name clash with a BIF referenced in another function" do
+    input = """
+      foo() -> bif().
+      bar(Bif) -> Bif.
+      """
+
+    expected = """
+      defp foo() do
+        :erlang.bif()
+      end
+
+
+      defp bar(var_bif) do
+        var_bif
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Simple specs" do
     input = """
       -spec foo(A :: atom(), integer()) -> boolean()
