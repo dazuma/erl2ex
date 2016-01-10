@@ -95,7 +95,7 @@ defmodule Erl2ex.Codegen do
         |> write_string("use Bitwise, only_operators: true", io)
     end
     context = context
-      |> foreach(header.init_macros, fn(ctx, {name, value_name, defined_name}) ->
+      |> foreach(header.init_macros, fn(ctx, {name, defined_name}) ->
         ctx = ctx |> skip_lines(:attr, io)
         env_name = ctx.define_prefix <> to_string(name)
         get_env_syntax = if ctx.defines_from_config do
@@ -103,13 +103,7 @@ defmodule Erl2ex.Codegen do
         else
           "System.get_env(#{inspect(env_name)})"
         end
-        if value_name != nil do
-          ctx = ctx |> write_string("@#{value_name} #{get_env_syntax}", io)
-        end
-        if defined_name != nil do
-          ctx = ctx |> write_string("@#{defined_name} #{get_env_syntax} != nil", io)
-        end
-        ctx
+        ctx |> write_string("@#{defined_name} #{get_env_syntax} != nil", io)
       end)
     if not Enum.empty?(header.records) do
       context = context
@@ -134,16 +128,16 @@ defmodule Erl2ex.Codegen do
       end)
   end
 
-  defp write_form(context, %ExAttr{name: name, tracking_name: tracking_name, register: register, arg: arg, comments: comments}, io) do
+  defp write_form(context, %ExAttr{name: name, register: register, arg: arg, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
-      |> write_raw_attr(name, tracking_name, register, arg, io)
+      |> write_raw_attr(name, register, arg, io)
   end
 
   defp write_form(context, %ExDirective{directive: directive, name: name, comments: comments}, io) do
     context
-      |> skip_lines(:attr, io)
+      |> skip_lines(:directive, io)
       |> foreach(comments, io, &write_string/3)
       |> write_raw_directive(directive, name, io)
   end
@@ -178,8 +172,8 @@ defmodule Erl2ex.Codegen do
       end)
   end
 
-  defp write_form(context, %ExMacro{signature: signature, stringifications: stringifications, expr: expr, comments: comments}, io) do
-    context
+  defp write_form(context, %ExMacro{signature: signature, tracking_name: tracking_name, stringifications: stringifications, expr: expr, comments: comments}, io) do
+    context = context
       |> write_comment_list(comments, :func_header, io)
       |> skip_lines(:func_clause_first, io)
       |> write_string("defmacrop #{Macro.to_string(signature)} do", io)
@@ -194,21 +188,21 @@ defmodule Erl2ex.Codegen do
       |> write_string("end", io)
       |> decrement_indent
       |> write_string("end", io)
-  end
-
-
-  defp write_raw_attr(context, name, tracking_name, register, arg, io) do
-    if register do
-      context = context
-        |> write_string("Module.register_attribute(__MODULE__, #{Macro.to_string(name)}, persist: true, accumulate: true)", io)
-    end
-    context = context
-      |> write_string("@#{name} #{Macro.to_string(arg)}", io)
     if tracking_name != nil do
       context = context
         |> write_string("@#{tracking_name} true", io)
     end
     context
+  end
+
+
+  defp write_raw_attr(context, name, register, arg, io) do
+    if register do
+      context = context
+        |> write_string("Module.register_attribute(__MODULE__, #{Macro.to_string(name)}, persist: true, accumulate: true)", io)
+    end
+    context
+      |> write_string("@#{name} #{Macro.to_string(arg)}", io)
   end
 
 

@@ -2,6 +2,10 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
+## v0.0.5 (not yet released)
+
+*   All erlang macros now translate to elixir macros, since it seems to be possible for parameterless macros not to be simple values.
+
 ## v0.0.4 (2016-01-05)
 
 *   Generate file comments by default.

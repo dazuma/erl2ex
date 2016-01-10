@@ -125,23 +125,8 @@ defmodule Erl2ex.Convert do
     {ex_attr, context}
   end
 
-  defp conv_form(%ErlDefine{line: line, name: name, args: nil, replacement: replacement, comments: comments}, context) do
-    {main_comments, inline_comments} = split_comments(comments, line)
-    mapped_name = Context.macro_const_name(context, name)
-    tracking_name = Context.tracking_attr_name(context, name)
-    {ex_arg, _} = Expressions.conv_expr(replacement, context)
-
-    ex_attr = %ExAttr{
-      name: mapped_name,
-      tracking_name: tracking_name,
-      arg: ex_arg,
-      comments: main_comments |> convert_comments,
-      inline_comments: inline_comments |> convert_comments
-    }
-    {ex_attr, context}
-  end
-
   defp conv_form(%ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}, context) do
+    if args == :nil, do: args = []
     {main_comments, inline_comments} = split_comments(comments, line)
     {variable_map, stringification_map} = VarRenamer.compute_var_maps(replacement, args)
 

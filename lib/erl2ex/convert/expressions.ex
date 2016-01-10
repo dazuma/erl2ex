@@ -237,13 +237,8 @@ defmodule Erl2ex.Convert.Expressions do
     conv_catch(expr, context)
   end
 
-  def conv_expr({:map_field_assoc, _, lhs, rhs}, context) do
-    {ex_lhs, context} = conv_expr(lhs, context)
-    {ex_rhs, context} = conv_expr(rhs, context)
-    {{ex_lhs, ex_rhs}, context}
-  end
-
-  def conv_expr({:map_field_exact, _, lhs, rhs}, context) do
+  def conv_expr({node_type, _, lhs, rhs}, context)
+  when node_type == :map_field_assoc or node_type == :map_field_exact do
     {ex_lhs, context} = conv_expr(lhs, context)
     {ex_rhs, context} = conv_expr(rhs, context)
     {{ex_lhs, ex_rhs}, context}
@@ -272,18 +267,13 @@ defmodule Erl2ex.Convert.Expressions do
     bin_element_expr(val, context)
   end
 
-  def conv_expr({:bin_element, _, val, size, :default}, context) do
-    {ex_val, context} = bin_element_expr(val, context)
-    {ex_size, context} = bin_element_size(size, context)
-    {{:::, [], [ex_val, ex_size]}, context}
-  end
-
   def conv_expr({:bin_element, _, val, :default, [type]}, context) do
     {ex_val, context} = bin_element_expr(val, context)
     {{:::, [], [ex_val, {type, [], Elixir}]}, context}
   end
 
-  def conv_expr({:bin_element, _, val, size, [:binary]}, context) do
+  def conv_expr({:bin_element, _, val, size, typespec}, context)
+  when typespec == :default or typespec == [:binary] do
     {ex_val, context} = bin_element_expr(val, context)
     {ex_size, context} = bin_element_size(size, context)
     {{:::, [], [ex_val, ex_size]}, context}
@@ -732,8 +722,8 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_const(name, context) do
-    macro_name = Context.macro_const_name(context, name)
-    {{:@, @import_kernel_metadata, [{macro_name, [], Elixir}]}, context}
+    macro_name = Context.macro_function_name(context, name)
+    {{macro_name, [], []}, context}
   end
 
 

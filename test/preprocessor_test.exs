@@ -13,18 +13,27 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      @erlmacro_HELLO 100 * 2
+      defmacrop erlmacro_HELLO() do
+        quote do
+          100 * 2
+        end
+      end
 
-      @erlmacro_hello @erlmacro_HELLO + 3
+
+      defmacrop erlmacro_hello() do
+        quote do
+          erlmacro_HELLO() + 3
+        end
+      end
 
 
       defp foo() do
-        @erlmacro_HELLO
+        erlmacro_HELLO()
       end
 
 
       defp bar() do
-        @erlmacro_hello
+        erlmacro_hello()
       end
       """
 
@@ -161,8 +170,13 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      @erlmacro_debug 1
+      defmacrop erlmacro_debug() do
+        quote do
+          1
+        end
+      end
       @defined_debug true
+
 
       if @defined_debug do
 
@@ -174,6 +188,7 @@ defmodule PreprocessorTest do
 
       else
 
+
       if not @defined_debug do
 
 
@@ -184,7 +199,9 @@ defmodule PreprocessorTest do
 
       end
 
+
       end
+
 
       @defined_debug false
       """
@@ -207,8 +224,13 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      @erlmacro_DEBUG 1
+      defmacrop erlmacro_DEBUG() do
+        quote do
+          1
+        end
+      end
       @defined_DEBUG true
+
 
       if @defined_DEBUG do
 
@@ -220,6 +242,7 @@ defmodule PreprocessorTest do
 
       else
 
+
       if not @defined_DEBUG do
 
 
@@ -230,33 +253,11 @@ defmodule PreprocessorTest do
 
       end
 
+
       end
+
 
       @defined_DEBUG false
-      """
-
-    assert Erl2ex.convert_str!(input, @opts) == expected
-  end
-
-
-  test "Macro name collides with attribute name" do
-    input = """
-      -erlmacro_vsn(1).
-      -define(vsn, 2).
-      -ifdef(vsn).
-      -endif.
-      """
-
-    expected = """
-      Module.register_attribute(__MODULE__, :erlmacro_vsn, persist: true, accumulate: true)
-      @erlmacro_vsn 1
-
-      @erlmacro2_vsn 2
-      @defined_vsn true
-
-      if @defined_vsn do
-
-      end
       """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
@@ -275,10 +276,17 @@ defmodule PreprocessorTest do
       Module.register_attribute(__MODULE__, :defined_vsn, persist: true, accumulate: true)
       @defined_vsn 1
 
-      @erlmacro_vsn 2
+
+      defmacrop erlmacro_vsn() do
+        quote do
+          2
+        end
+      end
       @defined2_vsn true
 
+
       if @defined2_vsn do
+
 
       end
       """
@@ -296,7 +304,9 @@ defmodule PreprocessorTest do
     expected = """
       @defined_TEST System.get_env("DEFINE_TEST") != nil
 
+
       if @defined_TEST do
+
 
       end
       """
@@ -314,7 +324,9 @@ defmodule PreprocessorTest do
     expected = """
       @defined_TEST System.get_env("ERL_DEFINE_TEST") != nil
 
+
       if @defined_TEST do
+
 
       end
       """
@@ -332,7 +344,9 @@ defmodule PreprocessorTest do
     expected = """
       @defined_TEST Application.get_env(:erl2ex, :ERL_DEFINE_TEST) != nil
 
+
       if @defined_TEST do
+
 
       end
       """
@@ -375,13 +389,21 @@ defmodule PreprocessorTest do
       # Begin included file: test/files/include1.hrl
 
 
-      @erlmacro_INCLUDE1_CONST 1
+      defmacrop erlmacro_INCLUDE1_CONST() do
+        quote do
+          1
+        end
+      end
 
 
       # Begin included file: files2/include2.hrl
 
 
-      @erlmacro_INCLUDE2_CONST 2
+      defmacrop erlmacro_INCLUDE2_CONST() do
+        quote do
+          2
+        end
+      end
 
 
       # End included file: files2/include2.hrl
@@ -393,7 +415,11 @@ defmodule PreprocessorTest do
       # Begin included file: include3.hrl
 
 
-      @erlmacro_INCLUDE3_CONST 3
+      defmacrop erlmacro_INCLUDE3_CONST() do
+        quote do
+          3
+        end
+      end
 
 
       # End included file: include3.hrl

@@ -47,8 +47,7 @@ defmodule Erl2ex.Convert.Context do
 
   defmodule MacroInfo do
     @moduledoc false
-    defstruct const_name: nil,
-              func_name: nil,
+    defstruct func_name: nil,
               define_tracker: nil,
               requires_init: nil
   end
@@ -135,10 +134,18 @@ defmodule Erl2ex.Convert.Context do
     %Context{context | scopes: [{top_vars, MapSet.new} | t]}
   end
 
+  def clear_exports(context = %Context{scopes: []}) do
+    context
+  end
+
 
   def apply_exports(context = %Context{scopes: [{top_vars, top_exports} | t]}) do
     top_vars = MapSet.union(top_vars, top_exports)
     %Context{context | scopes: [{top_vars, MapSet.new} | t]}
+  end
+
+  def apply_exports(context = %Context{scopes: []}) do
+    context
   end
 
 
@@ -199,11 +206,6 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def macro_const_name(context, name) do
-    Map.fetch!(context.macros, name).const_name |> ensure_exists
-  end
-
-
   def tracking_attr_name(context, name) do
     Map.fetch!(context.macros, name).define_tracker
   end
@@ -242,8 +244,8 @@ defmodule Erl2ex.Convert.Context do
         {_, %MacroInfo{requires_init: true}} -> true
         _ -> false
       end,
-      fn {name, %MacroInfo{const_name: const_name, define_tracker: define_tracker}} ->
-        {name, const_name, define_tracker}
+      fn {name, %MacroInfo{define_tracker: define_tracker}} ->
+        {name, define_tracker}
       end)
   end
 
@@ -347,23 +349,6 @@ defmodule Erl2ex.Convert.Context do
   end
   defp collect_record_info(_, context), do: context
 
-
-  defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: nil}, context) do
-    macro = Map.get(context.macros, name, %MacroInfo{})
-    if macro.const_name == nil do
-      macro_name = Utils.find_available_name(name, context.used_attr_names, "erlmacro")
-      nmacro = %MacroInfo{macro |
-        const_name: macro_name,
-        requires_init: update_requires_init(macro.requires_init, false)
-      }
-      %Context{context |
-        macros: Map.put(context.macros, name, nmacro),
-        used_attr_names: MapSet.put(context.used_attr_names, macro_name)
-      }
-    else
-      context
-    end
-  end
 
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name}, context) do
     macro = Map.get(context.macros, name, %MacroInfo{})

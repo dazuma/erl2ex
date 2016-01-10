@@ -11,7 +11,6 @@ defmodule Erl2ex.ExAttr do
   @moduledoc false
 
   defstruct name: nil,
-            tracking_name: nil,
             register: false,
             arg: nil,
             comments: [],
