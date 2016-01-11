@@ -125,13 +125,14 @@ defmodule Erl2ex.Convert do
   end
 
   defp conv_form(%ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}, context) do
+    arity = if args == nil, do: nil, else: Enum.count(args)
     if args == :nil, do: args = []
     {main_comments, inline_comments} = split_comments(comments, line)
 
     replacement_context = context
       |> Context.set_variable_maps(replacement, args)
     ex_args = args |> Enum.map(fn arg -> {Utils.lower_atom(arg), [], Elixir} end)
-    mapped_name = Context.macro_function_name(context, name)
+    mapped_name = Context.macro_function_name(context, name, arity)
     tracking_name = Context.tracking_attr_name(context, name)
     {ex_expr, _} = Expressions.conv_expr(replacement, replacement_context)
 

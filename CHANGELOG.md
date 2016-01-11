@@ -2,7 +2,7 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
-## v0.0.5 (not yet released)
+## v0.0.5 (2016-01-11)
 
 *   All erlang macros now translate to elixir macros, since it seems to be possible for parameterless macros not to be simple values.
 *   Variable names could clash with a BIF referenced in another function. Fixed.

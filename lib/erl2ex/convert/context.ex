@@ -48,7 +48,8 @@ defmodule Erl2ex.Convert.Context do
 
   defmodule MacroInfo do
     @moduledoc false
-    defstruct func_name: nil,
+    defstruct const_name: nil,
+              func_name: nil,
               define_tracker: nil,
               requires_init: nil
   end
@@ -182,8 +183,13 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def macro_function_name(context, name) do
-    Map.fetch!(context.macros, name).func_name |> ensure_exists
+  def macro_function_name(context, name, arity) do
+    macro_info = Map.get(context.macros, name, nil)
+    cond do
+      macro_info == nil -> nil
+      arity == nil -> macro_info.const_name
+      true -> macro_info.func_name
+    end
   end
 
 
@@ -450,14 +456,23 @@ defmodule Erl2ex.Convert.Context do
   defp collect_record_info(_, context), do: context
 
 
-  defp collect_macro_info(%Erl2ex.ErlDefine{name: name}, context) do
+  defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: args}, context) do
     macro = Map.get(context.macros, name, %MacroInfo{})
-    if macro.func_name == nil do
-      macro_name = Utils.find_available_name(name, context.used_func_names, "erlmacro")
-      nmacro = %MacroInfo{macro |
-        func_name: macro_name,
-        requires_init: update_requires_init(macro.requires_init, false)
-      }
+    if args == nil and macro.const_name == nil or args != nil and macro.func_name == nil do
+      prefix = if args == nil, do: "erlconst", else: "erlmacro"
+      macro_name = Utils.find_available_name(name, context.used_func_names, prefix)
+      requires_init = update_requires_init(macro.requires_init, false)
+      nmacro = if args == nil do
+        %MacroInfo{macro |
+          const_name: macro_name,
+          requires_init: requires_init
+        }
+      else
+        %MacroInfo{macro |
+          func_name: macro_name,
+          requires_init: requires_init
+        }
+      end
       %Context{context |
         macros: Map.put(context.macros, name, nmacro),
         used_func_names: MapSet.put(context.used_func_names, macro_name)
@@ -499,6 +514,5 @@ defmodule Erl2ex.Convert.Context do
 
   defp update_requires_init(nil, nval), do: nval
   defp update_requires_init(oval, _nval), do: oval
-
 
 end

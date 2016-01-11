@@ -13,27 +13,27 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      defmacrop erlmacro_HELLO() do
+      defmacrop erlconst_HELLO() do
         quote do
           100 * 2
         end
       end
 
 
-      defmacrop erlmacro_hello() do
+      defmacrop erlconst_hello() do
         quote do
-          erlmacro_HELLO() + 3
+          erlconst_HELLO() + 3
         end
       end
 
 
       defp foo() do
-        erlmacro_HELLO()
+        erlconst_HELLO()
       end
 
 
       defp bar() do
-        erlmacro_hello()
+        erlconst_hello()
       end
       """
 
@@ -68,6 +68,57 @@ defmodule PreprocessorTest do
       defp foo() do
         erlmacro_hello(2)
         erlmacro_HELLO(3)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Macro constant and function defines with the same name" do
+    input = """
+      -define(HELLO, 100 * 2).
+      -define(HELLO(), ?HELLO + 1).
+      -define(HELLO(X), ?HELLO() + X).
+      foo() -> ?HELLO.
+      bar() -> ?HELLO().
+      baz() -> ?HELLO(2).
+      """
+
+    expected = """
+      defmacrop erlconst_HELLO() do
+        quote do
+          100 * 2
+        end
+      end
+
+
+      defmacrop erlmacro_HELLO() do
+        quote do
+          erlconst_HELLO() + 1
+        end
+      end
+
+
+      defmacrop erlmacro_HELLO(x) do
+        quote do
+          erlmacro_HELLO() + unquote(x)
+        end
+      end
+
+
+      defp foo() do
+        erlconst_HELLO()
+      end
+
+
+      defp bar() do
+        erlmacro_HELLO()
+      end
+
+
+      defp baz() do
+        erlmacro_HELLO(2)
       end
       """
 
@@ -170,7 +221,7 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      defmacrop erlmacro_debug() do
+      defmacrop erlconst_debug() do
         quote do
           1
         end
@@ -224,7 +275,7 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      defmacrop erlmacro_DEBUG() do
+      defmacrop erlconst_DEBUG() do
         quote do
           1
         end
@@ -277,7 +328,7 @@ defmodule PreprocessorTest do
       @defined_vsn 1
 
 
-      defmacrop erlmacro_vsn() do
+      defmacrop erlconst_vsn() do
         quote do
           2
         end
@@ -389,7 +440,7 @@ defmodule PreprocessorTest do
       # Begin included file: test/files/include1.hrl
 
 
-      defmacrop erlmacro_INCLUDE1_CONST() do
+      defmacrop erlconst_INCLUDE1_CONST() do
         quote do
           1
         end
@@ -399,7 +450,7 @@ defmodule PreprocessorTest do
       # Begin included file: files2/include2.hrl
 
 
-      defmacrop erlmacro_INCLUDE2_CONST() do
+      defmacrop erlconst_INCLUDE2_CONST() do
         quote do
           2
         end
@@ -415,7 +466,7 @@ defmodule PreprocessorTest do
       # Begin included file: include3.hrl
 
 
-      defmacrop erlmacro_INCLUDE3_CONST() do
+      defmacrop erlconst_INCLUDE3_CONST() do
         quote do
           3
         end

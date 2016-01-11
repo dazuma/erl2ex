@@ -6,7 +6,7 @@ Erl2ex is an Erlang to Elixir transpiler, converting well-formed Erlang source t
 
 The goal is to produce correct, functioning, but not necessarily perfectly idiomatic, Elixir code. This tool may be used as a starting point to port code from Erlang to Elixir, but manual cleanup will likely be desired.
 
-This software is currently highly experimental and should be considered "pre-alpha". Some capabilities are not yet complete, and there are significant known issues. See the Caveats section for more information.
+This software is currently highly experimental and should be considered "pre-alpha". Some capabilities are not yet complete, and there are significant known issues, particularly in the Erlang preprocessor support. See the Caveats section for more information.
 
 ## Installing
 
@@ -22,7 +22,7 @@ To run the mix task, first add Erl2ex as a dependency to your existing Elixir pr
 
 ```elixir
 def deps do
-  [ {:erl2ex, ">= 0.0.4", only: :dev} ]
+  [ {:erl2ex, ">= 0.0.5", only: :dev} ]
 end
 ```
 
@@ -51,8 +51,10 @@ This software is still under heavy development, and many capabilities are not ye
 ### Known issues
 
 *   The include directive does not support environment variable interpolation.
+*   Redefining a macro results in an Elixir compiler error.
 *   Macro defines do not work with guard fragments, i.e. expressions delimited by commas or semicolons. See examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_tokenizer.erl.
-*   Macro defines do not work when generating multiple (comma-delimited) lines of a function definition. Need to determine if this is a real thing we need to support.
+*   Macro defines do not work when generating multiple (comma-delimited) lines of a function definition.
+*   Defining a macro that attempts to assign to a substitution results in an exception. e.g. `-define(A(X), X = 1).` should be legal. This may also run into problems because Elixir's macros are hygenic.
 *   Invoking constant macros as function names is not working. e.g. if `-define(A, m:f).`, it should be legal to invoke `?A()`.
 *   Record declarations with type info (e.g. `-record(foo, {field1 :: integer}).`) are not supported. Currently the converter drops the types. Additionally, record types are not yet supported.
 *   Binary expressions with complex or combination size/type specs are not supported, and cause the converter to crash. An example is `<<1:16/integer-signed-native>>`. This seems to be a limitation of Elixir itself.

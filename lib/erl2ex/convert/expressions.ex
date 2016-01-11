@@ -722,7 +722,11 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_const(name, context) do
-    macro_name = Context.macro_function_name(context, name)
+    macro_name = Context.macro_function_name(context, name, nil)
+    if macro_name == nil do
+      # TODO: Get the line number into here.
+      Utils.handle_error(context, name, "(no such macro)")
+    end
     {{macro_name, [], []}, context}
   end
 
@@ -780,10 +784,15 @@ defmodule Erl2ex.Convert.Expressions do
     {ex_expr, context}
   end
 
-  defp func_spec(func = {:var, _, name}, _args, context) do
+  defp func_spec(func = {:var, _, name}, args, context) do
     case Atom.to_string(name) do
       << "?" :: utf8, basename :: binary >> ->
-        {Context.macro_function_name(context, String.to_atom(basename)), context}
+        arity = Enum.count(args)
+        func_name = Context.macro_function_name(context, String.to_atom(basename), arity)
+        if func_name == nil do
+          Utils.handle_error(context, func, "(no such macro)")
+        end
+        {func_name, context}
       _ ->
         {ex_func, context} = conv_expr(func, context)
         {{:., [], [ex_func]}, context}
