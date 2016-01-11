@@ -346,9 +346,6 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  defp ensure_exists(x) when x != nil, do: x
-
-
   defp collect_func_info(%Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses}, context) do
     context = add_func_info({name, arity}, context)
     collect_func_ref_names(clauses, context)
