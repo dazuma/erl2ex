@@ -2,9 +2,13 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
+## v0.0.6 (not yet released)
+
+*   Convert string() and nonempty_string() Erlang types to the preferred Elixir equivalents, to avoid an Elixir warning.
+
 ## v0.0.5 (2016-01-11)
 
-*   All erlang macros now translate to elixir macros, since it seems to be possible for parameterless macros not to be simple values.
+*   All Erlang macros now translate to Elixir macros, since it seems to be possible for parameterless macros not to be simple values.
 *   Variable names could clash with a BIF referenced in another function. Fixed.
 
 ## v0.0.4 (2016-01-05)

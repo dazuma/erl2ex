@@ -571,6 +571,14 @@ defmodule Erl2ex.Convert.Expressions do
     conv_union(args, context)
   end
 
+  defp conv_type(:nonempty_string, [], context) do
+    {{:nonempty_list, [], [{:char, [], []}]}, context}
+  end
+
+  defp conv_type(:string, [], context) do
+    {{:char_list, [], []}, context}
+  end
+
   defp conv_type(name, params, context) do
     {ex_params, context} = conv_list(params, context)
     {{name, [], ex_params}, context}

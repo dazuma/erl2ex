@@ -66,6 +66,7 @@ This software is still under heavy development, and many capabilities are not ye
 *   Provide an option to elixirize module names (e.g. instead of generating `defmodule :my_erlang_module`, generate `defmodule MyErlangModule`)
 *   Provide an option to convert variable names from camelCase to snake_case.
 *   Provide (possibly optional) translation of include files (.hrl) to separate modules rather than copying into the including module, so the declarations can be shared after translation to Elixir.
+*   Correct the usage of leading underscores in variable names.
 
 ## Contributing
 
