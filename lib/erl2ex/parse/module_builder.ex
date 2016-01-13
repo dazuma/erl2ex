@@ -43,11 +43,14 @@ defmodule Erl2ex.Parse.ModuleBuilder do
   end
 
   defp add_form(module, {:attribute, _line, :include, path}, _comments, context) do
+    path = path
+      |> List.to_string
+      |> resolve_path_env
     file_path = Context.find_file(context, path)
     opts = Context.build_opts_for_include(context)
     included_module = Parse.from_file(file_path, opts)
-    comment1 = %ErlComment{comments: ["% Begin included file: #{List.to_string(path)}"]}
-    comment2 = %ErlComment{comments: ["% End included file: #{List.to_string(path)}"]}
+    comment1 = %ErlComment{comments: ["% Begin included file: #{path}"]}
+    comment2 = %ErlComment{comments: ["% End included file: #{path}"]}
     %ErlModule{module |
       forms: [comment2 | included_module.forms] ++ [comment1 | module.forms]
     }
@@ -56,6 +59,7 @@ defmodule Erl2ex.Parse.ModuleBuilder do
   defp add_form(module, {:attribute, line, :include_lib, path}, _comments, context) do
     [lib_name | path_elems] = path
       |> List.to_string
+      |> resolve_path_env
       |> Path.relative
       |> Path.split
     rel_path = path_elems |> Path.join
@@ -184,5 +188,15 @@ defmodule Erl2ex.Parse.ModuleBuilder do
   defp macro_name({:var, _, name}), do: name
   defp macro_name({:atom, _, name}), do: name
   defp macro_name(name) when is_atom(name), do: name
+
+
+  defp resolve_path_env(path) do
+    Regex.replace(~r/^\$(\w+)/, path, fn (match, env) ->
+      case System.get_env(env) do
+        nil -> match
+        val -> val
+      end
+    end)
+  end
 
 end

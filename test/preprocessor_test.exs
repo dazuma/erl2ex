@@ -491,4 +491,42 @@ defmodule PreprocessorTest do
   end
 
 
+  test "File include path with an environment variable" do
+    System.put_env("ERL2EX_TEST_FILES", "test/files")
+
+    input = """
+      -include("$ERL2EX_TEST_FILES/include3.hrl").
+      """
+
+    expected = """
+      # Begin included file: test/files/include3.hrl
+
+
+      defmacrop erlconst_INCLUDE3_CONST() do
+        quote do
+          3
+        end
+      end
+
+
+      # End included file: test/files/include3.hrl
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Library include with an environment ariable" do
+    System.put_env("ERL2EX_LIBRARY_NAME", "kernel")
+
+    input = """
+      -include_lib("$ERL2EX_LIBRARY_NAME/include/file.hrl").
+      """
+
+    output = Erl2ex.convert_str!(input)
+
+    assert String.contains?(output, "Record.defrecordp :erlrecord_file_info")
+  end
+
+
 end

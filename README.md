@@ -50,7 +50,6 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
-*   The include directive does not support environment variable interpolation.
 *   Redefining a macro results in an Elixir compiler error.
 *   Macro defines do not work with guard fragments, i.e. expressions delimited by commas or semicolons. See examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_tokenizer.erl.
 *   Macro defines do not work when generating multiple (comma-delimited) lines of a function definition.
