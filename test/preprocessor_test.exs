@@ -529,4 +529,82 @@ defmodule PreprocessorTest do
   end
 
 
+  test "Redefine constant macro" do
+    input = """
+      -define(HELLO, 1).
+      -define(HELLO, 2).
+      foo() -> ?HELLO.
+      """
+
+    expected = """
+      defmacrop erlmacro(name, args), do:
+        {Module.get_attribute(__MODULE__), name), [], args}
+      defmacrop erlmacro(name), do:
+        {Module.get_attribute(__MODULE__), name), [], []}
+
+
+      defmacrop erlconst_HELLO() do
+        quote do
+          1
+        end
+      end
+      @erlconst_HELLO :erlconst_HELLO
+
+
+      defmacrop erlconst2_HELLO() do
+        quote do
+          2
+        end
+      end
+      @erlconst_HELLO :erlconst2_HELLO
+
+
+      defp foo() do
+        erlmacro(:erlconst_HELLO)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Redefine function macro" do
+    input = """
+      -define(HELLO(X), 1 + X).
+      -define(HELLO(X), 2 + X).
+      foo() -> ?HELLO(3).
+      """
+
+    expected = """
+      defmacrop erlmacro(name, args), do:
+        {Module.get_attribute(__MODULE__), name), [], args}
+      defmacrop erlmacro(name), do:
+        {Module.get_attribute(__MODULE__), name), [], []}
+
+
+      defmacrop erlmacro_HELLO(x) do
+        quote do
+          1 + unquote(x)
+        end
+      end
+      @erlmacro_HELLO :erlmacro_HELLO
+
+
+      defmacrop erlmacro2_HELLO(x) do
+        quote do
+          2 + unquote(x)
+        end
+      end
+      @erlmacro_HELLO :erlmacro2_HELLO
+
+
+      defp foo() do
+        erlmacro(:erlmacro_HELLO, [3])
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
 end

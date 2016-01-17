@@ -4,7 +4,7 @@ defmodule Erl2ex.Mixfile do
   def project do
     [
       app: :erl2ex,
-      version: "0.0.5",
+      version: "0.0.6",
       elixir: "~> 1.2",
       name: "Erl2ex",
       source_url: "https://github.com/dazuma/erl2ex",
@@ -24,7 +24,7 @@ defmodule Erl2ex.Mixfile do
 
   defp deps do
     [
-      {:earmark, "~> 0.1", only: :dev},
+      {:earmark, "~> 0.2", only: :dev},
       {:ex_doc, "~> 0.11", only: :dev},
       {:credo, "~> 0.2", only: :dev}
     ]

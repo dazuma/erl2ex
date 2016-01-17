@@ -17,7 +17,8 @@ defmodule Erl2ex.Convert.Headers do
       |> Enum.reduce(%ExHeader{}, &header_check_form/2)
     %ExHeader{header |
       records: Context.map_records(context, fn(name, fields) -> {name, fields} end),
-      init_macros: Context.macros_that_need_init(context)
+      init_macros: Context.macros_that_need_init(context),
+      macro_dispatcher: Context.macro_dispatcher_name(context)
     }
   end
 

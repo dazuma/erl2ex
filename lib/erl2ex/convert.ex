@@ -131,14 +131,23 @@ defmodule Erl2ex.Convert do
 
     replacement_context = context
       |> Context.set_variable_maps(replacement, args)
+    needs_dispatch = Context.macro_needs_dispatch?(context, name)
     ex_args = args |> Enum.map(fn arg -> {Utils.lower_atom(arg), [], Elixir} end)
-    mapped_name = Context.macro_function_name(context, name, arity)
+    macro_name = Context.macro_function_name(context, name, arity)
+    {mapped_name, context} = if needs_dispatch do
+      Context.generate_macro_name(context, name, arity)
+    else
+      {macro_name, context}
+    end
+    dispatch_name = if needs_dispatch, do: macro_name, else: nil
     tracking_name = Context.tracking_attr_name(context, name)
     {ex_expr, _} = Expressions.conv_expr(replacement, replacement_context)
 
     ex_macro = %ExMacro{
+      macro_name: mapped_name,
       signature: {mapped_name, [], ex_args},
       tracking_name: tracking_name,
+      dispatch_name: dispatch_name,
       stringifications: replacement_context.stringification_map,
       expr: ex_expr,
       comments: main_comments |> convert_comments,

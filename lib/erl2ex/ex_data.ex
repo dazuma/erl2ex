@@ -45,7 +45,9 @@ defmodule Erl2ex.ExMacro do
   @moduledoc false
 
   defstruct signature: nil,
+            macro_name: nil,
             tracking_name: nil,
+            dispatch_name: nil,
             stringifications: nil,
             expr: nil,
             comments: [],
@@ -94,7 +96,8 @@ defmodule Erl2ex.ExHeader do
 
   defstruct use_bitwise: false,
             records: [],
-            init_macros: []
+            init_macros: [],
+            macro_dispatcher: nil
 
 end
 

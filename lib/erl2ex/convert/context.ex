@@ -26,6 +26,7 @@ defmodule Erl2ex.Convert.Context do
             records: %{},
             used_func_names: MapSet.new,
             used_attr_names: MapSet.new,
+            macro_dispatcher: nil,
             specs: %{},
             variable_map: %{},
             stringification_map: %{},
@@ -51,7 +52,8 @@ defmodule Erl2ex.Convert.Context do
     defstruct const_name: nil,
               func_name: nil,
               define_tracker: nil,
-              requires_init: nil
+              requires_init: nil,
+              is_redefined: MapSet.new
   end
 
   defmodule RecordInfo do
@@ -183,6 +185,12 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  def macro_needs_dispatch?(context, name) do
+    macro_info = Map.get(context.macros, name, nil)
+    if macro_info == nil, do: false, else: macro_info.is_redefined == true
+  end
+
+
   def macro_function_name(context, name, arity) do
     macro_info = Map.get(context.macros, name, nil)
     cond do
@@ -190,6 +198,21 @@ defmodule Erl2ex.Convert.Context do
       arity == nil -> macro_info.const_name
       true -> macro_info.func_name
     end
+  end
+
+
+  def macro_dispatcher_name(context) do
+    context.macro_dispatcher
+  end
+
+
+  def generate_macro_name(context, name, arity) do
+    prefix = if arity == nil, do: "erlconst", else: "erlmacro"
+    func_name = Utils.find_available_name(name, context.used_func_names, prefix)
+    context = %Context{context |
+      used_func_names: MapSet.put(context.used_func_names, func_name)
+    }
+    {func_name, context}
   end
 
 
@@ -455,28 +478,10 @@ defmodule Erl2ex.Convert.Context do
 
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: args}, context) do
     macro = Map.get(context.macros, name, %MacroInfo{})
-    if args == nil and macro.const_name == nil or args != nil and macro.func_name == nil do
-      prefix = if args == nil, do: "erlconst", else: "erlmacro"
-      macro_name = Utils.find_available_name(name, context.used_func_names, prefix)
-      requires_init = update_requires_init(macro.requires_init, false)
-      nmacro = if args == nil do
-        %MacroInfo{macro |
-          const_name: macro_name,
-          requires_init: requires_init
-        }
-      else
-        %MacroInfo{macro |
-          func_name: macro_name,
-          requires_init: requires_init
-        }
-      end
-      %Context{context |
-        macros: Map.put(context.macros, name, nmacro),
-        used_func_names: MapSet.put(context.used_func_names, macro_name)
-      }
-    else
-      context
-    end
+    requires_init = update_requires_init(macro.requires_init, false)
+    macro = %MacroInfo{macro | requires_init: requires_init}
+    next_is_redefined = update_is_redefined(macro.is_redefined, args)
+    update_macro_info(macro, next_is_redefined, args, name, context)
   end
 
   defp collect_macro_info(%Erl2ex.ErlDirective{name: name}, context) when name != nil do
@@ -509,7 +514,148 @@ defmodule Erl2ex.Convert.Context do
   defp extract_record_field_name({:record_field, _, {:atom, _, name}, _}), do: name
 
 
+  defp update_macro_info(
+    %MacroInfo{
+      const_name: const_name,
+      is_redefined: true
+    } = macro,
+    true, nil, name,
+    %Context{
+      macros: macros,
+      used_attr_names: used_attr_names
+    } = context)
+  do
+    {const_name, used_attr_names} = update_macro_name(name, const_name, used_attr_names, "erlconst")
+    macro = %MacroInfo{macro |
+      const_name: const_name
+    }
+    %Context{context |
+      macros: Map.put(macros, name, macro),
+      used_attr_names: used_attr_names
+    }
+  end
+
+  defp update_macro_info(
+    %MacroInfo{
+      func_name: func_name,
+      is_redefined: true
+    } = macro,
+    true, _args, name,
+    %Context{
+      macros: macros,
+      used_attr_names: used_attr_names
+    } = context)
+  do
+    {func_name, used_attr_names} = update_macro_name(name, func_name, used_attr_names, "erlmacro")
+    macro = %MacroInfo{macro |
+      func_name: func_name
+    }
+    %Context{context |
+      macros: Map.put(macros, name, macro),
+      used_attr_names: used_attr_names
+    }
+  end
+
+  defp update_macro_info(
+    %MacroInfo{
+      const_name: const_name,
+      func_name: func_name
+    } = macro,
+    true, args, name,
+    %Context{
+      macros: macros,
+      macro_dispatcher: macro_dispatcher,
+      used_func_names: used_func_names,
+      used_attr_names: used_attr_names
+    } = context)
+  do
+    used_func_names = used_func_names
+      |> MapSet.delete(const_name)
+      |> MapSet.delete(func_name)
+    if const_name != nil or args == nil do
+      {const_name, used_attr_names} = update_macro_name(name, nil, used_attr_names, "erlconst")
+    end
+    if func_name != nil or args != nil do
+      {func_name, used_attr_names} = update_macro_name(name, nil, used_attr_names, "erlmacro")
+    end
+    if macro_dispatcher == nil do
+      macro_dispatcher = Utils.find_available_name("erlmacro", used_func_names, "", 0)
+      used_func_names = used_func_names |> MapSet.put(macro_dispatcher)
+    end
+    macro = %MacroInfo{macro |
+      is_redefined: true,
+      const_name: const_name,
+      func_name: func_name
+    }
+    %Context{context |
+      macros: Map.put(macros, name, macro),
+      macro_dispatcher: macro_dispatcher,
+      used_func_names: used_func_names,
+      used_attr_names: used_attr_names
+    }
+  end
+
+  defp update_macro_info(
+    %MacroInfo{
+      const_name: const_name,
+    } = macro,
+    is_redefined, nil, name,
+    %Context{
+      macros: macros,
+      used_func_names: used_func_names
+    } = context)
+  do
+    {const_name, used_func_names} = update_macro_name(name, const_name, used_func_names, "erlconst")
+    macro = %MacroInfo{macro |
+      is_redefined: is_redefined,
+      const_name: const_name
+    }
+    %Context{context |
+      macros: Map.put(macros, name, macro),
+      used_func_names: used_func_names
+    }
+  end
+
+  defp update_macro_info(
+    %MacroInfo{
+      func_name: func_name,
+    } = macro,
+    is_redefined, _args, name,
+    %Context{
+      macros: macros,
+      used_func_names: used_func_names
+    } = context)
+  do
+    {func_name, used_func_names} = update_macro_name(name, func_name, used_func_names, "erlmacro")
+    macro = %MacroInfo{macro |
+      is_redefined: is_redefined,
+      func_name: func_name
+    }
+    %Context{context |
+      macros: Map.put(macros, name, macro),
+      used_func_names: used_func_names
+    }
+  end
+
+
+  defp update_macro_name(given_name, nil, used_names, prefix) do
+    macro_name = Utils.find_available_name(given_name, used_names, prefix)
+    used_names = MapSet.put(used_names, macro_name)
+    {macro_name, used_names}
+  end
+  defp update_macro_name(_given_name, cur_name, used_names, _prefix) do
+    {cur_name, used_names}
+  end
+
   defp update_requires_init(nil, nval), do: nval
   defp update_requires_init(oval, _nval), do: oval
+
+  defp update_is_redefined(true, _args), do: true
+  defp update_is_redefined(set, args) when is_list(args) do
+    update_is_redefined(set, Enum.count(args))
+  end
+  defp update_is_redefined(set, arity) do
+    if MapSet.member?(set, arity), do: true, else: MapSet.put(set, arity)
+  end
 
 end

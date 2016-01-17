@@ -110,6 +110,18 @@ defmodule Erl2ex.Codegen do
         |> skip_lines(:attr, io)
         |> write_string("require Record", io)
     end
+    if header.macro_dispatcher != nil do
+      context = context
+        |> skip_lines(:attr, io)
+        |> write_string("defmacrop #{header.macro_dispatcher}(name, args), do:", io)
+        |> increment_indent
+        |> write_string("{Module.get_attribute(__MODULE__), name), [], args}", io)
+        |> decrement_indent
+        |> write_string("defmacrop #{header.macro_dispatcher}(name), do:", io)
+        |> increment_indent
+        |> write_string("{Module.get_attribute(__MODULE__), name), [], []}", io)
+        |> decrement_indent
+    end
     context
   end
 
@@ -172,7 +184,19 @@ defmodule Erl2ex.Codegen do
       end)
   end
 
-  defp write_form(context, %ExMacro{signature: signature, tracking_name: tracking_name, stringifications: stringifications, expr: expr, comments: comments}, io) do
+  defp write_form(
+    context,
+    %ExMacro{
+      macro_name: macro_name,
+      signature: signature,
+      tracking_name: tracking_name,
+      dispatch_name: dispatch_name,
+      stringifications: stringifications,
+      expr: expr,
+      comments: comments
+    },
+    io)
+  do
     context = context
       |> write_comment_list(comments, :func_header, io)
       |> skip_lines(:func_clause_first, io)
@@ -191,6 +215,10 @@ defmodule Erl2ex.Codegen do
     if tracking_name != nil do
       context = context
         |> write_string("@#{tracking_name} true", io)
+    end
+    if dispatch_name != nil do
+      context = context
+        |> write_string("@#{dispatch_name} :#{macro_name}", io)
     end
     context
   end

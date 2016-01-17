@@ -735,7 +735,12 @@ defmodule Erl2ex.Convert.Expressions do
       # TODO: Get the line number into here.
       Utils.handle_error(context, name, "(no such macro)")
     end
-    {{macro_name, [], []}, context}
+    if Context.macro_needs_dispatch?(context, name) do
+      dispatcher = Context.macro_dispatcher_name(context)
+      {{dispatcher, [], [macro_name]}, context}
+    else
+      {{macro_name, [], []}, context}
+    end
   end
 
 
@@ -769,18 +774,19 @@ defmodule Erl2ex.Convert.Expressions do
 
 
   defp conv_normal_call(func, args, context) do
-    {ex_func, context} = func_spec(func, args, context)
     {ex_args, context} = conv_list(args, context)
+    {ex_func, ex_args, context} = func_spec(func, ex_args, context)
     {{ex_func, [], ex_args}, context}
   end
 
 
-  defp func_spec(func = {:remote, _, _, _}, _args, context) do
-    conv_expr(func, context)
+  defp func_spec(func = {:remote, _, _, _}, ex_args, context) do
+    {ex_func, context} = conv_expr(func, context)
+    {ex_func, ex_args, context}
   end
 
-  defp func_spec({:atom, _, func}, args, context) do
-    arity = Enum.count(args)
+  defp func_spec({:atom, _, func}, ex_args, context) do
+    arity = Enum.count(ex_args)
     ex_expr = if Context.is_local_func?(context, func, arity) do
       Context.local_function_name(context, func)
     else
@@ -789,27 +795,33 @@ defmodule Erl2ex.Convert.Expressions do
         ex_name -> ex_name
       end
     end
-    {ex_expr, context}
+    {ex_expr, ex_args, context}
   end
 
-  defp func_spec(func = {:var, _, name}, args, context) do
+  defp func_spec(func = {:var, _, name}, ex_args, context) do
     case Atom.to_string(name) do
       << "?" :: utf8, basename :: binary >> ->
-        arity = Enum.count(args)
-        func_name = Context.macro_function_name(context, String.to_atom(basename), arity)
+        arity = Enum.count(ex_args)
+        macro_raw_name = String.to_atom(basename)
+        func_name = Context.macro_function_name(context, macro_raw_name, arity)
         if func_name == nil do
           Utils.handle_error(context, func, "(no such macro)")
         end
-        {func_name, context}
+        if Context.macro_needs_dispatch?(context, macro_raw_name) do
+          dispatcher = Context.macro_dispatcher_name(context)
+          {dispatcher, [func_name, ex_args], context}
+        else
+          {func_name, ex_args, context}
+        end
       _ ->
         {ex_func, context} = conv_expr(func, context)
-        {{:., [], [ex_func]}, context}
+        {{:., [], [ex_func]}, ex_args, context}
     end
   end
 
-  defp func_spec(func, _args, context) do
+  defp func_spec(func, ex_args, context) do
     {ex_func, context} = conv_expr(func, context)
-    {{:., [], [ex_func]}, context}
+    {{:., [], [ex_func]}, ex_args, context}
   end
 
 
