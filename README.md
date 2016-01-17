@@ -59,6 +59,8 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Incomplete features
 
+*   Translate record_info calls and record index expressions into macros, rather than constants without semantics.
+*   Translate Erlang characters (e.g. $%) into the Elixir equivalent (e.g. ?%), rather than numbers without semantics.
 *   Generate exdoc comments, probably based on heuristics on the funtion comments.
 *   Do something reasonable with inline comments.
 *   Provide an option to elixirize module names (e.g. instead of generating `defmodule :my_erlang_module`, generate `defmodule MyErlangModule`)

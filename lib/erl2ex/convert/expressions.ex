@@ -129,8 +129,8 @@ defmodule Erl2ex.Convert.Expressions do
     {[{:|, [], [ex_head, ex_tail]}], context}
   end
 
-  def conv_expr({:var, _, name}, context) when is_atom(name) do
-    conv_generalized_var(Atom.to_string(name), context)
+  def conv_expr({:var, line, name}, context) when is_atom(name) do
+    conv_generalized_var(Atom.to_string(name), line, context)
   end
 
   def conv_expr({:match, _, lhs, rhs}, context) do
@@ -291,7 +291,6 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_expr({:record_index, _, name, field}, context) do
-    # TODO: consider using a semantic name for this.
     {ex_field, context} = conv_expr(field, context)
     {Context.record_field_index(context, name, ex_field), context}
   end
@@ -681,15 +680,15 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
 
-  defp conv_generalized_var(name = << "??" :: binary, _ :: binary >>, context) do
+  defp conv_generalized_var(name = << "??" :: binary, _ :: binary >>, _, context) do
     conv_normal_var(String.to_atom(name), context)
   end
 
-  defp conv_generalized_var(<< "?" :: utf8, name :: binary >>, context) do
-    conv_const(String.to_atom(name), context)
+  defp conv_generalized_var(<< "?" :: utf8, name :: binary >>, line, context) do
+    conv_const(String.to_atom(name), line, context)
   end
 
-  defp conv_generalized_var(name, context) do
+  defp conv_generalized_var(name, _, context) do
     conv_normal_var(String.to_atom(name), context)
   end
 
@@ -709,31 +708,30 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
 
-  defp conv_const(:MODULE, context) do
+  defp conv_const(:MODULE, _, context) do
     {{:__MODULE__, [], Elixir}, context}
   end
 
-  defp conv_const(:MODULE_STRING, context) do
+  defp conv_const(:MODULE_STRING, _, context) do
     {{{:., [], [{:__aliases__, [alias: false], [:Atom]}, :to_char_list]}, [], [{:__MODULE__, [], Elixir}]}, context}
   end
 
-  defp conv_const(:FILE, context) do
+  defp conv_const(:FILE, _, context) do
     {{{:., [], [{:__aliases__, [alias: false], [:String]}, :to_char_list]}, [], [{{:., [], [{:__ENV__, [], Elixir}, :file]}, [], []}]}, context}
   end
 
-  defp conv_const(:LINE, context) do
+  defp conv_const(:LINE, _, context) do
     {{{:., [], [{:__ENV__, [], Elixir}, :line]}, [], []}, context}
   end
 
-  defp conv_const(:MACHINE, context) do
+  defp conv_const(:MACHINE, _, context) do
     {'BEAM', context}
   end
 
-  defp conv_const(name, context) do
+  defp conv_const(name, line, context) do
     macro_name = Context.macro_function_name(context, name, nil)
     if macro_name == nil do
-      # TODO: Get the line number into here.
-      Utils.handle_error(context, name, "(no such macro)")
+      Utils.handle_error(context, {:atom, line, name}, "(no such macro)")
     end
     if Context.macro_needs_dispatch?(context, name) do
       dispatcher = Context.macro_dispatcher_name(context)
@@ -756,7 +754,6 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_call({:atom, _, :record_info}, [{:atom, _, :size}, {:atom, _, rec}], context) do
-    # TODO: consider using a semantic name for this.
     size = context
       |> Context.record_field_names(rec)
       |> Enum.count
@@ -764,7 +761,6 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_call({:atom, _, :record_info}, [{:atom, _, :fields}, {:atom, _, rec}], context) do
-    # TODO: consider using a semantic name for this.
     {Context.record_field_names(context, rec), context}
   end
 
@@ -829,10 +825,6 @@ defmodule Erl2ex.Convert.Expressions do
     {result, context}
   end
   defp guard_elem([ghead | gtail], result, context) do
-    # TODO: Make sure we can get away with conv_expr. Erlang guards can conceivably
-    # resolve to a value other than true or false, which for Erlang should
-    # fail the guard, but in Elixir will succeed the guard. If this is a
-    # problem, the Elixir version might need to compare === true.
     {ex_ghead, context} = conv_expr(ghead, context)
     guard_elem(gtail, guard_combine(result, ex_ghead, :and), context)
   end
