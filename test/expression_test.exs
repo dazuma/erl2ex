@@ -6,17 +6,34 @@ defmodule ExpressionTest do
 
   test "Various value types" do
     input = """
-      foo() -> atom, 123, $A, 3.14, {A, {}, {hello, "world"}}, [1, [], 2].
+      foo() -> atom, 123, 3.14, {A, {}, {hello, "world"}}, [1, [], 2].
       """
 
     expected = """
       defp foo() do
         :atom
         123
-        65
         3.14
         {a, {}, {:hello, 'world'}}
         [1, [], 2]
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Character values" do
+    input = """
+      foo() -> $A, $🐱, $\\n, $".
+      """
+
+    expected = """
+      defp foo() do
+        ?A
+        ?🐱
+        ?\\n
+        ?"
       end
       """
 

@@ -86,7 +86,7 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_expr({:char, _, val}, context) when is_integer(val) do
-    {val, context}
+    {{:"?", [char: val], Elixir}, context}
   end
 
   def conv_expr({:float, _, val}, context) when is_float(val) do

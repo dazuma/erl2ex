@@ -177,7 +177,7 @@ defmodule Erl2ex.Codegen do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
-      |> write_string("import #{Macro.to_string(module)}, only: #{Macro.to_string(funcs)}", io)
+      |> write_string("import #{expr_to_string(module)}, only: #{expr_to_string(funcs)}", io)
   end
 
   defp write_form(context, %ExRecord{tag: tag, macro: macro, data_attr: data_attr, fields: fields, comments: comments}, io) do
@@ -185,15 +185,15 @@ defmodule Erl2ex.Codegen do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
-      |> write_string("@#{data_attr} #{Macro.to_string(field_names)}", io)
-      |> write_string("Record.defrecordp #{Macro.to_string(macro)}, #{Macro.to_string(tag)}, #{Macro.to_string(fields)}", io)
+      |> write_string("@#{data_attr} #{expr_to_string(field_names)}", io)
+      |> write_string("Record.defrecordp #{expr_to_string(macro)}, #{expr_to_string(tag)}, #{expr_to_string(fields)}", io)
   end
 
   defp write_form(context, %ExType{kind: kind, signature: signature, defn: defn, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
-      |> write_string("@#{kind} #{Macro.to_string(signature)} :: #{Macro.to_string(defn)}", io)
+      |> write_string("@#{kind} #{expr_to_string(signature)} :: #{expr_to_string(defn)}", io)
   end
 
   defp write_form(context, %ExCallback{specs: specs, comments: comments}, io) do
@@ -201,7 +201,7 @@ defmodule Erl2ex.Codegen do
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
       |> foreach(specs, fn(ctx, spec) ->
-        write_string(ctx, "@callback #{Macro.to_string(spec)}", io)
+        write_string(ctx, "@callback #{expr_to_string(spec)}", io)
       end)
   end
 
@@ -222,7 +222,7 @@ defmodule Erl2ex.Codegen do
     context = context
       |> write_comment_list(comments, :func_header, io)
       |> skip_lines(:func_clause_first, io)
-      |> write_string("defmacrop #{Macro.to_string(signature)} do", io)
+      |> write_string("defmacrop #{expr_to_string(signature)} do", io)
       |> increment_indent
       |> foreach(stringifications, fn(ctx, {var, str}) ->
         write_string(ctx, "#{str} = Macro.to_string(quote do: unquote(#{var}))", io)
@@ -233,7 +233,7 @@ defmodule Erl2ex.Codegen do
         |> increment_indent
         |> write_string("quote do", io)
         |> increment_indent
-        |> write_string(Macro.to_string(guard_expr), io)
+        |> write_string(expr_to_string(guard_expr), io)
         |> decrement_indent
         |> write_string("end", io)
         |> decrement_indent
@@ -243,7 +243,7 @@ defmodule Erl2ex.Codegen do
     context = context
       |> write_string("quote do", io)
       |> increment_indent
-      |> write_string(Macro.to_string(expr), io)
+      |> write_string(expr_to_string(expr), io)
       |> decrement_indent
       |> write_string("end", io)
     if guard_expr != nil do
@@ -269,10 +269,10 @@ defmodule Erl2ex.Codegen do
   defp write_raw_attr(context, name, register, arg, io) do
     if register do
       context = context
-        |> write_string("Module.register_attribute(__MODULE__, #{Macro.to_string(name)}, persist: true, accumulate: true)", io)
+        |> write_string("Module.register_attribute(__MODULE__, #{expr_to_string(name)}, persist: true, accumulate: true)", io)
     end
     context
-      |> write_string("@#{name} #{Macro.to_string(arg)}", io)
+      |> write_string("@#{name} #{expr_to_string(arg)}", io)
   end
 
 
@@ -315,7 +315,7 @@ defmodule Erl2ex.Codegen do
     context
       |> skip_lines(:func_specs, io)
       |> foreach(specs, fn(ctx, spec) ->
-        write_string(ctx, "@spec #{Macro.to_string(spec)}", io)
+        write_string(ctx, "@spec #{expr_to_string(spec)}", io)
       end)
   end
 
@@ -325,10 +325,10 @@ defmodule Erl2ex.Codegen do
     context
       |> skip_lines(form_type, io)
       |> foreach(clause.comments, io, &write_string/3)
-      |> write_string("#{decl} #{Macro.to_string(clause.signature)} do", io)
+      |> write_string("#{decl} #{expr_to_string(clause.signature)} do", io)
       |> increment_indent
       |> foreach(clause.exprs, fn (ctx, expr) ->
-        write_string(ctx, Macro.to_string(expr), io)
+        write_string(ctx, expr_to_string(expr), io)
       end)
       |> decrement_indent
       |> write_string("end", io)
@@ -374,6 +374,38 @@ defmodule Erl2ex.Codegen do
   defp calc_skip_lines(:func_clause, :func_clause), do: 1
   defp calc_skip_lines(:attr, :attr), do: 1
   defp calc_skip_lines(_, _), do: 2
+
+
+  defp expr_to_string(expr) do
+    Macro.to_string(expr, &modify_codegen/2)
+  end
+
+
+  defp modify_codegen({:"?", metadata, Elixir}, str) do
+    case Keyword.get(metadata, :char) do
+      nil -> str
+      val -> << "?"::utf8, escape_char(val)::binary >>
+    end
+  end
+
+  defp modify_codegen(_ast, str) do
+    str
+  end
+
+
+  defp escape_char(?\\), do: "\\\\"
+  defp escape_char(?\a), do: "\\a"
+  defp escape_char(?\b), do: "\\b"
+  defp escape_char(?\d), do: "\\d"
+  defp escape_char(?\e), do: "\\e"
+  defp escape_char(?\f), do: "\\f"
+  defp escape_char(?\n), do: "\\n"
+  defp escape_char(?\r), do: "\\r"
+  defp escape_char(?\s), do: "\\s"
+  defp escape_char(?\t), do: "\\t"
+  defp escape_char(?\v), do: "\\v"
+  defp escape_char(?\0), do: "\\0"
+  defp escape_char(val), do: <<val::utf8>>
 
 
 end

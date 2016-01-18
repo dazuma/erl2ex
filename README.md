@@ -50,6 +50,7 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
+*   Erlang source files in latin-1 encoding may crash on read, or may not be read correctly.
 *   If a "do" clause or similar appears in the arguments pattern, codegen gets confused. Example found in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl (function "MACRO-defmodule").
 *   Defining a macro that attempts to assign to a substitution results in an exception. e.g. `-define(A(X), X = 1).` should be legal. This may also run into problems because Elixir's macros are hygenic.
 *   Invoking constant macros as function names is not working. e.g. if `-define(A, m:f).`, it should be legal to invoke `?A()`.
@@ -58,7 +59,6 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Incomplete features
 
-*   Translate Erlang characters (e.g. $%) into the Elixir equivalent (e.g. ?%), rather than numbers without semantics.
 *   Generate exdoc comments, probably based on heuristics on the funtion comments.
 *   Do something reasonable with inline comments.
 *   Provide an option to elixirize module names (e.g. instead of generating `defmodule :my_erlang_module`, generate `defmodule MyErlangModule`)

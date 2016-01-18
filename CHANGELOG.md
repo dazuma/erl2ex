@@ -9,6 +9,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   Support for redefining macros.
 *   Support for macro definitions that include comma and semicolon delimited expressions.
 *   Generate macros for record_info calls and record index expressions.
+*   Erlang characters (e.g. $A) are translated into the Elixir equivalent syntax (e.g. ?A) rather than integers.
 
 ## v0.0.5 (2016-01-11)
 
