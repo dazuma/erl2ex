@@ -193,6 +193,7 @@ defmodule Erl2ex.Codegen do
       dispatch_name: dispatch_name,
       stringifications: stringifications,
       expr: expr,
+      guard_expr: guard_expr,
       comments: comments
     },
     io)
@@ -205,11 +206,31 @@ defmodule Erl2ex.Codegen do
       |> foreach(stringifications, fn(ctx, {var, str}) ->
         write_string(ctx, "#{str} = Macro.to_string(quote do: unquote(#{var}))", io)
       end)
+    if guard_expr != nil do
+      context = context
+        |> write_string("if Macro.Env.in_guard? do", io)
+        |> increment_indent
+        |> write_string("quote do", io)
+        |> increment_indent
+        |> write_string(Macro.to_string(guard_expr), io)
+        |> decrement_indent
+        |> write_string("end", io)
+        |> decrement_indent
+        |> write_string("else", io)
+        |> increment_indent
+    end
+    context = context
       |> write_string("quote do", io)
       |> increment_indent
       |> write_string(Macro.to_string(expr), io)
       |> decrement_indent
       |> write_string("end", io)
+    if guard_expr != nil do
+      context = context
+        |> decrement_indent
+        |> write_string("end", io)
+    end
+    context = context
       |> decrement_indent
       |> write_string("end", io)
     if tracking_name != nil do

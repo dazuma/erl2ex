@@ -7,6 +7,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   Convert string() and nonempty_string() Erlang types to the preferred Elixir equivalents, to avoid an Elixir warning.
 *   Support for environment variable interpolation in include paths.
 *   Support for redefining macros.
+*   Support for macro definitions that include comma and semicolon delimited expressions.
 
 ## v0.0.5 (2016-01-11)
 

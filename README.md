@@ -50,8 +50,7 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
-*   Macro defines do not work with guard fragments, i.e. expressions delimited by commas or semicolons. See examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_tokenizer.erl.
-*   Macro defines do not work when generating multiple (comma-delimited) lines of a function definition.
+*   If a "do" clause or similar appears in the arguments pattern, codegen gets confused. Example found in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl (function "MACRO-defmodule").
 *   Defining a macro that attempts to assign to a substitution results in an exception. e.g. `-define(A(X), X = 1).` should be legal. This may also run into problems because Elixir's macros are hygenic.
 *   Invoking constant macros as function names is not working. e.g. if `-define(A, m:f).`, it should be legal to invoke `?A()`.
 *   Record declarations with type info (e.g. `-record(foo, {field1 :: integer}).`) are not supported. Currently the converter drops the types. Additionally, record types are not yet supported.

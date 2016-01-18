@@ -141,7 +141,7 @@ defmodule Erl2ex.Convert do
     end
     dispatch_name = if needs_dispatch, do: macro_name, else: nil
     tracking_name = Context.tracking_attr_name(context, name)
-    {ex_expr, _} = Expressions.conv_expr(replacement, replacement_context)
+    {normal_expr, guard_expr, _} = Expressions.conv_macro_expr(replacement, replacement_context)
 
     ex_macro = %ExMacro{
       macro_name: mapped_name,
@@ -149,7 +149,8 @@ defmodule Erl2ex.Convert do
       tracking_name: tracking_name,
       dispatch_name: dispatch_name,
       stringifications: replacement_context.stringification_map,
-      expr: ex_expr,
+      expr: normal_expr,
+      guard_expr: guard_expr,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }

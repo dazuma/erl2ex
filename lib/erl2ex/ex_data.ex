@@ -50,6 +50,7 @@ defmodule Erl2ex.ExMacro do
             dispatch_name: nil,
             stringifications: nil,
             expr: nil,
+            guard_expr: nil,
             comments: [],
             inline_comments: []
 

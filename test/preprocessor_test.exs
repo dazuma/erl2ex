@@ -75,6 +75,61 @@ defmodule PreprocessorTest do
   end
 
 
+  test "Macro that includes semicolons and should work only for guards" do
+    input = """
+      -define(HELLO(X), X > 10, X < 20; X == 1).
+      foo(X) when ?HELLO(X) -> X.
+      """
+
+    expected = """
+      defmacrop erlmacro_HELLO(x) do
+        quote do
+          unquote(x) > 10 and unquote(x) < 20 or unquote(x) == 1
+        end
+      end
+
+
+      defp foo(x) when erlmacro_HELLO(x) do
+        x
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Macro that includes commas and works differently in guards" do
+    input = """
+      -define(HELLO(X), X > 10, X < 20).
+      foo(X) when ?HELLO(X) -> ?HELLO(X).
+      """
+
+    expected = """
+      defmacrop erlmacro_HELLO(x) do
+        if Macro.Env.in_guard? do
+          quote do
+            unquote(x) > 10 and unquote(x) < 20
+          end
+        else
+          quote do
+            (
+              unquote(x) > 10
+              unquote(x) < 20
+            )
+          end
+        end
+      end
+
+
+      defp foo(x) when erlmacro_HELLO(x) do
+        erlmacro_HELLO(x)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Macro constant and function defines with the same name" do
     input = """
       -define(HELLO, 100 * 2).

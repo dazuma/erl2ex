@@ -357,6 +357,32 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
 
+  def conv_macro_expr([[expr]], context) do
+    {normal_expr, context} = conv_expr(expr, context)
+    {normal_expr, nil, context}
+  end
+
+  def conv_macro_expr([expr_list], context) do
+    {normal_expr, ncontext} = conv_block(expr_list, context)
+    {guard_expr, _} = guard_elem(expr_list, nil, context)
+    {normal_expr, guard_expr, ncontext}
+  end
+
+  def conv_macro_expr(exprs, context) do
+    {guard_expr, context} = guard_seq(exprs, nil, context)
+    {guard_expr, nil, context}
+  end
+
+
+  def guard_seq([], context) do
+    {[], context}
+  end
+  def guard_seq(guards, context) do
+    {result, context} = guard_seq(guards, nil, context)
+    {[result], context}
+  end
+
+
   defp conv_clause_list(type, clauses, context) do
     if type == :case or type == :if or type == :receive do
       context = Context.clear_exports(context)
@@ -418,14 +444,6 @@ defmodule Erl2ex.Convert.Expressions do
     {ex_expr, context}
   end
 
-
-  def guard_seq([], context) do
-    {[], context}
-  end
-  def guard_seq(guards, context) do
-    {result, context} = guard_seq(guards, nil, context)
-    {[result], context}
-  end
 
   defp guard_seq([], result, context) do
     {result, context}

@@ -73,10 +73,7 @@ defmodule Erl2ex.Parse do
 
 
   defp parse_form(context, {[{:-, line} | defn_tokens = [{:atom, _, :define} | _]], comment_tokens}) do
-    [{:call, _, {:atom, _, :define}, [macro, replacement]}] =
-      defn_tokens |> :erl_parse.parse_exprs |> handle_parse_result(context)
-    ast = {:define, line, macro, replacement}
-    {ast, comment_tokens}
+    parse_define(context, line, defn_tokens, comment_tokens)
   end
 
   defp parse_form(context, {[{:-, line} | defn_tokens = [{:atom, _, directive} | _]], comment_tokens})
@@ -96,6 +93,47 @@ defmodule Erl2ex.Parse do
     ast = form_tokens |> :erl_parse.parse_form |> handle_parse_result(context)
     {ast, comment_tokens}
   end
+
+
+  defp parse_define(context, line, [{:atom, _, :define}, {:"(", _}, name_token, {:",", dot_line} | replacement_tokens], comment_tokens) do
+    parse_define(context, line, [name_token, {:dot, dot_line}], replacement_tokens, comment_tokens)
+  end
+
+  defp parse_define(context, line, [{:atom, _, :define}, {:"(", _} | remaining_tokens = [_, {:"(", _} | _]], comment_tokens) do
+    close_paren_index = remaining_tokens
+      |> Enum.find_index(fn
+        {:")", _} -> true
+        _ -> false
+      end)
+    {macro_tokens, [{:",", dot_line} | replacement_tokens]} = Enum.split(remaining_tokens, close_paren_index + 1)
+    parse_define(context, line, macro_tokens ++ [{:dot, dot_line}], replacement_tokens, comment_tokens)
+  end
+
+
+  defp parse_define(context, line, macro_tokens, replacement_tokens, comment_tokens) do
+    macro_expr = macro_tokens
+      |> :erl_parse.parse_exprs
+      |> handle_parse_result(context)
+      |> hd
+    replacement_exprs = replacement_tokens
+      |> List.delete_at(-2)
+      |> split_on_semicolon
+      |> Enum.map(fn tokens ->
+        tokens |> :erl_parse.parse_exprs |> handle_parse_result(context)
+      end)
+    ast = {:define, line, macro_expr, replacement_exprs}
+    {ast, comment_tokens}
+  end
+
+
+  defp split_on_semicolon(list), do: split_on_semicolon(list, [[]])
+
+  defp split_on_semicolon([], results), do:
+    results |> Enum.map(&(Enum.reverse(&1))) |> Enum.reverse
+  defp split_on_semicolon([{:";", line} | tlist], [hresults | tresults]), do:
+    split_on_semicolon(tlist, [[], [{:dot, line} | hresults] | tresults])
+  defp split_on_semicolon([hlist | tlist], [hresults | tresults]), do:
+    split_on_semicolon(tlist, [[hlist | hresults] | tresults])
 
 
   defp handle_parse_result({:error, {line, :erl_parse, messages = [h | _]}}, context) when is_list(h), do:
