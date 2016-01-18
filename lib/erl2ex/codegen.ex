@@ -109,17 +109,36 @@ defmodule Erl2ex.Codegen do
       context = context
         |> skip_lines(:attr, io)
         |> write_string("require Record", io)
+      if header.record_size_macro != nil do
+        context = context
+          |> skip_lines(:attr, io)
+          |> write_string("defmacrop #{header.record_size_macro}(data_attr) do", io)
+          |> increment_indent
+          |> write_string("__MODULE__ |> Module.get_attribute(data_attr) |> Enum.count |> +(1)", io)
+          |> decrement_indent
+          |> write_string("end", io)
+      end
+      if header.record_index_macro != nil do
+        context = context
+          |> skip_lines(:attr, io)
+          |> write_string("defmacrop #{header.record_index_macro}(data_attr, field) do", io)
+          |> increment_indent
+          |> write_string("index = __MODULE__ |> Module.get_attribute(data_attr) |> Enum.find_index(&(&1 ==field))", io)
+          |> write_string("if index == nil, do: 0, else: index + 1", io)
+          |> decrement_indent
+          |> write_string("end", io)
+      end
     end
     if header.macro_dispatcher != nil do
       context = context
         |> skip_lines(:attr, io)
         |> write_string("defmacrop #{header.macro_dispatcher}(name, args), do:", io)
         |> increment_indent
-        |> write_string("{Module.get_attribute(__MODULE__), name), [], args}", io)
+        |> write_string("{Module.get_attribute(__MODULE__, name), [], args}", io)
         |> decrement_indent
         |> write_string("defmacrop #{header.macro_dispatcher}(name), do:", io)
         |> increment_indent
-        |> write_string("{Module.get_attribute(__MODULE__), name), [], []}", io)
+        |> write_string("{Module.get_attribute(__MODULE__, name), [], []}", io)
         |> decrement_indent
     end
     context
@@ -161,10 +180,12 @@ defmodule Erl2ex.Codegen do
       |> write_string("import #{Macro.to_string(module)}, only: #{Macro.to_string(funcs)}", io)
   end
 
-  defp write_form(context, %ExRecord{tag: tag, macro: macro, fields: fields, comments: comments}, io) do
+  defp write_form(context, %ExRecord{tag: tag, macro: macro, data_attr: data_attr, fields: fields, comments: comments}, io) do
+    field_names = fields |> Enum.map(&(elem(&1, 0)))
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
+      |> write_string("@#{data_attr} #{Macro.to_string(field_names)}", io)
       |> write_string("Record.defrecordp #{Macro.to_string(macro)}, #{Macro.to_string(tag)}, #{Macro.to_string(fields)}", io)
   end
 

@@ -62,6 +62,7 @@ defmodule Erl2ex.ExRecord do
 
   defstruct tag: nil,
             macro: nil,
+            data_attr: nil,
             fields: [],
             comments: [],
             inline_comments: []
@@ -98,7 +99,9 @@ defmodule Erl2ex.ExHeader do
   defstruct use_bitwise: false,
             records: [],
             init_macros: [],
-            macro_dispatcher: nil
+            macro_dispatcher: nil,
+            record_size_macro: nil,
+            record_index_macro: nil
 
 end
 

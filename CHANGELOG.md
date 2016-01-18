@@ -8,6 +8,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   Support for environment variable interpolation in include paths.
 *   Support for redefining macros.
 *   Support for macro definitions that include comma and semicolon delimited expressions.
+*   Generate macros for record_info calls and record index expressions.
 
 ## v0.0.5 (2016-01-11)
 

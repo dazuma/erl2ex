@@ -593,9 +593,9 @@ defmodule PreprocessorTest do
 
     expected = """
       defmacrop erlmacro(name, args), do:
-        {Module.get_attribute(__MODULE__), name), [], args}
+        {Module.get_attribute(__MODULE__, name), [], args}
       defmacrop erlmacro(name), do:
-        {Module.get_attribute(__MODULE__), name), [], []}
+        {Module.get_attribute(__MODULE__, name), [], []}
 
 
       defmacrop erlconst_HELLO() do
@@ -632,9 +632,9 @@ defmodule PreprocessorTest do
 
     expected = """
       defmacrop erlmacro(name, args), do:
-        {Module.get_attribute(__MODULE__), name), [], args}
+        {Module.get_attribute(__MODULE__, name), [], args}
       defmacrop erlmacro(name), do:
-        {Module.get_attribute(__MODULE__), name), [], []}
+        {Module.get_attribute(__MODULE__, name), [], []}
 
 
       defmacrop erlmacro_HELLO(x) do

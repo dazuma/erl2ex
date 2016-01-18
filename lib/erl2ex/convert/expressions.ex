@@ -292,7 +292,7 @@ defmodule Erl2ex.Convert.Expressions do
 
   def conv_expr({:record_index, _, name, field}, context) do
     {ex_field, context} = conv_expr(field, context)
-    {Context.record_field_index(context, name, ex_field), context}
+    {{Context.record_index_macro(context), [], [Context.record_data_attr_name(context, name), ex_field]}, context}
   end
 
   def conv_expr({:record_field, _, name}, context) do
@@ -772,14 +772,11 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_call({:atom, _, :record_info}, [{:atom, _, :size}, {:atom, _, rec}], context) do
-    size = context
-      |> Context.record_field_names(rec)
-      |> Enum.count
-    {size + 1, context}
+    {{Context.record_size_macro(context), [], [Context.record_data_attr_name(context, rec)]}, context}
   end
 
   defp conv_call({:atom, _, :record_info}, [{:atom, _, :fields}, {:atom, _, rec}], context) do
-    {Context.record_field_names(context, rec), context}
+    {{:@, @import_kernel_metadata, [{Context.record_data_attr_name(context, rec), [], Elixir}]}, context}
   end
 
   defp conv_call(func, args, context) do

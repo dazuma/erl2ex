@@ -181,6 +181,7 @@ defmodule Erl2ex.Convert do
     ex_record = %ExRecord{
       tag: name,
       macro: Context.record_function_name(context, name),
+      data_attr: Context.record_data_attr_name(context, name),
       fields: ex_fields,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments

@@ -27,6 +27,8 @@ defmodule Erl2ex.Convert.Context do
             used_func_names: MapSet.new,
             used_attr_names: MapSet.new,
             macro_dispatcher: nil,
+            record_size_macro: nil,
+            record_index_macro: nil,
             specs: %{},
             variable_map: %{},
             stringification_map: %{},
@@ -59,6 +61,7 @@ defmodule Erl2ex.Convert.Context do
   defmodule RecordInfo do
     @moduledoc false
     defstruct func_name: nil,
+              data_name: nil,
               fields: []
   end
 
@@ -201,8 +204,18 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def macro_dispatcher_name(context) do
-    context.macro_dispatcher
+  def macro_dispatcher_name(%Context{macro_dispatcher: macro_name}) do
+    macro_name
+  end
+
+
+  def record_size_macro(%Context{record_size_macro: macro_name}) do
+    macro_name
+  end
+
+
+  def record_index_macro(%Context{record_index_macro: macro_name}) do
+    macro_name
   end
 
 
@@ -221,9 +234,8 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def record_field_index(context, record_name, field_name) do
-    (Map.fetch!(context.records, record_name).fields
-      |> Enum.find_index(fn f -> f == field_name end)) + 1
+  def record_data_attr_name(context, name) do
+    Map.fetch!(context.records, name).data_name
   end
 
 
@@ -464,16 +476,65 @@ defmodule Erl2ex.Convert.Context do
 
   defp collect_record_info(%Erl2ex.ErlRecord{name: name, fields: fields}, context) do
     macro_name = Utils.find_available_name(name, context.used_func_names, "erlrecord")
+    data_name = Utils.find_available_name(name, context.used_attr_names, "erlrecordfields")
     record_info = %RecordInfo{
       func_name: macro_name,
+      data_name: data_name,
       fields: fields |> Enum.map(&extract_record_field_name/1)
     }
     %Context{context |
       used_func_names: MapSet.put(context.used_func_names, macro_name),
+      used_attr_names: MapSet.put(context.used_attr_names, data_name),
       records: Map.put(context.records, name, record_info)
     }
   end
+  defp collect_record_info(%Erl2ex.ErlFunc{clauses: clauses}, context) do
+    detect_record_query_presence(clauses, context)
+  end
+  defp collect_record_info(%Erl2ex.ErlDefine{replacement: replacement}, context) do
+    detect_record_query_presence(replacement, context)
+  end
   defp collect_record_info(_, context), do: context
+
+
+  defp extract_record_field_name({:typed_record_field, record_field, _type}), do:
+    extract_record_field_name(record_field)
+  defp extract_record_field_name({:record_field, _, {:atom, _, name}}), do: name
+  defp extract_record_field_name({:record_field, _, {:atom, _, name}, _}), do: name
+
+
+  defp detect_record_query_presence({:call, _, {:atom, _, :record_info}, [{:atom, _, :size}, _]}, context), do:
+    set_record_size_macro(context)
+  defp detect_record_query_presence({:record_index, _, _, _}, context), do:
+    set_record_index_macro(context)
+  defp detect_record_query_presence(tuple, context) when is_tuple(tuple), do:
+    detect_record_query_presence(Tuple.to_list(tuple), context)
+  defp detect_record_query_presence(list, context) when is_list(list), do:
+    list |> Enum.reduce(context, &detect_record_query_presence/2)
+  defp detect_record_query_presence(_, context), do: context
+
+
+  defp set_record_size_macro(context = %Context{record_size_macro: nil, used_func_names: used_func_names}) do
+    macro_name = Utils.find_available_name("erlrecordsize", used_func_names, "", 0)
+    context = %Context{context |
+      record_size_macro: macro_name,
+      used_func_names: MapSet.put(used_func_names, macro_name)
+    }
+    context
+  end
+  defp set_record_size_macro(context), do: context
+
+
+  defp set_record_index_macro(context = %Context{record_index_macro: nil, used_func_names: used_func_names}) do
+    macro_name = Utils.find_available_name("erlrecordindex", used_func_names, "", 0)
+    context = %Context{context |
+      record_index_macro: macro_name,
+      used_func_names: MapSet.put(used_func_names, macro_name)
+    }
+    context
+  end
+  defp set_record_index_macro(context), do: context
+
 
 
   defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: args}, context) do
@@ -506,12 +567,6 @@ defmodule Erl2ex.Convert.Context do
 
   defp collect_specs(spec = %Erl2ex.ErlSpec{name: name}, context), do:
     %Context{context | specs: Map.put(context.specs, name, spec)}
-
-
-  defp extract_record_field_name({:typed_record_field, record_field, _type}), do:
-    extract_record_field_name(record_field)
-  defp extract_record_field_name({:record_field, _, {:atom, _, name}}), do: name
-  defp extract_record_field_name({:record_field, _, {:atom, _, name}, _}), do: name
 
 
   defp update_macro_info(

@@ -18,7 +18,9 @@ defmodule Erl2ex.Convert.Headers do
     %ExHeader{header |
       records: Context.map_records(context, fn(name, fields) -> {name, fields} end),
       init_macros: Context.macros_that_need_init(context),
-      macro_dispatcher: Context.macro_dispatcher_name(context)
+      macro_dispatcher: Context.macro_dispatcher_name(context),
+      record_size_macro: Context.record_size_macro(context),
+      record_index_macro: Context.record_index_macro(context)
     }
   end
 

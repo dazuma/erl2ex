@@ -30,15 +30,13 @@ defmodule StructureTest do
         B = A#foo{field2=234},
         C = #foo{field1="Lovelace", _=345},
         #foo{field1=D} = B,
-        #foo.field2,
-        B#foo.field2,
-        record_info(size, foo),
-        record_info(fields, foo).
+        B#foo.field2.
       """
 
     expected = """
       require Record
 
+      @erlrecordfields_foo [:field1, :field2]
       Record.defrecordp :erlrecord_foo, :foo, [field1: :undefined, field2: 123]
 
 
@@ -47,10 +45,43 @@ defmodule StructureTest do
         b = erlrecord_foo(a, field2: 234)
         c = erlrecord_foo(field1: 'Lovelace', field2: 345)
         erlrecord_foo(field1: d) = b
-        2
         erlrecord_foo(b, :field2)
-        3
-        [:field1, :field2]
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Record queries" do
+    input = """
+      -record(foo, {field1, field2=123}).
+      foo() ->
+        #foo.field2,
+        record_info(size, foo),
+        record_info(fields, foo).
+      """
+
+    expected = """
+      require Record
+
+      defmacrop erlrecordsize(data_attr) do
+        __MODULE__ |> Module.get_attribute(data_attr) |> Enum.count |> +(1)
+      end
+
+      defmacrop erlrecordindex(data_attr, field) do
+        index = __MODULE__ |> Module.get_attribute(data_attr) |> Enum.find_index(&(&1 ==field))
+        if index == nil, do: 0, else: index + 1
+      end
+
+      @erlrecordfields_foo [:field1, :field2]
+      Record.defrecordp :erlrecord_foo, :foo, [field1: :undefined, field2: 123]
+
+
+      defp foo() do
+        erlrecordindex(:erlrecordfields_foo, :field2)
+        erlrecordsize(:erlrecordfields_foo)
+        @erlrecordfields_foo
       end
       """
 
