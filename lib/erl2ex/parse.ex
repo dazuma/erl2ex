@@ -115,25 +115,20 @@ defmodule Erl2ex.Parse do
       |> :erl_parse.parse_exprs
       |> handle_parse_result(context)
       |> hd
-    replacement_exprs = replacement_tokens
-      |> List.delete_at(-2)
-      |> split_on_semicolon
-      |> Enum.map(fn tokens ->
-        tokens |> :erl_parse.parse_exprs |> handle_parse_result(context)
-      end)
+    replacement_tokens = replacement_tokens |> List.delete_at(-2)
+    replacement_exprs = case :erl_parse.parse_exprs(replacement_tokens) do
+      {:ok, asts} -> [asts]
+      {:error, _} ->
+        {guard_tokens, [{:dot, dot_line}]} = Enum.split(replacement_tokens, -1)
+        temp_form_tokens = [{:atom, 1, :foo}, {:"(", 1}, {:")", 1}, {:when, 1}] ++
+            guard_tokens ++
+            [{:"->", dot_line}, {:atom, dot_line, :ok}, {:dot, dot_line}]
+        {:ok, {:function, _, :foo, 0, [{:clause, _, [], guards, _}]}} = :erl_parse.parse_form(temp_form_tokens)
+        guards
+    end
     ast = {:define, line, macro_expr, replacement_exprs}
     {ast, comment_tokens}
   end
-
-
-  defp split_on_semicolon(list), do: split_on_semicolon(list, [[]])
-
-  defp split_on_semicolon([], results), do:
-    results |> Enum.map(&(Enum.reverse(&1))) |> Enum.reverse
-  defp split_on_semicolon([{:";", line} | tlist], [hresults | tresults]), do:
-    split_on_semicolon(tlist, [[], [{:dot, line} | hresults] | tresults])
-  defp split_on_semicolon([hlist | tlist], [hresults | tresults]), do:
-    split_on_semicolon(tlist, [[hlist | hresults] | tresults])
 
 
   defp handle_parse_result({:error, {line, :erl_parse, messages = [h | _]}}, context) when is_list(h), do:
