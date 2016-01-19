@@ -340,7 +340,7 @@ defmodule Erl2ex.Codegen do
     str
       |> String.split("\n")
       |> Enum.each(fn line ->
-        IO.puts(io, "#{indent}#{line}")
+        IO.binwrite(io, "#{indent}#{line}\n")
       end)
     context
   end

@@ -335,13 +335,13 @@ defmodule Erl2ex.Convert do
 
   defp convert_comments(comments) do
     comments |> Enum.map(fn
-      {:comment, _, str} -> convert_comment_str(str)
+      {:comment, _, str} -> str |> List.to_string |> convert_comment_str
       str when is_binary(str) -> convert_comment_str(str)
     end)
   end
 
   defp convert_comment_str(str) do
-    Regex.replace(~r{^%+}, to_string(str), fn prefix -> String.replace(prefix, "%", "#") end)
+    Regex.replace(~r{^%+}, str, fn prefix -> String.replace(prefix, "%", "#") end)
   end
 
 end
