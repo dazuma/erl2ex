@@ -348,6 +348,21 @@ defmodule FunctionTest do
   end
 
 
+  test "Function pattern looks like keyword block" do
+    input = """
+      foo([{do, a}, {else, b}]) -> ok.
+      """
+
+    expected = """
+      defp foo(do: :a, else: :b) do
+        :ok
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Simple specs" do
     input = """
       -spec foo(A :: atom(), integer()) -> boolean()

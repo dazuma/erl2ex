@@ -222,7 +222,7 @@ defmodule Erl2ex.Codegen do
     context = context
       |> write_comment_list(comments, :func_header, io)
       |> skip_lines(:func_clause_first, io)
-      |> write_string("defmacrop #{expr_to_string(signature)} do", io)
+      |> write_string("defmacrop #{signature_to_string(signature)} do", io)
       |> increment_indent
       |> foreach(stringifications, fn(ctx, {var, str}) ->
         write_string(ctx, "#{str} = Macro.to_string(quote do: unquote(#{var}))", io)
@@ -325,7 +325,7 @@ defmodule Erl2ex.Codegen do
     context
       |> skip_lines(form_type, io)
       |> foreach(clause.comments, io, &write_string/3)
-      |> write_string("#{decl} #{expr_to_string(clause.signature)} do", io)
+      |> write_string("#{decl} #{signature_to_string(clause.signature)} do", io)
       |> increment_indent
       |> foreach(clause.exprs, fn (ctx, expr) ->
         write_string(ctx, expr_to_string(expr), io)
@@ -378,6 +378,20 @@ defmodule Erl2ex.Codegen do
 
   defp expr_to_string(expr) do
     Macro.to_string(expr, &modify_codegen/2)
+  end
+
+
+  defp signature_to_string({target, ctx, args} = expr) do
+    str = expr_to_string(expr)
+    if String.ends_with?(str, "\nend") do
+      args = args |> List.update_at(-1, fn kwargs ->
+        kwargs ++ [a: :a]
+      end)
+      str = {target, ctx, args}
+        |> expr_to_string
+        |> String.replace_suffix(", a: :a)", ")")
+    end
+    str
   end
 
 
