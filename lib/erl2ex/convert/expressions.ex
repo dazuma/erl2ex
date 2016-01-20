@@ -809,20 +809,27 @@ defmodule Erl2ex.Convert.Expressions do
     {ex_expr, ex_args, context}
   end
 
-  defp func_spec(func = {:var, _, name}, ex_args, context) do
+  defp func_spec(func = {:var, line, name}, ex_args, context) do
     case Atom.to_string(name) do
       << "?" :: utf8, basename :: binary >> ->
         arity = Enum.count(ex_args)
         macro_raw_name = String.to_atom(basename)
         func_name = Context.macro_function_name(context, macro_raw_name, arity)
-        if func_name == nil do
-          Utils.handle_error(context, func, "(no such macro)")
-        end
-        if Context.macro_needs_dispatch?(context, macro_raw_name) do
-          dispatcher = Context.macro_dispatcher_name(context)
-          {dispatcher, [func_name, ex_args], context}
-        else
-          {func_name, ex_args, context}
+        const_name = Context.macro_function_name(context, macro_raw_name, nil)
+        cond do
+          func_name != nil ->
+            if Context.macro_needs_dispatch?(context, macro_raw_name) do
+              dispatcher = Context.macro_dispatcher_name(context)
+              {dispatcher, [func_name, ex_args], context}
+            else
+              {func_name, ex_args, context}
+            end
+          const_name != nil ->
+            dispatcher = Context.macro_dispatcher_name(context)
+            {macro_expr, context} = conv_const(macro_raw_name, line, context)
+            {dispatcher, [macro_expr, ex_args], context}
+          true ->
+            Utils.handle_error(context, func, "(no such macro)")
         end
       _ ->
         {ex_func, context} = conv_expr(func, context)

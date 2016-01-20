@@ -55,6 +55,7 @@ defmodule Erl2ex.Convert.Context do
               func_name: nil,
               define_tracker: nil,
               requires_init: nil,
+              has_func_style_call: false,
               is_redefined: MapSet.new
   end
 
@@ -190,7 +191,11 @@ defmodule Erl2ex.Convert.Context do
 
   def macro_needs_dispatch?(context, name) do
     macro_info = Map.get(context.macros, name, nil)
-    if macro_info == nil, do: false, else: macro_info.is_redefined == true
+    if macro_info == nil do
+      false
+    else
+      macro_info.is_redefined == true or macro_info.has_func_style_call and macro_info.func_name == nil
+    end
   end
 
 
@@ -537,12 +542,13 @@ defmodule Erl2ex.Convert.Context do
 
 
 
-  defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: args}, context) do
+  defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: args, replacement: replacement}, context) do
     macro = Map.get(context.macros, name, %MacroInfo{})
     requires_init = update_requires_init(macro.requires_init, false)
     macro = %MacroInfo{macro | requires_init: requires_init}
     next_is_redefined = update_is_redefined(macro.is_redefined, args)
-    update_macro_info(macro, next_is_redefined, args, name, context)
+    context = update_macro_info(macro, next_is_redefined, args, name, context)
+    detect_func_style_call(replacement, context)
   end
 
   defp collect_macro_info(%Erl2ex.ErlDirective{name: name}, context) when name != nil do
@@ -562,11 +568,46 @@ defmodule Erl2ex.Convert.Context do
     end
   end
 
+  defp collect_macro_info(%Erl2ex.ErlFunc{clauses: clauses}, context) do
+    detect_func_style_call(clauses, context)
+  end
+
   defp collect_macro_info(_, context), do: context
 
 
-  defp collect_specs(spec = %Erl2ex.ErlSpec{name: name}, context), do:
-    %Context{context | specs: Map.put(context.specs, name, spec)}
+  defp detect_func_style_call(
+    {:call, _, {:var, _, name}, _},
+    %Context{
+      macros: macros,
+      macro_dispatcher: macro_dispatcher,
+      used_func_names: used_func_names
+    } = context)
+  do
+    case Atom.to_string(name) do
+      << "?" :: utf8, basename :: binary >> ->
+        macro = Map.get(macros, String.to_atom(basename), %MacroInfo{})
+        macro = %MacroInfo{macro | has_func_style_call: true}
+        if macro_dispatcher == nil and macro.func_name == nil do
+          macro_dispatcher = Utils.find_available_name("erlmacro", used_func_names, "", 0)
+          used_func_names = used_func_names |> MapSet.put(macro_dispatcher)
+        end
+        %Context{context |
+          macros: Map.put(macros, name, macro),
+          macro_dispatcher: macro_dispatcher,
+          used_func_names: used_func_names
+        }
+      _ ->
+        context
+    end
+  end
+
+  defp detect_func_style_call(tuple, context) when is_tuple(tuple), do:
+    detect_func_style_call(Tuple.to_list(tuple), context)
+
+  defp detect_func_style_call(list, context) when is_list(list), do:
+    list |> Enum.reduce(context, &detect_func_style_call/2)
+
+  defp detect_func_style_call(_, context), do: context
 
 
   defp update_macro_info(
@@ -702,6 +743,7 @@ defmodule Erl2ex.Convert.Context do
     {cur_name, used_names}
   end
 
+
   defp update_requires_init(nil, nval), do: nval
   defp update_requires_init(oval, _nval), do: oval
 
@@ -712,5 +754,9 @@ defmodule Erl2ex.Convert.Context do
   defp update_is_redefined(set, arity) do
     if MapSet.member?(set, arity), do: true, else: MapSet.put(set, arity)
   end
+
+
+  defp collect_specs(spec = %Erl2ex.ErlSpec{name: name}, context), do:
+    %Context{context | specs: Map.put(context.specs, name, spec)}
 
 end

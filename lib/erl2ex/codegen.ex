@@ -132,13 +132,13 @@ defmodule Erl2ex.Codegen do
     if header.macro_dispatcher != nil do
       context = context
         |> skip_lines(:attr, io)
-        |> write_string("defmacrop #{header.macro_dispatcher}(name, args), do:", io)
+        |> write_string("defmacrop #{header.macro_dispatcher}(name, args \\\\ []) when is_atom(name), do:", io)
         |> increment_indent
         |> write_string("{Module.get_attribute(__MODULE__, name), [], args}", io)
         |> decrement_indent
-        |> write_string("defmacrop #{header.macro_dispatcher}(name), do:", io)
+        |> write_string("defmacrop #{header.macro_dispatcher}(macro, args), do:", io)
         |> increment_indent
-        |> write_string("{Module.get_attribute(__MODULE__, name), [], []}", io)
+        |> write_string("{Macro.expand(macro, __CALLER__), [], args}", io)
         |> decrement_indent
     end
     context

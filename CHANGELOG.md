@@ -2,6 +2,10 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
+## v0.0.7 (not yet released)
+
+*   Support invoking a constant macro as a function name.
+
 ## v0.0.6 (2016-01-19)
 
 *   Unicode characters greater than 127 were incorrectly encoded in output files, and codepoints greater than 255 caused codegen to crash. Fixed.

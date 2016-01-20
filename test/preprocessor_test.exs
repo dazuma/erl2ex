@@ -592,10 +592,10 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      defmacrop erlmacro(name, args), do:
+      defmacrop erlmacro(name, args \\\\ []) when is_atom(name), do:
         {Module.get_attribute(__MODULE__, name), [], args}
-      defmacrop erlmacro(name), do:
-        {Module.get_attribute(__MODULE__, name), [], []}
+      defmacrop erlmacro(macro, args), do:
+        {Macro.expand(macro, __CALLER__), [], args}
 
 
       defmacrop erlconst_HELLO() do
@@ -631,10 +631,10 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      defmacrop erlmacro(name, args), do:
+      defmacrop erlmacro(name, args \\\\ []) when is_atom(name), do:
         {Module.get_attribute(__MODULE__, name), [], args}
-      defmacrop erlmacro(name), do:
-        {Module.get_attribute(__MODULE__, name), [], []}
+      defmacrop erlmacro(macro, args), do:
+        {Macro.expand(macro, __CALLER__), [], args}
 
 
       defmacrop erlmacro_HELLO(x) do
@@ -661,5 +661,39 @@ defmodule PreprocessorTest do
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
+
+  test "Invoking constant macro as function name" do
+    input = """
+      -define(HELLO, bar).
+      foo() -> ?HELLO(3).
+      bar(X) -> X.
+      """
+
+    expected = """
+      defmacrop erlmacro(name, args \\\\ []) when is_atom(name), do:
+        {Module.get_attribute(__MODULE__, name), [], args}
+      defmacrop erlmacro(macro, args), do:
+        {Macro.expand(macro, __CALLER__), [], args}
+
+
+      defmacrop erlconst_HELLO() do
+        quote do
+          :bar
+        end
+      end
+
+
+      defp foo() do
+        erlmacro(erlconst_HELLO(), [3])
+      end
+
+
+      defp bar(x) do
+        x
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
 
 end

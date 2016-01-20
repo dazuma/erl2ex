@@ -51,9 +51,10 @@ This software is still under heavy development, and many capabilities are not ye
 ### Known issues
 
 *   If a "do" clause or similar appears in the arguments pattern, codegen gets confused. Example found in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl (function "MACRO-defmodule").
-*   Need to analyze macro substitutions to determine whether variables matched in their arguments should be exported.
+*   Need to analyze macro substitutions to determine whether variables matched in their arguments should be exported. A failure example is in https://github.com/talentdeficit/jsx/blob/develop/src/jsx.erl (function end_stream_test_) in which the references to F should not be exported because each call to _assertEqual wraps it in a fun.
 *   Defining a macro that attempts to assign to a substitution results in an exception. e.g. `-define(A(X), X = 1).` should be legal. This may also run into problems because Elixir's macros are hygenic.
-*   Invoking constant macros as function names is not working. e.g. if `-define(A, m:f).`, it should be legal to invoke `?A()`.
+*   Returning a remote function reference from a macro is not supported: e.g. `-define(A, m:f).` generates illegal Elixir syntax.
+*   Invoking function macros as function names is not working; Erlang's parser rejects the syntax `?A()()` although the preprocessor can smooth it out.
 *   Record declarations with type info (e.g. `-record(foo, {field1 :: integer}).`) are not supported. Currently the converter drops the types. Additionally, record types are not yet supported.
 *   Binary expressions with complex or combination size/type specs are not supported, and cause the converter to crash. An example is `<<1:16/integer-signed-native>>`. This seems to be a limitation of Elixir itself.
 
