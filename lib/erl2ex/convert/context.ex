@@ -3,33 +3,13 @@ defmodule Erl2ex.Convert.Context do
 
   @moduledoc false
 
+  alias Erl2ex.Utils
   alias Erl2ex.Convert.Context
-  alias Erl2ex.Convert.Utils
 
 
-  # These are not allowed as names of functions
-  @elixir_reserved_words [
-    :do,
-    :else,
-    :end,
-    :false,
-    :fn,
-    :nil,
-    :true,
-  ] |> Enum.into(MapSet.new)
-
-
-  defstruct cur_file_path: nil,
-            funcs: %{},
-            types: %{},
-            macros: %{},
-            records: %{},
+  defstruct analyzed_module: nil,
+            cur_file_path: nil,
             used_func_names: MapSet.new,
-            used_attr_names: MapSet.new,
-            macro_dispatcher: nil,
-            record_size_macro: nil,
-            record_index_macro: nil,
-            specs: %{},
             variable_map: %{},
             stringification_map: %{},
             quoted_variables: [],
@@ -38,52 +18,12 @@ defmodule Erl2ex.Convert.Context do
             match_vars: MapSet.new,
             scopes: []
 
-  defmodule FuncInfo do
-    @moduledoc false
-    defstruct func_name: nil,
-              arities: %{}  # Map of arity to exported flag
-  end
 
-  defmodule TypeInfo do
-    @moduledoc false
-    defstruct arities: %{}  # Map of arity to exported flag
-  end
-
-  defmodule MacroInfo do
-    @moduledoc false
-    defstruct const_name: nil,
-              func_name: nil,
-              define_tracker: nil,
-              requires_init: nil,
-              has_func_style_call: false,
-              is_redefined: MapSet.new
-  end
-
-  defmodule RecordInfo do
-    @moduledoc false
-    defstruct func_name: nil,
-              data_name: nil,
-              fields: []
-  end
-
-
-  def build(erl_module, opts) do
-    context = build(opts)
-    context = Enum.reduce(erl_module.forms, context, &collect_func_info/2)
-    context = Enum.reduce(context.funcs, context, &assign_strange_func_names/2)
-    context = Enum.reduce(erl_module.exports, context, &collect_exports/2)
-    context = Enum.reduce(erl_module.type_exports, context, &collect_type_exports/2)
-    context = Enum.reduce(erl_module.forms, context, &collect_attr_info/2)
-    context = Enum.reduce(erl_module.forms, context, &collect_record_info/2)
-    context = Enum.reduce(erl_module.forms, context, &collect_macro_info/2)
-    context = Enum.reduce(erl_module.specs, context, &collect_specs/2)
-    context
-  end
-
-
-  def build(opts) do
+  def build(analyzed_module, opts) do
     %Context{
+      analyzed_module: analyzed_module,
       cur_file_path: Keyword.get(opts, :cur_file_path, nil),
+      used_func_names: analyzed_module.used_func_names
     }
   end
 
@@ -102,7 +42,13 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def push_match_level(context = %Context{match_level: old_match_level, in_func_params: old_in_func_params}, in_func_params) do
+  def push_match_level(
+    %Context{
+      match_level: old_match_level,
+      in_func_params: old_in_func_params
+    } = context,
+    in_func_params)
+  do
     %Context{context |
       match_level: old_match_level + 1,
       in_func_params: old_in_func_params or in_func_params
@@ -110,7 +56,14 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def pop_match_level(context = %Context{scopes: scopes, match_vars: match_vars, match_level: old_match_level, in_func_params: in_func_params}) do
+  def pop_match_level(
+    %Context{
+      scopes: scopes,
+      match_vars: match_vars,
+      match_level: old_match_level,
+      in_func_params: in_func_params
+    } = context)
+  do
     if old_match_level == 1 do
       in_func_params = false
       [{top_vars, top_exports} | other_scopes] = scopes
@@ -127,143 +80,52 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def push_scope(context = %Context{scopes: scopes}) do
+  def push_scope(%Context{scopes: scopes} = context) do
     %Context{context | scopes: [{MapSet.new, MapSet.new} | scopes]}
   end
 
 
-  def pop_scope(context = %Context{scopes: [_h]}) do
+  def pop_scope(%Context{scopes: [_h]} = context) do
     %Context{context | scopes: []}
   end
 
-  def pop_scope(context = %Context{scopes: [{top_vars, _top_exports}, {next_vars, next_exports} | t]}) do
+  def pop_scope(%Context{scopes: [{top_vars, _top_exports}, {next_vars, next_exports} | t]} = context) do
     next_exports = MapSet.union(next_exports, top_vars)
     %Context{context | scopes: [{next_vars, next_exports} | t]}
   end
 
 
-  def clear_exports(context = %Context{scopes: [{top_vars, _top_exports} | t]}) do
+  def clear_exports(%Context{scopes: [{top_vars, _top_exports} | t]} = context) do
     %Context{context | scopes: [{top_vars, MapSet.new} | t]}
   end
 
-  def clear_exports(context = %Context{scopes: []}) do
+  def clear_exports(%Context{scopes: []} = context) do
     context
   end
 
 
-  def apply_exports(context = %Context{scopes: [{top_vars, top_exports} | t]}) do
+  def apply_exports(%Context{scopes: [{top_vars, top_exports} | t]} = context) do
     top_vars = MapSet.union(top_vars, top_exports)
     %Context{context | scopes: [{top_vars, MapSet.new} | t]}
   end
 
-  def apply_exports(context = %Context{scopes: []}) do
+  def apply_exports(%Context{scopes: []} = context) do
     context
   end
 
 
-  def is_exported?(context, name, arity) do
-    info = Map.get(context.funcs, name, %FuncInfo{})
-    Map.get(info.arities, arity, false)
+  def is_quoted_var?(%Context{quoted_variables: quoted_variables}, name) do
+    Enum.member?(quoted_variables, name)
   end
 
 
-  def is_type_exported?(context, name, arity) do
-    info = Map.get(context.types, name, %TypeInfo{})
-    Map.get(info.arities, arity, false)
-  end
-
-
-  def is_local_func?(context, name, arity) do
-    info = Map.get(context.funcs, name, %FuncInfo{})
-    Map.has_key?(info.arities, arity)
-  end
-
-
-  def is_quoted_var?(context, name) do
-    Enum.member?(context.quoted_variables, name)
-  end
-
-
-  def local_function_name(context, name) do
-    Map.fetch!(context.funcs, name).func_name
-  end
-
-
-  def macro_needs_dispatch?(context, name) do
-    macro_info = Map.get(context.macros, name, nil)
-    if macro_info == nil do
-      false
-    else
-      macro_info.is_redefined == true or macro_info.has_func_style_call and macro_info.func_name == nil
-    end
-  end
-
-
-  def macro_function_name(context, name, arity) do
-    macro_info = Map.get(context.macros, name, nil)
-    cond do
-      macro_info == nil -> nil
-      arity == nil -> macro_info.const_name
-      true -> macro_info.func_name
-    end
-  end
-
-
-  def macro_dispatcher_name(%Context{macro_dispatcher: macro_name}) do
-    macro_name
-  end
-
-
-  def record_size_macro(%Context{record_size_macro: macro_name}) do
-    macro_name
-  end
-
-
-  def record_index_macro(%Context{record_index_macro: macro_name}) do
-    macro_name
-  end
-
-
-  def generate_macro_name(context, name, arity) do
+  def generate_macro_name(%Context{used_func_names: used_func_names} = context, name, arity) do
     prefix = if arity == nil, do: "erlconst", else: "erlmacro"
-    func_name = Utils.find_available_name(name, context.used_func_names, prefix)
+    func_name = Utils.find_available_name(name, used_func_names, prefix)
     context = %Context{context |
-      used_func_names: MapSet.put(context.used_func_names, func_name)
+      used_func_names: MapSet.put(used_func_names, func_name)
     }
     {func_name, context}
-  end
-
-
-  def record_function_name(context, name) do
-    Map.fetch!(context.records, name).func_name
-  end
-
-
-  def record_data_attr_name(context, name) do
-    Map.fetch!(context.records, name).data_name
-  end
-
-
-  def record_field_names(context, record_name) do
-    Map.fetch!(context.records, record_name).fields
-  end
-
-
-  def map_records(context, func) do
-    context.records |>
-      Enum.map(fn {name, %RecordInfo{fields: fields}} ->
-        func.(name, fields)
-      end)
-  end
-
-
-  def tracking_attr_name(context, name) do
-    Map.fetch!(context.macros, name).define_tracker
-  end
-
-
-  def specs_for_func(context, name) do
-    Map.get(context.specs, name, %Erl2ex.ErlSpec{name: name})
   end
 
 
@@ -271,7 +133,9 @@ defmodule Erl2ex.Convert.Context do
     mapped_name = Map.fetch!(context.variable_map, name)
     needs_caret = false
     if context.match_level > 0 do
-      needs_caret = not context.in_func_params and name != :_ and variable_seen?(context.scopes, name)
+      needs_caret = not context.in_func_params and
+          name != :_ and
+          variable_seen?(context.scopes, name)
       if not needs_caret and name != :_ do
         context = %Context{context |
           match_vars: MapSet.put(context.match_vars, name)
@@ -289,16 +153,18 @@ defmodule Erl2ex.Convert.Context do
     path
 
 
-  def macros_that_need_init(%Context{macros: macros}) do
-    macros |> Enum.filter_map(
-      fn
-        {_, %MacroInfo{requires_init: true}} -> true
-        _ -> false
-      end,
-      fn {name, %MacroInfo{define_tracker: define_tracker}} ->
-        {name, define_tracker}
-      end)
+  def handle_error(context, expr, ast_context \\ nil) do
+    ast_context = if ast_context, do: " #{ast_context}", else: ""
+    raise CompileError,
+      file: cur_file_path_for_display(context),
+      line: find_error_line(expr),
+      description: "Unrecognized Erlang expression#{ast_context}: #{inspect(expr)}"
   end
+
+
+  defp find_error_line(expr) when is_tuple(expr) and tuple_size(expr) >= 3, do: elem(expr, 1)
+  defp find_error_line([expr | _]), do: find_error_line(expr)
+  defp find_error_line(_), do: :unknown
 
 
   defp compute_var_maps(context, expr, extra_omits) do
@@ -307,7 +173,7 @@ defmodule Erl2ex.Convert.Context do
       |> MapSet.union(extra_omits |> Enum.into(MapSet.new))
       |> classify_var_names()
 
-    all_names = MapSet.union(context.used_func_names, @elixir_reserved_words)
+    all_names = MapSet.union(context.used_func_names, Utils.elixir_reserved_words)
     {variables_map, all_names} = normal_vars
       |> Enum.reduce({%{}, all_names}, &map_variables/2)
     {stringification_map, variables_map, _all_names} = stringified_args
@@ -384,379 +250,5 @@ defmodule Erl2ex.Convert.Context do
       variable_seen?(scopes_t, name)
     end
   end
-
-
-  defp collect_func_info(%Erl2ex.ErlFunc{name: name, arity: arity, clauses: clauses}, context) do
-    context = add_func_info({name, arity}, context)
-    collect_func_ref_names(clauses, context)
-  end
-  defp collect_func_info(%Erl2ex.ErlDefine{replacement: replacement}, context) do
-    collect_func_ref_names(replacement, context)
-  end
-  defp collect_func_info(%Erl2ex.ErlImport{funcs: funcs}, context) do
-    Enum.reduce(funcs, context, &add_func_info/2)
-  end
-  defp collect_func_info(_, context), do: context
-
-  defp add_func_info({name, arity}, context) do
-    func_name = nil
-    used_func_names = context.used_func_names
-    if is_valid_elixir_func_name(name) do
-      func_name = name
-      used_func_names = MapSet.put(used_func_names, name)
-    end
-    func_info = Map.get(context.funcs, name, %FuncInfo{func_name: func_name})
-    func_info = %FuncInfo{func_info |
-      arities: Map.put(func_info.arities, arity, false)
-    }
-    %Context{context |
-      funcs: Map.put(context.funcs, name, func_info),
-      used_func_names: used_func_names
-    }
-  end
-
-  defp collect_func_ref_names({:call, _, {:atom, _, name}, args}, context) do
-    context = collect_func_ref_names(args, context)
-    %Context{context |
-      used_func_names: MapSet.put(context.used_func_names, name)
-    }
-  end
-  defp collect_func_ref_names(tuple, context) when is_tuple(tuple) do
-    collect_func_ref_names(Tuple.to_list(tuple), context)
-  end
-  defp collect_func_ref_names(list, context) when is_list(list) do
-    list |> Enum.reduce(context, &collect_func_ref_names/2)
-  end
-  defp collect_func_ref_names(_, context), do: context
-
-
-  defp is_valid_elixir_func_name(name) do
-    Regex.match?(~r/^[_a-z]\w*$/, Atom.to_string(name)) and
-      not MapSet.member?(@elixir_reserved_words, name)
-  end
-
-
-  defp assign_strange_func_names({name, info = %FuncInfo{func_name: nil}}, context) do
-    mangled_name = Regex.replace(~r/\W/, Atom.to_string(name), "_")
-    elixir_name = mangled_name
-      |> Utils.find_available_name(context.used_func_names, "func")
-    info = %FuncInfo{info | func_name: elixir_name}
-    %Context{context |
-      funcs: Map.put(context.funcs, name, info),
-      used_func_names: MapSet.put(context.used_func_names, elixir_name)
-    }
-  end
-  defp assign_strange_func_names(_, context), do: context
-
-
-  defp collect_type_exports({name, arity}, context) do
-    type_info = Map.get(context.types, name, %TypeInfo{})
-    type_info = %TypeInfo{type_info |
-      arities: Map.put(type_info.arities, arity, true)
-    }
-    %Context{context |
-      types: Map.put(context.types, name, type_info)
-    }
-  end
-
-
-  defp collect_exports({name, arity}, context) do
-    func_info = Map.fetch!(context.funcs, name)
-    func_info = %FuncInfo{func_info |
-      arities: Map.put(func_info.arities, arity, true)
-    }
-    %Context{context |
-      funcs: Map.put(context.funcs, name, func_info)
-    }
-  end
-
-
-  defp collect_attr_info(%Erl2ex.ErlAttr{name: name}, context) do
-    %Context{context |
-      used_attr_names: MapSet.put(context.used_attr_names, name)
-    }
-  end
-  defp collect_attr_info(_, context), do: context
-
-
-  defp collect_record_info(%Erl2ex.ErlRecord{name: name, fields: fields}, context) do
-    macro_name = Utils.find_available_name(name, context.used_func_names, "erlrecord")
-    data_name = Utils.find_available_name(name, context.used_attr_names, "erlrecordfields")
-    record_info = %RecordInfo{
-      func_name: macro_name,
-      data_name: data_name,
-      fields: fields |> Enum.map(&extract_record_field_name/1)
-    }
-    %Context{context |
-      used_func_names: MapSet.put(context.used_func_names, macro_name),
-      used_attr_names: MapSet.put(context.used_attr_names, data_name),
-      records: Map.put(context.records, name, record_info)
-    }
-  end
-  defp collect_record_info(%Erl2ex.ErlFunc{clauses: clauses}, context) do
-    detect_record_query_presence(clauses, context)
-  end
-  defp collect_record_info(%Erl2ex.ErlDefine{replacement: replacement}, context) do
-    detect_record_query_presence(replacement, context)
-  end
-  defp collect_record_info(_, context), do: context
-
-
-  defp extract_record_field_name({:typed_record_field, record_field, _type}), do:
-    extract_record_field_name(record_field)
-  defp extract_record_field_name({:record_field, _, {:atom, _, name}}), do: name
-  defp extract_record_field_name({:record_field, _, {:atom, _, name}, _}), do: name
-
-
-  defp detect_record_query_presence({:call, _, {:atom, _, :record_info}, [{:atom, _, :size}, _]}, context), do:
-    set_record_size_macro(context)
-  defp detect_record_query_presence({:record_index, _, _, _}, context), do:
-    set_record_index_macro(context)
-  defp detect_record_query_presence(tuple, context) when is_tuple(tuple), do:
-    detect_record_query_presence(Tuple.to_list(tuple), context)
-  defp detect_record_query_presence(list, context) when is_list(list), do:
-    list |> Enum.reduce(context, &detect_record_query_presence/2)
-  defp detect_record_query_presence(_, context), do: context
-
-
-  defp set_record_size_macro(context = %Context{record_size_macro: nil, used_func_names: used_func_names}) do
-    macro_name = Utils.find_available_name("erlrecordsize", used_func_names, "", 0)
-    context = %Context{context |
-      record_size_macro: macro_name,
-      used_func_names: MapSet.put(used_func_names, macro_name)
-    }
-    context
-  end
-  defp set_record_size_macro(context), do: context
-
-
-  defp set_record_index_macro(context = %Context{record_index_macro: nil, used_func_names: used_func_names}) do
-    macro_name = Utils.find_available_name("erlrecordindex", used_func_names, "", 0)
-    context = %Context{context |
-      record_index_macro: macro_name,
-      used_func_names: MapSet.put(used_func_names, macro_name)
-    }
-    context
-  end
-  defp set_record_index_macro(context), do: context
-
-
-
-  defp collect_macro_info(%Erl2ex.ErlDefine{name: name, args: args, replacement: replacement}, context) do
-    macro = Map.get(context.macros, name, %MacroInfo{})
-    requires_init = update_requires_init(macro.requires_init, false)
-    macro = %MacroInfo{macro | requires_init: requires_init}
-    next_is_redefined = update_is_redefined(macro.is_redefined, args)
-    context = update_macro_info(macro, next_is_redefined, args, name, context)
-    detect_func_style_call(replacement, context)
-  end
-
-  defp collect_macro_info(%Erl2ex.ErlDirective{name: name}, context) when name != nil do
-    macro = Map.get(context.macros, name, %MacroInfo{})
-    if macro.define_tracker == nil do
-      tracker_name = Utils.find_available_name(name, context.used_attr_names, "defined")
-      nmacro = %MacroInfo{macro |
-        define_tracker: tracker_name,
-        requires_init: update_requires_init(macro.requires_init, true)
-      }
-      %Context{context |
-        macros: Map.put(context.macros, name, nmacro),
-        used_attr_names: MapSet.put(context.used_attr_names, tracker_name)
-      }
-    else
-      context
-    end
-  end
-
-  defp collect_macro_info(%Erl2ex.ErlFunc{clauses: clauses}, context) do
-    detect_func_style_call(clauses, context)
-  end
-
-  defp collect_macro_info(_, context), do: context
-
-
-  defp detect_func_style_call(
-    {:call, _, {:var, _, name}, _},
-    %Context{
-      macros: macros,
-      macro_dispatcher: macro_dispatcher,
-      used_func_names: used_func_names
-    } = context)
-  do
-    case Atom.to_string(name) do
-      << "?" :: utf8, basename :: binary >> ->
-        macro = Map.get(macros, String.to_atom(basename), %MacroInfo{})
-        macro = %MacroInfo{macro | has_func_style_call: true}
-        if macro_dispatcher == nil and macro.func_name == nil do
-          macro_dispatcher = Utils.find_available_name("erlmacro", used_func_names, "", 0)
-          used_func_names = used_func_names |> MapSet.put(macro_dispatcher)
-        end
-        %Context{context |
-          macros: Map.put(macros, name, macro),
-          macro_dispatcher: macro_dispatcher,
-          used_func_names: used_func_names
-        }
-      _ ->
-        context
-    end
-  end
-
-  defp detect_func_style_call(tuple, context) when is_tuple(tuple), do:
-    detect_func_style_call(Tuple.to_list(tuple), context)
-
-  defp detect_func_style_call(list, context) when is_list(list), do:
-    list |> Enum.reduce(context, &detect_func_style_call/2)
-
-  defp detect_func_style_call(_, context), do: context
-
-
-  defp update_macro_info(
-    %MacroInfo{
-      const_name: const_name,
-      is_redefined: true
-    } = macro,
-    true, nil, name,
-    %Context{
-      macros: macros,
-      used_attr_names: used_attr_names
-    } = context)
-  do
-    {const_name, used_attr_names} = update_macro_name(name, const_name, used_attr_names, "erlconst")
-    macro = %MacroInfo{macro |
-      const_name: const_name
-    }
-    %Context{context |
-      macros: Map.put(macros, name, macro),
-      used_attr_names: used_attr_names
-    }
-  end
-
-  defp update_macro_info(
-    %MacroInfo{
-      func_name: func_name,
-      is_redefined: true
-    } = macro,
-    true, _args, name,
-    %Context{
-      macros: macros,
-      used_attr_names: used_attr_names
-    } = context)
-  do
-    {func_name, used_attr_names} = update_macro_name(name, func_name, used_attr_names, "erlmacro")
-    macro = %MacroInfo{macro |
-      func_name: func_name
-    }
-    %Context{context |
-      macros: Map.put(macros, name, macro),
-      used_attr_names: used_attr_names
-    }
-  end
-
-  defp update_macro_info(
-    %MacroInfo{
-      const_name: const_name,
-      func_name: func_name
-    } = macro,
-    true, args, name,
-    %Context{
-      macros: macros,
-      macro_dispatcher: macro_dispatcher,
-      used_func_names: used_func_names,
-      used_attr_names: used_attr_names
-    } = context)
-  do
-    used_func_names = used_func_names
-      |> MapSet.delete(const_name)
-      |> MapSet.delete(func_name)
-    if const_name != nil or args == nil do
-      {const_name, used_attr_names} = update_macro_name(name, nil, used_attr_names, "erlconst")
-    end
-    if func_name != nil or args != nil do
-      {func_name, used_attr_names} = update_macro_name(name, nil, used_attr_names, "erlmacro")
-    end
-    if macro_dispatcher == nil do
-      macro_dispatcher = Utils.find_available_name("erlmacro", used_func_names, "", 0)
-      used_func_names = used_func_names |> MapSet.put(macro_dispatcher)
-    end
-    macro = %MacroInfo{macro |
-      is_redefined: true,
-      const_name: const_name,
-      func_name: func_name
-    }
-    %Context{context |
-      macros: Map.put(macros, name, macro),
-      macro_dispatcher: macro_dispatcher,
-      used_func_names: used_func_names,
-      used_attr_names: used_attr_names
-    }
-  end
-
-  defp update_macro_info(
-    %MacroInfo{
-      const_name: const_name,
-    } = macro,
-    is_redefined, nil, name,
-    %Context{
-      macros: macros,
-      used_func_names: used_func_names
-    } = context)
-  do
-    {const_name, used_func_names} = update_macro_name(name, const_name, used_func_names, "erlconst")
-    macro = %MacroInfo{macro |
-      is_redefined: is_redefined,
-      const_name: const_name
-    }
-    %Context{context |
-      macros: Map.put(macros, name, macro),
-      used_func_names: used_func_names
-    }
-  end
-
-  defp update_macro_info(
-    %MacroInfo{
-      func_name: func_name,
-    } = macro,
-    is_redefined, _args, name,
-    %Context{
-      macros: macros,
-      used_func_names: used_func_names
-    } = context)
-  do
-    {func_name, used_func_names} = update_macro_name(name, func_name, used_func_names, "erlmacro")
-    macro = %MacroInfo{macro |
-      is_redefined: is_redefined,
-      func_name: func_name
-    }
-    %Context{context |
-      macros: Map.put(macros, name, macro),
-      used_func_names: used_func_names
-    }
-  end
-
-
-  defp update_macro_name(given_name, nil, used_names, prefix) do
-    macro_name = Utils.find_available_name(given_name, used_names, prefix)
-    used_names = MapSet.put(used_names, macro_name)
-    {macro_name, used_names}
-  end
-  defp update_macro_name(_given_name, cur_name, used_names, _prefix) do
-    {cur_name, used_names}
-  end
-
-
-  defp update_requires_init(nil, nval), do: nval
-  defp update_requires_init(oval, _nval), do: oval
-
-  defp update_is_redefined(true, _args), do: true
-  defp update_is_redefined(set, args) when is_list(args) do
-    update_is_redefined(set, Enum.count(args))
-  end
-  defp update_is_redefined(set, arity) do
-    if MapSet.member?(set, arity), do: true, else: MapSet.put(set, arity)
-  end
-
-
-  defp collect_specs(spec = %Erl2ex.ErlSpec{name: name}, context), do:
-    %Context{context | specs: Map.put(context.specs, name, spec)}
 
 end

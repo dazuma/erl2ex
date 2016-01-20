@@ -9,18 +9,18 @@ defmodule Erl2ex.Convert.Headers do
   alias Erl2ex.ExHeader
   alias Erl2ex.ExMacro
 
-  alias Erl2ex.Convert.Context
+  alias Erl2ex.Analyze
 
 
-  def build_header(context, forms) do
+  def build_header(analysis, forms) do
     header = forms
       |> Enum.reduce(%ExHeader{}, &header_check_form/2)
     %ExHeader{header |
-      records: Context.map_records(context, fn(name, fields) -> {name, fields} end),
-      init_macros: Context.macros_that_need_init(context),
-      macro_dispatcher: Context.macro_dispatcher_name(context),
-      record_size_macro: Context.record_size_macro(context),
-      record_index_macro: Context.record_index_macro(context)
+      records: Analyze.map_records(analysis, fn(name, fields) -> {name, fields} end),
+      init_macros: Analyze.macros_that_need_init(analysis),
+      macro_dispatcher: Analyze.macro_dispatcher_name(analysis),
+      record_size_macro: Analyze.record_size_macro(analysis),
+      record_index_macro: Analyze.record_index_macro(analysis)
     }
   end
 

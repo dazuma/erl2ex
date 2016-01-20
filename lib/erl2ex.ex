@@ -14,6 +14,7 @@ defmodule Erl2ex do
   """
 
   alias Erl2ex.Parse
+  alias Erl2ex.Analyze
   alias Erl2ex.Convert
   alias Erl2ex.Codegen
 
@@ -83,6 +84,7 @@ defmodule Erl2ex do
   def convert_str!(source, opts \\ []) do
     source
       |> Parse.from_str(opts)
+      |> Analyze.module(opts)
       |> Convert.module(opts)
       |> Codegen.to_str(opts)
   end
@@ -134,6 +136,7 @@ defmodule Erl2ex do
     end
     source_path
       |> Parse.from_file(opts)
+      |> Analyze.module(opts)
       |> Convert.module([{:cur_file_path, source_path} | opts])
       |> Codegen.to_file(dest_path, opts)
     if Keyword.get(opts, :verbosity, 0) > 0 do

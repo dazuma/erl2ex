@@ -56,6 +56,9 @@ This software is still under heavy development, and many capabilities are not ye
 *   Invoking function macros as function names is not working; Erlang's parser rejects the syntax `?A()()` although the preprocessor can smooth it out.
 *   Record declarations with type info (e.g. `-record(foo, {field1 :: integer}).`) are not supported. Currently the converter drops the types. Additionally, record types are not yet supported.
 *   Binary expressions with complex or combination size/type specs are not supported, and cause the converter to crash. An example is `<<1:16/integer-signed-native>>`. This seems to be a limitation of Elixir itself.
+*   Defining a function with the same name as an auto-imported BIF from Kernel causes an error. (Example: inspect/1 in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_aliases.erl). May need to limit the auto-imports.
+*   Strange function names that are exported cannot be mangled and need to be handled differently. (Examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl). Note this file also fails because the name `__info__` is special.
+*   The Elixir compiler doesn't seem to like functions with too many clauses. (Example: https://github.com/benoitc/erlang-idna/blob/master/src/idna_unicode_data2.erl). Not sure if this is just an Elixir limitation.
 
 ### Incomplete features
 

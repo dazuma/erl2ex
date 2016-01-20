@@ -5,7 +5,7 @@ defmodule IntegrationTestHelper do
 
   def download_project(name, url) do
     File.mkdir_p!(@integration_files_dir)
-    if File.dir?(project_dir(name, ".git")) do
+    if File.dir?(project_path(name, ".git")) do
       run_cmd("git", ["pull"])
     else
       run_cmd("git", ["clone", url])
@@ -14,20 +14,20 @@ defmodule IntegrationTestHelper do
 
 
   def clean_dir(name, path) do
-    File.rm_rf!(project_dir(name, path))
-    File.mkdir_p!(project_dir(name, path))
+    File.rm_rf!(project_path(name, path))
+    File.mkdir_p!(project_path(name, path))
   end
 
 
   def run_conversion(name, src_path, dest_path, opts \\ []) do
-    File.mkdir_p!(project_dir(name, dest_path))
-    Erl2ex.convert_dir!(project_dir(name, src_path), project_dir(name, dest_path), opts)
+    File.mkdir_p!(project_path(name, dest_path))
+    Erl2ex.convert_dir!(project_path(name, src_path), project_path(name, dest_path), opts)
   end
 
 
   def copy_files(name, src_path, dest_path) do
-    File.mkdir_p!(project_dir(name, dest_path))
-    File.cp_r!(project_dir(name, src_path), project_dir(name, dest_path))
+    File.mkdir_p!(project_path(name, dest_path))
+    File.cp_r!(project_path(name, src_path), project_path(name, dest_path))
   end
 
 
@@ -52,7 +52,7 @@ defmodule IntegrationTestHelper do
   def run_cmd(cmd, args, opts \\ []) do
     name = Keyword.get(opts, :name)
     path = Keyword.get(opts, :path)
-    cd = Keyword.get(opts, :cd, project_dir(name, path))
+    cd = Keyword.get(opts, :cd, project_path(name, path))
     env = opts |> Enum.filter_map(
       fn {k, _} -> Regex.match?(~r/^[A-Z]/, Atom.to_string(k)) end,
       fn {k, v} -> {Atom.to_string(k), v} end
@@ -72,15 +72,15 @@ defmodule IntegrationTestHelper do
   end
 
 
-  def project_dir(name, path \\ nil)
+  def project_path(name, path \\ nil)
 
-  def project_dir(nil, nil) do
+  def project_path(nil, nil) do
     @integration_files_dir
   end
-  def project_dir(name, nil) do
+  def project_path(name, nil) do
     "#{@integration_files_dir}/#{name}"
   end
-  def project_dir(name, path) do
+  def project_path(name, path) do
     "#{@integration_files_dir}/#{name}/#{path}"
   end
 
@@ -111,9 +111,14 @@ defmodule IntegrationTest do
     download_project("elixir", "https://github.com/elixir-lang/elixir.git")
     clean_dir("elixir", "lib/elixir/ex")
     run_conversion("elixir", "lib/elixir/src", "lib/elixir/ex")
+
+    # elixir_bootstrap.erl generates __info__ functions so can't be converted
+    File.rm!(project_path("elixir", "lib/elixir/ex/elixir_bootstrap.ex"))
+    File.cp!(project_path("elixir", "lib/elixir/src/elixir_bootstrap.erl"),
+        project_path("elixir", "lib/elixir/ex/elixir_bootstrap.erl"))
+
     copy_files("elixir", "lib/elixir/test/erlang", "lib/elixir/ex")
-    # Not yet working: elixir_bootstrap.erl generates __info__ functions
-    # compile_dir("elixir", "lib/elixir/ex")
+    compile_dir("elixir", "lib/elixir/ex")
   end
 
 

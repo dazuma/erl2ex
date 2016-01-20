@@ -3,8 +3,8 @@ defmodule Erl2ex.Convert.Expressions do
 
   @moduledoc false
 
+  alias Erl2ex.Analyze
   alias Erl2ex.Convert.Context
-  alias Erl2ex.Convert.Utils
 
 
   @import_kernel_metadata [context: Elixir, import: Kernel]
@@ -281,18 +281,18 @@ defmodule Erl2ex.Convert.Expressions do
 
   def conv_expr({:record, _, name, fields}, context) do
     {ex_fields, context} = record_field_list(name, fields, context)
-    {{Context.record_function_name(context, name), [], [ex_fields]}, context}
+    {{Analyze.record_function_name(context.analyzed_module, name), [], [ex_fields]}, context}
   end
 
   def conv_expr({:record, _, record, name, updates}, context) do
     {ex_record, context} = conv_expr(record, context)
     {ex_updates, context} = conv_list(updates, context)
-    {{Context.record_function_name(context, name), [], [ex_record, ex_updates]}, context}
+    {{Analyze.record_function_name(context.analyzed_module, name), [], [ex_record, ex_updates]}, context}
   end
 
   def conv_expr({:record_index, _, name, field}, context) do
     {ex_field, context} = conv_expr(field, context)
-    {{Context.record_index_macro(context), [], [Context.record_data_attr_name(context, name), ex_field]}, context}
+    {{Analyze.record_index_macro(context.analyzed_module), [], [Analyze.record_data_attr_name(context.analyzed_module, name), ex_field]}, context}
   end
 
   def conv_expr({:record_field, _, name}, context) do
@@ -309,7 +309,7 @@ defmodule Erl2ex.Convert.Expressions do
   def conv_expr({:record_field, _, record, name, field}, context) do
     {ex_record, context} = conv_expr(record, context)
     {ex_field, context} = conv_expr(field, context)
-    {{Context.record_function_name(context, name), [], [ex_record, ex_field]}, context}
+    {{Analyze.record_function_name(context.analyzed_module, name), [], [ex_record, ex_field]}, context}
   end
 
   # Elixir doesn't seem to support typed fields in record declarations
@@ -344,7 +344,7 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_expr(expr, context) do
-    Utils.handle_error(context, expr)
+    Context.handle_error(context, expr)
   end
 
 
@@ -353,7 +353,7 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_list(expr, context) do
-    Utils.handle_error(context, expr, "when expecting a list")
+    Context.handle_error(context, expr, "when expecting a list")
   end
 
 
@@ -402,7 +402,7 @@ defmodule Erl2ex.Convert.Expressions do
 
 
   defp conv_clause(:catch, [], _guards, _expr, context) do
-    Utils.handle_error(context, [], "in a catch clause (no params)")
+    Context.handle_error(context, [], "in a catch clause (no params)")
   end
 
   defp conv_clause(_type, [], guards, expr, context) do
@@ -434,7 +434,7 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_clause_params(:catch, expr, context) do
-    Utils.handle_error(context, expr, "in the set of catch params")
+    Context.handle_error(context, expr, "in the set of catch params")
   end
 
   defp conv_clause_params(type, expr, context) do
@@ -630,7 +630,7 @@ defmodule Erl2ex.Convert.Expressions do
       [{_, value}] ->
         explicit_field_names = ex_fields
           |> Enum.map(fn {name, _} -> name end)
-        needed_field_names = Context.record_field_names(context, record_name)
+        needed_field_names = Analyze.record_field_names(context.analyzed_module, record_name)
         extra_field_names = (needed_field_names -- explicit_field_names)
         extra_fields = extra_field_names
           |> Enum.map(fn name -> {name, value} end)
@@ -747,12 +747,12 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_const(name, line, context) do
-    macro_name = Context.macro_function_name(context, name, nil)
+    macro_name = Analyze.macro_function_name(context.analyzed_module, name, nil)
     if macro_name == nil do
-      Utils.handle_error(context, {:atom, line, name}, "(no such macro)")
+      Context.handle_error(context, {:atom, line, name}, "(no such macro)")
     end
-    if Context.macro_needs_dispatch?(context, name) do
-      dispatcher = Context.macro_dispatcher_name(context)
+    if Analyze.macro_needs_dispatch?(context.analyzed_module, name) do
+      dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
       {{dispatcher, [], [macro_name]}, context}
     else
       {{macro_name, [], []}, context}
@@ -772,11 +772,11 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_call({:atom, _, :record_info}, [{:atom, _, :size}, {:atom, _, rec}], context) do
-    {{Context.record_size_macro(context), [], [Context.record_data_attr_name(context, rec)]}, context}
+    {{Analyze.record_size_macro(context.analyzed_module), [], [Analyze.record_data_attr_name(context.analyzed_module, rec)]}, context}
   end
 
   defp conv_call({:atom, _, :record_info}, [{:atom, _, :fields}, {:atom, _, rec}], context) do
-    {{:@, @import_kernel_metadata, [{Context.record_data_attr_name(context, rec), [], Elixir}]}, context}
+    {{:@, @import_kernel_metadata, [{Analyze.record_data_attr_name(context.analyzed_module, rec), [], Elixir}]}, context}
   end
 
   defp conv_call(func, args, context) do
@@ -798,8 +798,8 @@ defmodule Erl2ex.Convert.Expressions do
 
   defp func_spec({:atom, _, func}, ex_args, context) do
     arity = Enum.count(ex_args)
-    ex_expr = if Context.is_local_func?(context, func, arity) do
-      Context.local_function_name(context, func)
+    ex_expr = if Analyze.is_local_func?(context.analyzed_module, func, arity) do
+      Analyze.local_function_name(context.analyzed_module, func)
     else
       case Map.get(@autoimport_map, func, nil) do
         nil -> {:., [], [:erlang, func]}
@@ -814,22 +814,22 @@ defmodule Erl2ex.Convert.Expressions do
       << "?" :: utf8, basename :: binary >> ->
         arity = Enum.count(ex_args)
         macro_raw_name = String.to_atom(basename)
-        func_name = Context.macro_function_name(context, macro_raw_name, arity)
-        const_name = Context.macro_function_name(context, macro_raw_name, nil)
+        func_name = Analyze.macro_function_name(context.analyzed_module, macro_raw_name, arity)
+        const_name = Analyze.macro_function_name(context.analyzed_module, macro_raw_name, nil)
         cond do
           func_name != nil ->
-            if Context.macro_needs_dispatch?(context, macro_raw_name) do
-              dispatcher = Context.macro_dispatcher_name(context)
+            if Analyze.macro_needs_dispatch?(context.analyzed_module, macro_raw_name) do
+              dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
               {dispatcher, [func_name, ex_args], context}
             else
               {func_name, ex_args, context}
             end
           const_name != nil ->
-            dispatcher = Context.macro_dispatcher_name(context)
+            dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
             {macro_expr, context} = conv_const(macro_raw_name, line, context)
             {dispatcher, [macro_expr, ex_args], context}
           true ->
-            Utils.handle_error(context, func, "(no such macro)")
+            Context.handle_error(context, func, "(no such macro)")
         end
       _ ->
         {ex_func, context} = conv_expr(func, context)

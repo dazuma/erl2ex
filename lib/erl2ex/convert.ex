@@ -25,20 +25,23 @@ defmodule Erl2ex.Convert do
   alias Erl2ex.ExRecord
   alias Erl2ex.ExType
 
+  alias Erl2ex.Analyze
+  alias Erl2ex.Utils
+
   alias Erl2ex.Convert.Context
   alias Erl2ex.Convert.Expressions
   alias Erl2ex.Convert.Headers
-  alias Erl2ex.Convert.Utils
 
 
   @auto_registered_attrs [:vsn, :compile, :on_load, :behaviour, :behavior]
 
 
-  def module(erl_module, opts \\ []) do
-    context = Context.build(erl_module, opts)
+  def module(analyzed_module, opts \\ []) do
+    erl_module = analyzed_module.erl_module
+    context = Context.build(analyzed_module, opts)
     {forms, context} = erl_module.forms
       |> Enum.map_reduce(context, &conv_form/2)
-    forms = [Headers.build_header(context, forms) | forms]
+    forms = [Headers.build_header(context.analyzed_module, forms) | forms]
     %ExModule{
       name: erl_module.name,
       file_comments: file_comments(context, opts),
@@ -73,9 +76,10 @@ defmodule Erl2ex.Convert do
 
 
   defp conv_form(%ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}, context) do
-    mapped_name = Context.local_function_name(context, name)
-    spec_info = Context.specs_for_func(context, name)
-    is_exported = Context.is_exported?(context, name, arity)
+    analysis = context.analyzed_module
+    mapped_name = Analyze.local_function_name(analysis, name)
+    spec_info = Analyze.specs_for_func(analysis, name)
+    is_exported = Analyze.is_exported?(analysis, name, arity)
 
     first_line = clauses |> List.first |> elem(1)
     {main_comments, clause_comments} = split_comments(comments, first_line)
@@ -128,19 +132,19 @@ defmodule Erl2ex.Convert do
     arity = if args == nil, do: nil, else: Enum.count(args)
     if args == :nil, do: args = []
     {main_comments, inline_comments} = split_comments(comments, line)
+    analysis = context.analyzed_module
 
-    replacement_context = context
-      |> Context.set_variable_maps(replacement, args)
-    needs_dispatch = Context.macro_needs_dispatch?(context, name)
+    replacement_context = Context.set_variable_maps(context, replacement, args)
+    needs_dispatch = Analyze.macro_needs_dispatch?(analysis, name)
     ex_args = args |> Enum.map(fn arg -> {Utils.lower_atom(arg), [], Elixir} end)
-    macro_name = Context.macro_function_name(context, name, arity)
+    macro_name = Analyze.macro_function_name(analysis, name, arity)
     {mapped_name, context} = if needs_dispatch do
       Context.generate_macro_name(context, name, arity)
     else
       {macro_name, context}
     end
     dispatch_name = if needs_dispatch, do: macro_name, else: nil
-    tracking_name = Context.tracking_attr_name(context, name)
+    tracking_name = Analyze.tracking_attr_name(context.analyzed_module, name)
     {normal_expr, guard_expr, _} = Expressions.conv_macro_expr(replacement, replacement_context)
 
     ex_macro = %ExMacro{
@@ -162,7 +166,7 @@ defmodule Erl2ex.Convert do
     tracking_name = if name == nil do
       nil
     else
-      Context.tracking_attr_name(context, name)
+      Analyze.tracking_attr_name(context.analyzed_module, name)
     end
 
     ex_directive = %ExDirective{
@@ -180,8 +184,8 @@ defmodule Erl2ex.Convert do
 
     ex_record = %ExRecord{
       tag: name,
-      macro: Context.record_function_name(context, name),
-      data_attr: Context.record_data_attr_name(context, name),
+      macro: Analyze.record_function_name(context.analyzed_module, name),
+      data_attr: Analyze.record_data_attr_name(context.analyzed_module, name),
       fields: ex_fields,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
@@ -197,7 +201,7 @@ defmodule Erl2ex.Convert do
     ex_kind = cond do
       kind == :opaque ->
         :opaque
-      Context.is_type_exported?(context, name, Enum.count(params)) ->
+      Analyze.is_type_exported?(context.analyzed_module, name, Enum.count(params)) ->
         :type
       true ->
         :typep
@@ -251,7 +255,7 @@ defmodule Erl2ex.Convert do
   end
 
   defp conv_var_mapped_spec_clause(context, name, expr), do:
-    Utils.handle_error(context, expr, "in spec for #{name}")
+    Context.handle_error(context, expr, "in spec for #{name}")
 
   defp conv_spec_constraint(context, _name, {:type, _, :constraint, [{:atom, _, :is_subtype}, [{:var, _, var}, type]]}) do
     {ex_type, _} = Expressions.conv_expr(type, context)
@@ -259,7 +263,7 @@ defmodule Erl2ex.Convert do
   end
 
   defp conv_spec_constraint(context, name, expr), do:
-    Utils.handle_error(context, expr, "in spec constraint for #{name}")
+    Context.handle_error(context, expr, "in spec constraint for #{name}")
 
 
   defp conv_clause(context, clause, comments, name) do
