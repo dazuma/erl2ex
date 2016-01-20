@@ -4,6 +4,34 @@ defmodule ScopeTest do
   @opts [emit_file_headers: false]
 
 
+  test "Illegal variable names" do
+    input = """
+      foo() ->
+        Do = 1,
+        Else = 2,
+        End = 3,
+        False = 4,
+        Fn = 5,
+        Nil = 6,
+        True = 7.
+      """
+
+    expected = """
+      defp foo() do
+        var_do = 1
+        var_else = 2
+        var_end = 3
+        var_false = 4
+        var_fn = 5
+        var_nil = 6
+        var_true = 7
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Reference param var in toplevel function" do
     input = """
       foo(A) ->
