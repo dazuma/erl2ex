@@ -1,2 +1,2 @@
-ExUnit.configure exclude: [:integration, :dummy]
+ExUnit.configure exclude: [:e2e, :dummy]
 ExUnit.start()

@@ -4,7 +4,6 @@
 /doc
 /erl2ex
 /test/dummy_test.exs
-/integration_files
-/test_files
+/tmp
 erl_crash.dump
 *.ez

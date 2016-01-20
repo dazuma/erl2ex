@@ -1,10 +1,10 @@
-defmodule IntegrationTestHelper do
+defmodule E2ETestHelper do
 
-  @integration_files_dir "integration_files"
+  @e2e_files_dir "tmp/e2e"
 
 
   def download_project(name, url) do
-    File.mkdir_p!(@integration_files_dir)
+    File.mkdir_p!(@e2e_files_dir)
     if File.dir?(project_path(name, ".git")) do
       run_cmd("git", ["pull"])
     else
@@ -19,27 +19,31 @@ defmodule IntegrationTestHelper do
   end
 
 
-  def run_conversion(name, src_path, dest_path, opts \\ []) do
+  def convert_dir(name, src_path, dest_path, opts \\ []) do
     File.mkdir_p!(project_path(name, dest_path))
     Erl2ex.convert_dir!(project_path(name, src_path), project_path(name, dest_path), opts)
   end
 
 
-  def copy_files(name, src_path, dest_path) do
+  def copy_dir(name, src_path, dest_path) do
     File.mkdir_p!(project_path(name, dest_path))
     File.cp_r!(project_path(name, src_path), project_path(name, dest_path))
   end
 
 
   def compile_dir(name, path) do
-    run_cmd("elixirc", [{"*.ex"}], name: name, path: path, DEFINE_TEST: "true")
-    run_cmd("erlc", ["-DTEST", {"*.erl"}], name: name, path: path)
+    if Path.wildcard("#{project_path(name, path)}/*.ex") != [] do
+      run_cmd("elixirc", [{"*.ex"}], name: name, path: path, DEFINE_TEST: "true")
+    end
+    if Path.wildcard("#{project_path(name, path)}/*.erl") != [] do
+      run_cmd("erlc", ["-DTEST", {"*.erl"}], name: name, path: path)
+    end
   end
 
 
-  def run_eunit_tests(tests, name, path) do
+  def run_eunit_tests(tests, name, path, opts \\ []) do
     tests |> Enum.each(fn test ->
-      run_elixir(":ok = :eunit.test(:#{test})", name: name, path: path)
+      run_elixir(":ok = :eunit.test(:#{test})", Keyword.merge(opts, name: name, path: path))
     end)
   end
 
@@ -53,6 +57,7 @@ defmodule IntegrationTestHelper do
     name = Keyword.get(opts, :name)
     path = Keyword.get(opts, :path)
     cd = Keyword.get(opts, :cd, project_path(name, path))
+    display_output = Keyword.get(opts, :display_output)
     env = opts |> Enum.filter_map(
       fn {k, _} -> Regex.match?(~r/^[A-Z]/, Atom.to_string(k)) end,
       fn {k, v} -> {Atom.to_string(k), v} end
@@ -64,60 +69,64 @@ defmodule IntegrationTestHelper do
           |> Enum.map(&(String.replace_prefix(&1, "#{cd}/", "")))
       str -> [str]
     end)
-    case System.cmd(cmd, args, cd: cd, env: env, stderr_to_stdout: true) do
+    output = case System.cmd(cmd, args, cd: cd, env: env, stderr_to_stdout: true) do
       {str, 0} -> str
       {str, code} ->
         raise "Error #{code} when running command #{cmd} #{inspect(args)}\n#{str}"
     end
+    if display_output do
+      IO.puts(output)
+    end
+    output
   end
 
 
   def project_path(name, path \\ nil)
 
   def project_path(nil, nil) do
-    @integration_files_dir
+    @e2e_files_dir
   end
   def project_path(name, nil) do
-    "#{@integration_files_dir}/#{name}"
+    "#{@e2e_files_dir}/#{name}"
   end
   def project_path(name, path) do
-    "#{@integration_files_dir}/#{name}/#{path}"
+    "#{@e2e_files_dir}/#{name}/#{path}"
   end
 
 end
 
 
-defmodule IntegrationTest do
+defmodule E2ETest do
   use ExUnit.Case
 
-  import IntegrationTestHelper
+  import E2ETestHelper
 
 
-  @tag :integration
-  @tag :integration_poolboy
+  @tag :e2e
+  @tag :e2e_poolboy
   test "poolboy" do
     download_project("poolboy", "https://github.com/devinus/poolboy.git")
     clean_dir("poolboy", "ex")
-    run_conversion("poolboy", "src", "ex")
-    copy_files("poolboy", "test", "ex")
+    convert_dir("poolboy", "src", "ex")
+    copy_dir("poolboy", "test", "ex")
     compile_dir("poolboy", "ex")
-    run_eunit_tests([:poolboy_tests], "poolboy", "ex")
+    run_eunit_tests([:poolboy_tests], "poolboy", "ex", display_output: true)
   end
 
 
-  @tag :integration
-  @tag :integration_elixir
+  @tag :e2e
+  @tag :e2e_elixir
   test "elixir" do
     download_project("elixir", "https://github.com/elixir-lang/elixir.git")
     clean_dir("elixir", "lib/elixir/ex")
-    run_conversion("elixir", "lib/elixir/src", "lib/elixir/ex")
+    convert_dir("elixir", "lib/elixir/src", "lib/elixir/ex")
 
     # elixir_bootstrap.erl generates __info__ functions so can't be converted
     File.rm!(project_path("elixir", "lib/elixir/ex/elixir_bootstrap.ex"))
     File.cp!(project_path("elixir", "lib/elixir/src/elixir_bootstrap.erl"),
         project_path("elixir", "lib/elixir/ex/elixir_bootstrap.erl"))
 
-    copy_files("elixir", "lib/elixir/test/erlang", "lib/elixir/ex")
+    copy_dir("elixir", "lib/elixir/test/erlang", "lib/elixir/ex")
     compile_dir("elixir", "lib/elixir/ex")
   end
 
