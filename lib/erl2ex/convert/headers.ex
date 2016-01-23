@@ -20,7 +20,8 @@ defmodule Erl2ex.Convert.Headers do
       init_macros: Analyze.macros_that_need_init(analysis),
       macro_dispatcher: Analyze.macro_dispatcher_name(analysis),
       record_size_macro: Analyze.record_size_macro(analysis),
-      record_index_macro: Analyze.record_index_macro(analysis)
+      record_index_macro: Analyze.record_index_macro(analysis),
+      func_renamer: Analyze.func_renamer_name(analysis),
     }
   end
 

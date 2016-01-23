@@ -101,7 +101,8 @@ defmodule Erl2ex.ExHeader do
             init_macros: [],
             macro_dispatcher: nil,
             record_size_macro: nil,
-            record_index_macro: nil
+            record_index_macro: nil,
+            func_renamer: nil
 
 end
 
@@ -112,6 +113,7 @@ defmodule Erl2ex.ExFunc do
   defstruct name: nil,
             arity: nil,
             public: false,
+            func_renamer: nil,
             specs: [],
             clauses: [],
             comments: []

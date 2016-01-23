@@ -53,10 +53,10 @@ This software is still under heavy development, and many capabilities are not ye
 *   Need to analyze macro substitutions to determine whether variables matched in their arguments should be exported. A failure example is in https://github.com/talentdeficit/jsx/blob/develop/src/jsx.erl (function end_stream_test_) in which the references to F should not be exported because each call to _assertEqual wraps it in a fun.
 *   Defining a macro that attempts to assign to a substitution results in an exception. e.g. `-define(A(X), X = 1).` should be legal. This may also run into problems because Elixir's macros are hygenic.
 *   Returning a remote function reference from a macro is not supported: e.g. `-define(A, m:f).` generates illegal Elixir syntax.
-*   Invoking function macros as function names is not working; Erlang's parser rejects the syntax `?A()()` although the preprocessor can smooth it out.
+*   Function macros cannot return function names; Erlang's parser rejects the syntax `?A()()`. In Erlang, the preprocessor fixes this, but we're not running the Erlang preprocessor directly.
 *   Record declarations with type info (e.g. `-record(foo, {field1 :: integer}).`) are not supported. Currently the converter drops the types. Additionally, record types are not yet supported.
 *   Binary expressions with complex or combination size/type specs are not supported, and cause the converter to crash. An example is `<<1:16/integer-signed-native>>`. This seems to be a limitation of Elixir itself.
-*   Strange function names that are exported cannot be mangled and need to be handled differently. (Examples in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl). Note this file also fails because the name `__info__` is special.
+*   Elixir reserves the function name `__info__` and won't allow its definition. (Failure example in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl).
 *   Erlang allows variables for function name/arity in captures, whereas Elixir apparently doesn't. (Example in the expand_macro_named function in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_dispatch.erl)
 *   The Elixir compiler doesn't seem to like functions with too many clauses. (Example: https://github.com/benoitc/erlang-idna/blob/master/src/idna_unicode_data2.erl). Not sure if this is just an Elixir limitation.
 

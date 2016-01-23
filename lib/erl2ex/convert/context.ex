@@ -3,6 +3,7 @@ defmodule Erl2ex.Convert.Context do
 
   @moduledoc false
 
+  alias Erl2ex.Analyze
   alias Erl2ex.Utils
   alias Erl2ex.Convert.Context
 
@@ -173,7 +174,7 @@ defmodule Erl2ex.Convert.Context do
       |> MapSet.union(extra_omits |> Enum.into(MapSet.new))
       |> classify_var_names()
 
-    all_names = MapSet.union(context.used_func_names, Utils.elixir_reserved_words)
+    all_names = MapSet.union(context.used_func_names, Analyze.elixir_reserved_words)
     {variables_map, all_names} = normal_vars
       |> Enum.reduce({%{}, all_names}, &map_variables/2)
     {stringification_map, variables_map, _all_names} = stringified_args

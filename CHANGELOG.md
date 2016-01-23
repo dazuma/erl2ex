@@ -4,12 +4,13 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 ## v0.0.7 (not yet released)
 
-*   Support invoking a constant macro as a function name.
 *   Overhauled the logic that reconciled imported vs defined functions, and fixed some related issues. Calls of functions with conflicting names are now properly qualified.
+*   Allow definition and calling of exported functions with names that the parser won't normally accept; e.g. Elixir keywords such as "do", or names with strange characters such as "E=mc^2".
+*   Support invoking a constant macro as a function name.
 *   If a function's argument pattern looks like a keyword block, it tried to codegen as such. Fixed.
 *   If an Erlang variable name was a capitalized version of an Elixir keyword (such as "End"), it would generate uncompilable Elixir code. Fixed.
 *   If the input did not end with a newline, the final form was dropped. Fixed.
-*   Start some optional end-to-end tests that convert and run against common Erlang libraries.
+*   Started some optional end-to-end tests that convert and run against common Erlang libraries.
 *   Refactor: Break analysis out into a separate stage instead of combining with conversion context.
 
 ## v0.0.6 (2016-01-19)

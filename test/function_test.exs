@@ -189,23 +189,109 @@ defmodule FunctionTest do
   end
 
 
-  test "List of all auto-imported functions" do
+  test "Local private function name is reserved or has strange characters" do
     input = """
-      foo() ->
-        abs(A),
-        bit_size(A),
-        byte_size(A),
-        is_atom(A),
-        statistics(A).
+      do() -> hello.
+      'E=mc^2'() -> hello.
+      foo() -> do(), 'E=mc^2'().
       """
 
     expected = """
+      defp func_do() do
+        :hello
+      end
+
+
+      defp func_E_mc_2() do
+        :hello
+      end
+
+
       defp foo() do
-        abs(a)
-        bit_size(a)
-        byte_size(a)
-        is_atom(a)
-        :erlang.statistics(a)
+        func_do()
+        func_E_mc_2()
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Local exported function name is reserved or has strange characters" do
+    input = """
+      -export([do/0, 'E=mc^2'/0]).
+      do() -> hello.
+      'E=mc^2'() -> bye.
+      foo() -> do(), 'E=mc^2'().
+      """
+
+    expected = """
+      @defrenamed fn(name, expr) ->
+        renamer = fn n, {:def, a, [{_, b, c}, d]} -> {:def, a, [{n, b, c}, d]} end
+        Module.eval_quoted(__MODULE__, renamer.(name, expr))
+      end
+
+
+      @defrenamed.(:do, quote do
+        def func() do
+          :hello
+        end
+      end)
+
+
+      @defrenamed.(:"E=mc^2", quote do
+        def func() do
+          :bye
+        end
+      end)
+
+
+      defp foo() do
+        __MODULE__.do()
+        Kernel.apply(__MODULE__, :"E=mc^2", [])
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Local private function name is a special form" do
+    input = """
+      'cond'(X) -> X.
+      foo() -> 'cond'(a).
+      """
+
+    expected = """
+      defp func_cond(x) do
+        x
+      end
+
+
+      defp foo() do
+        func_cond(:a)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Local exported function name is a special form" do
+    input = """
+      -export(['cond'/1]).
+      'cond'(X) -> X.
+      foo() -> 'cond'(a).
+      """
+
+    expected = """
+      def cond(x) do
+        x
+      end
+
+
+      defp foo() do
+        __MODULE__.cond(:a)
       end
       """
 
@@ -256,36 +342,18 @@ defmodule FunctionTest do
   end
 
 
-  test "Imported function name is an elixir reserved word" do
+  test "Imported function name is an elixir reserved word or special form" do
     input = """
-      -import(mymod, [do/0]).
-      foo() -> do().
+      -import(mymod, [do/0, 'cond'/1]).
+      foo() -> do(), 'cond'(x).
       """
 
     expected = """
-      import :mymod, only: [do: 0]
+      import :mymod, only: [do: 0, cond: 1]
 
 
       defp foo() do
-        Kernel.apply(:mymod, :do, [])
-      end
-      """
-
-    assert Erl2ex.convert_str!(input, @opts) == expected
-  end
-
-
-  test "Imported function name is an elixir special form" do
-    input = """
-      -import(mymod, ['cond'/1]).
-      foo() -> 'cond'(x).
-      """
-
-    expected = """
-      import :mymod, only: [cond: 1]
-
-
-      defp foo() do
+        :mymod.do()
         :mymod.cond(:x)
       end
       """
@@ -294,91 +362,18 @@ defmodule FunctionTest do
   end
 
 
-  test "Use of elixir reserved words as function names" do
+  test "Imported function name has illegal characters" do
     input = """
-      do() -> hello.
-      else() -> hello.
-      'end'() -> hello.
-      false() -> hello.
-      fn() -> hello.
-      nil() -> hello.
-      true() -> hello.
-
-      foo() ->
-        do(),
-        else(),
-        'end'(),
-        false(),
-        fn(),
-        nil(),
-        true().
+      -import(mymod, ['minus-one'/1]).
+      foo() -> 'minus-one'(x).
       """
 
     expected = """
-      defp func_do() do
-        :hello
-      end
-
-
-      defp func_else() do
-        :hello
-      end
-
-
-      defp func_end() do
-        :hello
-      end
-
-
-      defp func_false() do
-        :hello
-      end
-
-
-      defp func_fn() do
-        :hello
-      end
-
-
-      defp func_nil() do
-        :hello
-      end
-
-
-      defp func_true() do
-        :hello
-      end
+      import :mymod, only: ["minus-one": 1]
 
 
       defp foo() do
-        func_do()
-        func_else()
-        func_end()
-        func_false()
-        func_fn()
-        func_nil()
-        func_true()
-      end
-      """
-
-    assert Erl2ex.convert_str!(input, @opts) == expected
-  end
-
-
-  test "Strange function names" do
-    input = """
-      'E=mc^2'() -> hello.
-      foo() -> 'E=mc^2'().
-      """
-
-    expected = """
-      defp func_E_mc_2() do
-        :hello
-      end
-
-
-      defp foo() do
-        func_E_mc_2()
+        Kernel.apply(:mymod, :"minus-one", [:x])
       end
       """
 

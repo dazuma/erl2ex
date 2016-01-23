@@ -80,6 +80,11 @@ defmodule Erl2ex.Convert do
     mapped_name = Analyze.local_function_name(analysis, name)
     spec_info = Analyze.specs_for_func(analysis, name)
     is_exported = Analyze.is_exported?(analysis, name, arity)
+    func_renamer = if Analyze.is_deffable_function_name(mapped_name) do
+      nil
+    else
+      Analyze.func_renamer_name(analysis)
+    end
 
     first_line = clauses |> List.first |> elem(1)
     {main_comments, clause_comments} = split_comments(comments, first_line)
@@ -94,6 +99,7 @@ defmodule Erl2ex.Convert do
       name: mapped_name,
       arity: arity,
       public: is_exported,
+      func_renamer: func_renamer,
       specs: specs,
       comments: main_comments |> convert_comments,
       clauses: ex_clauses

@@ -60,6 +60,7 @@ defmodule Erl2ex.AnalyzedModule do
             used_func_names: MapSet.new,
             used_attr_names: MapSet.new,
             macro_dispatcher: nil,
+            func_renamer: nil,
             record_size_macro: nil,
             record_index_macro: nil,
             specs: %{}
