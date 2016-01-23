@@ -2,8 +2,17 @@
 defmodule Erl2ex.AnalyzedFunc do
   @moduledoc false
 
-  defstruct func_name: nil,
-            arities: %{}  # Map of arity to exported flag
+  defstruct func_name: {},
+            is_exported: false,  # At least one arity is exported
+            arities: %{}         # Map of arity to exported flag
+
+end
+
+
+defmodule Erl2ex.AnalyzedImport do
+  @moduledoc false
+
+  defstruct arities: %{}   # Map of arities to modules
 
 end
 
@@ -11,7 +20,7 @@ end
 defmodule Erl2ex.AnalyzedType do
   @moduledoc false
 
-  defstruct arities: %{}  # Map of arity to exported flag
+  defstruct arities: %{}   # Map of arity to exported flag
 
 end
 
@@ -43,6 +52,7 @@ defmodule Erl2ex.AnalyzedModule do
   @moduledoc false
 
   defstruct erl_module: nil,
+            imports: %{},
             funcs: %{},
             types: %{},
             macros: %{},

@@ -10,7 +10,7 @@ defmodule Erl2ex.Convert.Expressions do
   @import_kernel_metadata [context: Elixir, import: Kernel]
   @import_bitwise_metadata [context: Elixir, import: Bitwise]
 
-  @op_map [
+  @op_map %{
     ==: {@import_kernel_metadata, :==},
     "/=": {@import_kernel_metadata, :!=},
     "=<": {@import_kernel_metadata, :<=},
@@ -40,41 +40,7 @@ defmodule Erl2ex.Convert.Expressions do
     bsl: {@import_bitwise_metadata, :<<<},
     bsr: {@import_bitwise_metadata, :>>>},
     bnot: {@import_bitwise_metadata, :~~~},
-  ] |> Enum.into(%{})
-
-  @autoimport_map [
-    abs: :abs,
-    apply: :apply,
-    bit_size: :bit_size,
-    byte_size: :byte_size,
-    hd: :hd,
-    is_atom: :is_atom,
-    is_binary: :is_binary,
-    is_bitstring: :is_bitstring,
-    is_boolean: :is_boolean,
-    is_float: :is_float,
-    is_function: :is_function,
-    is_integer: :is_integer,
-    is_list: :is_list,
-    is_map: :is_map,
-    is_number: :is_number,
-    is_pid: :is_pid,
-    is_port: :is_port,
-    is_reference: :is_reference,
-    is_tuple: :is_tuple,
-    length: :length,
-    make_ref: :make_ref,
-    map_size: :map_size,
-    max: :max,
-    min: :min,
-    node: :node,
-    round: :round,
-    self: :self,
-    throw: :throw,
-    tl: :tl,
-    trunc: :trunc,
-    tuple_size: :tuple_size
-  ] |> Enum.into(%{})
+  }
 
 
   def conv_expr({:atom, _, val}, context) when is_atom(val) do
@@ -784,32 +750,40 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
 
-  defp conv_normal_call(func, args, context) do
+  defp conv_normal_call(func = {:remote, _, _, _}, args, context) do
     {ex_args, context} = conv_list(args, context)
-    {ex_func, ex_args, context} = func_spec(func, ex_args, context)
+    {ex_func, context} = conv_expr(func, context)
     {{ex_func, [], ex_args}, context}
   end
 
-
-  defp func_spec(func = {:remote, _, _, _}, ex_args, context) do
-    {ex_func, context} = conv_expr(func, context)
-    {ex_func, ex_args, context}
-  end
-
-  defp func_spec({:atom, _, func}, ex_args, context) do
+  defp conv_normal_call({:atom, _, func}, args, context) do
+    {ex_args, context} = conv_list(args, context)
     arity = Enum.count(ex_args)
-    ex_expr = if Analyze.is_local_func?(context.analyzed_module, func, arity) do
-      Analyze.local_function_name(context.analyzed_module, func)
-    else
-      case Map.get(@autoimport_map, func, nil) do
-        nil -> {:., [], [:erlang, func]}
-        ex_name -> ex_name
-      end
+    ex_expr = case Analyze.local_call_strategy(context.analyzed_module, func, arity) do
+      {:apply, mapped_name} ->
+        {{:., [], [{:__aliases__, [alias: false], [:Kernel]}, :apply]}, [], [{:__MODULE__, [], Elixir}, mapped_name, ex_args]}
+      {:apply, Kernel, mapped_name} ->
+        {{:., [], [{:__aliases__, [alias: false], [:Kernel]}, :apply]}, [], [{:__aliases__, [alias: false], [:Kernel]}, mapped_name, ex_args]}
+      {:apply, module, mapped_name} ->
+        {{:., [], [{:__aliases__, [alias: false], [:Kernel]}, :apply]}, [], [module, mapped_name, ex_args]}
+      {:qualify, mapped_name} ->
+        {{:., [], [{:__MODULE__, [], Elixir}, mapped_name]}, [], ex_args}
+      {:qualify, Kernel, mapped_name} ->
+        {{:., [], [{:__aliases__, [alias: false], [:Kernel]}, mapped_name]}, [], ex_args}
+      {:qualify, module, mapped_name} ->
+        {{:., [], [module, mapped_name]}, [], ex_args}
+      {:bare, mapped_name} ->
+        {mapped_name, [], ex_args}
+      {:bare, Kernel, mapped_name} ->
+        {mapped_name, @import_kernel_metadata, ex_args}
+      {:bare, module, mapped_name} ->
+        {mapped_name, [context: Elixir, import: module], ex_args}
     end
-    {ex_expr, ex_args, context}
+    {ex_expr, context}
   end
 
-  defp func_spec(func = {:var, line, name}, ex_args, context) do
+  defp conv_normal_call(func = {:var, line, name}, args, context) do
+    {ex_args, context} = conv_list(args, context)
     case Atom.to_string(name) do
       << "?" :: utf8, basename :: binary >> ->
         arity = Enum.count(ex_args)
@@ -820,26 +794,27 @@ defmodule Erl2ex.Convert.Expressions do
           func_name != nil ->
             if Analyze.macro_needs_dispatch?(context.analyzed_module, macro_raw_name) do
               dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
-              {dispatcher, [func_name, ex_args], context}
+              {{dispatcher, [], [func_name, ex_args]}, context}
             else
-              {func_name, ex_args, context}
+              {{func_name, [], ex_args}, context}
             end
           const_name != nil ->
             dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
             {macro_expr, context} = conv_const(macro_raw_name, line, context)
-            {dispatcher, [macro_expr, ex_args], context}
+            {{dispatcher, [], [macro_expr, ex_args]}, context}
           true ->
             Context.handle_error(context, func, "(no such macro)")
         end
       _ ->
         {ex_func, context} = conv_expr(func, context)
-        {{:., [], [ex_func]}, ex_args, context}
+        {{{:., [], [ex_func]}, [], ex_args}, context}
     end
   end
 
-  defp func_spec(func, ex_args, context) do
+  defp conv_normal_call(func, args, context) do
+    {ex_args, context} = conv_list(args, context)
     {ex_func, context} = conv_expr(func, context)
-    {{:., [], [ex_func]}, ex_args, context}
+    {{{:., [], [ex_func]}, [], ex_args}, context}
   end
 
 

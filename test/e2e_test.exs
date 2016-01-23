@@ -31,19 +31,22 @@ defmodule E2ETestHelper do
   end
 
 
-  def compile_dir(name, path) do
+  def compile_dir(name, path, opts \\ []) do
     if Path.wildcard("#{project_path(name, path)}/*.ex") != [] do
-      run_cmd("elixirc", [{"*.ex"}], name: name, path: path, DEFINE_TEST: "true")
+      run_cmd("elixirc", [{"*.ex"}],
+          Keyword.merge(opts, name: name, path: path, DEFINE_TEST: "true"))
     end
     if Path.wildcard("#{project_path(name, path)}/*.erl") != [] do
-      run_cmd("erlc", ["-DTEST", {"*.erl"}], name: name, path: path)
+      run_cmd("erlc", ["-DTEST", {"*.erl"}],
+          Keyword.merge(opts, name: name, path: path))
     end
   end
 
 
   def run_eunit_tests(tests, name, path, opts \\ []) do
     tests |> Enum.each(fn test ->
-      run_elixir(":ok = :eunit.test(:#{test})", Keyword.merge(opts, name: name, path: path))
+      run_elixir(":ok = :eunit.test(:#{test})",
+          Keyword.merge(opts, name: name, path: path))
     end)
   end
 
@@ -109,7 +112,7 @@ defmodule E2ETest do
     clean_dir("poolboy", "ex")
     convert_dir("poolboy", "src", "ex")
     copy_dir("poolboy", "test", "ex")
-    compile_dir("poolboy", "ex")
+    compile_dir("poolboy", "ex", display_output: true)
     run_eunit_tests([:poolboy_tests], "poolboy", "ex", display_output: true)
   end
 
@@ -127,7 +130,7 @@ defmodule E2ETest do
         project_path("elixir", "lib/elixir/ex/elixir_bootstrap.erl"))
 
     copy_dir("elixir", "lib/elixir/test/erlang", "lib/elixir/ex")
-    compile_dir("elixir", "lib/elixir/ex")
+    compile_dir("elixir", "lib/elixir/ex", display_output: true)
   end
 
 

@@ -592,7 +592,7 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      defmacrop erlmacro(name, args \\\\ []) when is_atom(name), do:
+      defmacrop erlmacro(name, args) when is_atom(name), do:
         {Module.get_attribute(__MODULE__, name), [], args}
       defmacrop erlmacro(macro, args), do:
         {Macro.expand(macro, __CALLER__), [], args}
@@ -631,7 +631,7 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      defmacrop erlmacro(name, args \\\\ []) when is_atom(name), do:
+      defmacrop erlmacro(name, args) when is_atom(name), do:
         {Module.get_attribute(__MODULE__, name), [], args}
       defmacrop erlmacro(macro, args), do:
         {Macro.expand(macro, __CALLER__), [], args}
@@ -670,7 +670,7 @@ defmodule PreprocessorTest do
       """
 
     expected = """
-      defmacrop erlmacro(name, args \\\\ []) when is_atom(name), do:
+      defmacrop erlmacro(name, args) when is_atom(name), do:
         {Module.get_attribute(__MODULE__, name), [], args}
       defmacrop erlmacro(macro, args), do:
         {Macro.expand(macro, __CALLER__), [], args}

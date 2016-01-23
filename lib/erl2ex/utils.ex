@@ -4,17 +4,32 @@ defmodule Erl2ex.Utils do
   @moduledoc false
 
 
-  # These are not allowed as names of functions
+  # These are not allowed as names of functions or variables.
+  # The converter will attempt to rename things that use one of these names.
+  # If an exported function uses one of these names, it will require special
+  # handling in both definition and calling.
   @elixir_reserved_words [
+    :after,
+    :catch,
     :do,
     :else,
     :end,
     :false,
     :fn,
     :nil,
+    :rescue,
     :true,
+    :__CALLER__,
+    :__DIR__,
+    :__ENV__,
+    :__MODULE__,
+    :__aliases__,
+    :__block__
   ] |> Enum.into(MapSet.new)
 
+
+  def find_available_name(basename, used_names), do:
+    find_available_name(to_string(basename), used_names, "", 0)
 
   def find_available_name(basename, used_names, prefix), do:
     find_available_name(to_string(basename), used_names, prefix, 1)
@@ -39,7 +54,10 @@ defmodule Erl2ex.Utils do
     atom |> Atom.to_string |> lower_str |> String.to_atom
 
 
-  def elixir_reserved_words, do: @elixir_reserved_words
+  def elixir_reserved_words(), do: @elixir_reserved_words
+
+  def is_reserved_word(name), do:
+    MapSet.member?(@elixir_reserved_words, name)
 
 
   defp suggest_name(basename, _, 0), do:

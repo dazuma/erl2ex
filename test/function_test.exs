@@ -213,7 +213,88 @@ defmodule FunctionTest do
   end
 
 
-  test "Illegal use of elixir keywords as function names" do
+  test "Local private function name conflicts with auto-imported function" do
+    input = """
+      self() -> 1.
+      foo() -> self().
+      """
+
+    expected = """
+      defp func_self() do
+        1
+      end
+
+
+      defp foo() do
+        func_self()
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Local exported function name conflicts with auto-imported function" do
+    input = """
+      -export([self/0]).
+      self() -> 1.
+      foo() -> self().
+      """
+
+    expected = """
+      def self() do
+        1
+      end
+
+
+      defp foo() do
+        __MODULE__.self()
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Imported function name is an elixir reserved word" do
+    input = """
+      -import(mymod, [do/0]).
+      foo() -> do().
+      """
+
+    expected = """
+      import :mymod, only: [do: 0]
+
+
+      defp foo() do
+        Kernel.apply(:mymod, :do, [])
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Imported function name is an elixir special form" do
+    input = """
+      -import(mymod, ['cond'/1]).
+      foo() -> 'cond'(x).
+      """
+
+    expected = """
+      import :mymod, only: [cond: 1]
+
+
+      defp foo() do
+        :mymod.cond(:x)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Use of elixir reserved words as function names" do
     input = """
       do() -> hello.
       else() -> hello.
@@ -222,6 +303,15 @@ defmodule FunctionTest do
       fn() -> hello.
       nil() -> hello.
       true() -> hello.
+
+      foo() ->
+        do(),
+        else(),
+        'end'(),
+        false(),
+        fn(),
+        nil(),
+        true().
       """
 
     expected = """
@@ -257,6 +347,17 @@ defmodule FunctionTest do
 
       defp func_true() do
         :hello
+      end
+
+
+      defp foo() do
+        func_do()
+        func_else()
+        func_end()
+        func_false()
+        func_fn()
+        func_nil()
+        func_true()
       end
       """
 
@@ -327,20 +428,20 @@ defmodule FunctionTest do
   end
 
 
-  test "Function name clash with a BIF referenced in another function" do
+  test "Variable name clash with a BIF name" do
     input = """
-      foo() -> bif().
-      bar(Bif) -> Bif.
+      foo() -> self().
+      bar(Self) -> Self.
       """
 
     expected = """
       defp foo() do
-        :erlang.bif()
+        self()
       end
 
 
-      defp bar(var_bif) do
-        var_bif
+      defp bar(var_self) do
+        var_self
       end
       """
 

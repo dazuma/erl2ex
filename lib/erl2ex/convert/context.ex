@@ -220,7 +220,7 @@ defmodule Erl2ex.Convert.Context do
         |> String.to_atom
       mapped_arg = Map.fetch!(variables_map, arg_name)
       mangled_name = mapped_arg
-        |> Utils.find_available_name(all_names, "str")
+        |> Utils.find_available_name(all_names, "str", 1)
       variables_map = Map.put(variables_map, stringified_arg, mangled_name)
       stringification_map = Map.put(stringification_map, mapped_arg, mangled_name)
       all_names = MapSet.put(all_names, mangled_name)

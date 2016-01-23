@@ -26,12 +26,20 @@ defmodule Erl2ex.Parse do
   def from_str(str, opts \\ []) do
     context = Context.build(opts)
     str
-      |> to_char_list
+      |> generate_char_list
       |> generate_token_group_stream
       |> Stream.map(&separate_comments/1)
       |> Stream.map(&preprocess_tokens/1)
       |> Stream.map(&(parse_form(context, &1)))
       |> ModuleBuilder.build(context)
+  end
+
+
+  defp generate_char_list(str) do
+    if not String.ends_with?(str, "\n") do
+      str = str <> "\n"
+    end
+    to_char_list(str)
   end
 
 

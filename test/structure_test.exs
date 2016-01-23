@@ -22,6 +22,19 @@ defmodule StructureTest do
   end
 
 
+  test "Input does not end with a newline" do
+    input = "-module(foo)."
+
+    expected = """
+      defmodule :foo do
+
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Record operations" do
     input = """
       -record(foo, {field1, field2=123}).
