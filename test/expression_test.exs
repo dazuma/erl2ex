@@ -1,43 +1,45 @@
 defmodule ExpressionTest do
   use ExUnit.Case
 
+  import Erl2ex.TestHelper
+
+
   @opts [emit_file_headers: false]
 
 
   test "Various value types" do
     input = """
-      foo() -> atom, 123, 3.14, {A, {}, {hello, "world"}}, [1, [], 2].
+      -export([foo/1]).
+      foo(A) -> [atom, 123, 3.14, {A, {}, {hello, "world"}}, [1, [], 2]].
       """
 
     expected = """
-      defp foo() do
-        :atom
-        123
-        3.14
-        {a, {}, {:hello, 'world'}}
-        [1, [], 2]
+      def foo(a) do
+        [:atom, 123, 3.14, {a, {}, {:hello, 'world'}}, [1, [], 2]]
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, [:x]) == [:atom, 123, 3.14, {:x, {}, {:hello, 'world'}}, [1, [], 2]]
   end
 
 
   test "Character values" do
     input = """
-      foo() -> $A, $🐱, $\\n, $".
+      -export([foo/0]).
+      foo() -> $A + $🐱 + $\\n + $".
       """
 
     expected = """
-      defp foo() do
-        ?A
-        ?🐱
-        ?\\n
-        ?"
+      def foo() do
+        ?A + ?🐱 + ?\\n + ?"
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == 128158
   end
 
 
