@@ -258,7 +258,7 @@ defmodule Erl2ex.Codegen do
       end)
     if guard_expr != nil do
       context = context
-        |> write_string("if Macro.Env.in_guard? do", io)
+        |> write_string("if Macro.Env.in_guard?(__CALLER__) do", io)
         |> increment_indent
         |> write_string("quote do", io)
         |> increment_indent

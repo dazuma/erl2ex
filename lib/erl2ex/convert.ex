@@ -140,7 +140,9 @@ defmodule Erl2ex.Convert do
     {main_comments, inline_comments} = split_comments(comments, line)
     analysis = context.analyzed_module
 
-    replacement_context = Context.set_variable_maps(context, replacement, args)
+    replacement_context = context
+      |> Context.set_variable_maps(replacement, args)
+      |> Context.push_scope
     needs_dispatch = Analyze.macro_needs_dispatch?(analysis, name)
     ex_args = args |> Enum.map(fn arg -> {Utils.lower_atom(arg), [], Elixir} end)
     macro_name = Analyze.macro_function_name(analysis, name, arity)

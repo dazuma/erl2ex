@@ -1,15 +1,18 @@
 defmodule PreprocessorTest do
   use ExUnit.Case
 
+  import Erl2ex.TestHelper
+
+
   @opts [emit_file_headers: false]
 
 
   test "Macro constant defines with a nested define" do
     input = """
+      -export([foo/0]).
       -define(HELLO, 100 * 2).
       -define(hello, ?HELLO + 3).
-      foo() -> ?HELLO.
-      bar() -> ?hello.
+      foo() -> {?HELLO, ?hello}.
       """
 
     expected = """
@@ -27,27 +30,23 @@ defmodule PreprocessorTest do
       end
 
 
-      defp foo() do
-        erlconst_HELLO()
-      end
-
-
-      defp bar() do
-        erlconst_hello()
+      def foo() do
+        {erlconst_HELLO(), erlconst_hello()}
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == {200, 203}
   end
 
 
   test "Simple macro function defines with a nested define" do
     input = """
+      -export([foo/0]).
       -define(hello(X), 100 * X).
       -define(HELLO(X), ?hello(X) + 2).
-      foo() ->
-        ?hello(2),
-        ?HELLO(3).
+      foo() -> {?hello(2), ?HELLO(3)}.
       """
 
     expected = """
@@ -65,20 +64,23 @@ defmodule PreprocessorTest do
       end
 
 
-      defp foo() do
-        erlmacro_hello(2)
-        erlmacro_HELLO(3)
+      def foo() do
+        {erlmacro_hello(2), erlmacro_HELLO(3)}
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == {200, 302}
   end
 
 
   test "Macro that includes semicolons and should work only for guards" do
     input = """
+      -export([foo/1]).
       -define(HELLO(X), X > 10, X < 20; X == 1).
-      foo(X) when ?HELLO(X) -> X.
+      foo(X) when ?HELLO(X) -> X;
+      foo(_) -> ok.
       """
 
     expected = """
@@ -89,31 +91,43 @@ defmodule PreprocessorTest do
       end
 
 
-      defp foo(x) when erlmacro_HELLO(x) do
+      def foo(x) when erlmacro_HELLO(x) do
         x
+      end
+
+      def foo(_) do
+        :ok
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, [1]) == 1
+    assert apply(result.module, :foo, [9]) == :ok
+    assert apply(result.module, :foo, [11]) == 11
   end
 
 
   test "Macro that includes commas and works differently in guards" do
     input = """
-      -define(HELLO(X), X > 10, X < 20).
-      foo(X) when ?HELLO(X) -> ?HELLO(X).
+      -export([foo/1, bar/1]).
+      -define(HELLO(X), is_integer(X), X < 20).
+      -define(HELLO2(X), Y = 20, X < Y).
+      foo(X) when ?HELLO(X) -> X;
+      foo(_) -> ok.
+      bar(X) -> ?HELLO2(X).
       """
 
     expected = """
       defmacrop erlmacro_HELLO(x) do
-        if Macro.Env.in_guard? do
+        if Macro.Env.in_guard?(__CALLER__) do
           quote do
-            unquote(x) > 10 and unquote(x) < 20
+            is_integer(unquote(x)) and unquote(x) < 20
           end
         else
           quote do
             (
-              unquote(x) > 10
+              is_integer(unquote(x))
               unquote(x) < 20
             )
           end
@@ -121,12 +135,42 @@ defmodule PreprocessorTest do
       end
 
 
-      defp foo(x) when erlmacro_HELLO(x) do
-        erlmacro_HELLO(x)
+      defmacrop erlmacro_HELLO2(x) do
+        if Macro.Env.in_guard?(__CALLER__) do
+          quote do
+            (y = 20) and unquote(x) < y
+          end
+        else
+          quote do
+            (
+              y = 20
+              unquote(x) < y
+            )
+          end
+        end
+      end
+
+
+      def foo(x) when erlmacro_HELLO(x) do
+        x
+      end
+
+      def foo(_) do
+        :ok
+      end
+
+
+      def bar(x) do
+        erlmacro_HELLO2(x)
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, [:hi]) == :ok
+    assert apply(result.module, :foo, [11]) == 11
+    assert apply(result.module, :bar, [19]) == true
+    assert apply(result.module, :bar, [21]) == false
   end
 
 

@@ -1,6 +1,9 @@
 defmodule FunctionTest do
   use ExUnit.Case
 
+  import Erl2ex.TestHelper
+
+
   @opts [emit_file_headers: false]
 
 
@@ -192,7 +195,7 @@ defmodule FunctionTest do
   test "Local private function name is reserved or has strange characters" do
     input = """
       do() -> hello.
-      'E=mc^2'() -> hello.
+      'E=mc^2'() -> bye.
       foo() -> do(), 'E=mc^2'().
       """
 
@@ -203,7 +206,7 @@ defmodule FunctionTest do
 
 
       defp func_E_mc_2() do
-        :hello
+        :bye
       end
 
 
@@ -219,10 +222,10 @@ defmodule FunctionTest do
 
   test "Local exported function name is reserved or has strange characters" do
     input = """
-      -export([do/0, 'E=mc^2'/0]).
+      -export([do/0, 'E=mc^2'/0, foo/0]).
       do() -> hello.
       'E=mc^2'() -> bye.
-      foo() -> do(), 'E=mc^2'().
+      foo() -> {do(), 'E=mc^2'()}.
       """
 
     expected = """
@@ -246,13 +249,15 @@ defmodule FunctionTest do
       end)
 
 
-      defp foo() do
-        __MODULE__.do()
-        Kernel.apply(__MODULE__, :"E=mc^2", [])
+      def foo() do
+        {__MODULE__.do(), Kernel.apply(__MODULE__, :"E=mc^2", [])}
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :do, []) == :hello
+    assert apply(result.module, :foo, []) == {:hello, :bye}
   end
 
 
@@ -279,7 +284,7 @@ defmodule FunctionTest do
 
   test "Local exported function name is a special form" do
     input = """
-      -export(['cond'/1]).
+      -export(['cond'/1, foo/0]).
       'cond'(X) -> X.
       foo() -> 'cond'(a).
       """
@@ -290,12 +295,15 @@ defmodule FunctionTest do
       end
 
 
-      defp foo() do
+      def foo() do
         __MODULE__.cond(:a)
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == :a
+    assert apply(result.module, :cond, [:b]) == :b
   end
 
 
@@ -322,7 +330,7 @@ defmodule FunctionTest do
 
   test "Local exported function name conflicts with auto-imported function" do
     input = """
-      -export([self/0]).
+      -export([self/0, foo/0]).
       self() -> 1.
       foo() -> self().
       """
@@ -333,12 +341,15 @@ defmodule FunctionTest do
       end
 
 
-      defp foo() do
+      def foo() do
         __MODULE__.self()
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == 1
+    assert apply(result.module, :self, []) == 1
   end
 
 
