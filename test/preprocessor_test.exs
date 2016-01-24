@@ -176,12 +176,11 @@ defmodule PreprocessorTest do
 
   test "Macro constant and function defines with the same name" do
     input = """
+      -export([foo/0]).
       -define(HELLO, 100 * 2).
       -define(HELLO(), ?HELLO + 1).
       -define(HELLO(X), ?HELLO() + X).
-      foo() -> ?HELLO.
-      bar() -> ?HELLO().
-      baz() -> ?HELLO(2).
+      foo() -> {?HELLO, ?HELLO(), ?HELLO(2)}.
       """
 
     expected = """
@@ -206,59 +205,55 @@ defmodule PreprocessorTest do
       end
 
 
-      defp foo() do
-        erlconst_HELLO()
-      end
-
-
-      defp bar() do
-        erlmacro_HELLO()
-      end
-
-
-      defp baz() do
-        erlmacro_HELLO(2)
+      def foo() do
+        {erlconst_HELLO(), erlmacro_HELLO(), erlmacro_HELLO(2)}
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == {200, 201, 203}
   end
 
 
   test "Macro function with arg stringification" do
     input = """
+      -export([foo/0]).
       -define(hello(X), ??X).
-      foo() ->
-        ?hello(2 + 3).
+      foo() -> ?hello(2 + 3).
       """
 
     expected = """
       defmacrop erlmacro_hello(x) do
-        str_x = Macro.to_string(quote do: unquote(x))
+        str_x = Macro.to_string(quote do: unquote(x)) |> String.to_char_list
         quote do
           unquote(str_x)
         end
       end
 
 
-      defp foo() do
+      def foo() do
         erlmacro_hello(2 + 3)
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == '2 + 3'
   end
 
 
   test "Arg stringification name collides with function name" do
     input = """
+      -export([foo/0]).
       -define(hello(X), ??X ++ str_x()).
       str_x() -> "hi".
+      foo() -> ?hello(2 + 3).
       """
 
     expected = """
       defmacrop erlmacro_hello(x) do
-        str2_x = Macro.to_string(quote do: unquote(x))
+        str2_x = Macro.to_string(quote do: unquote(x)) |> String.to_char_list
         quote do
           unquote(str2_x) ++ str_x()
         end
@@ -268,9 +263,16 @@ defmodule PreprocessorTest do
       defp str_x() do
         'hi'
       end
+
+
+      def foo() do
+        erlmacro_hello(2 + 3)
+      end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == '2 + 3hi'
   end
 
 
@@ -278,8 +280,7 @@ defmodule PreprocessorTest do
     input = """
       -define(Foo(X), X + 1).
       -define(foo(X), ?Foo(X) + 2).
-      erlmacro_foo() ->
-        ?foo(0).
+      erlmacro_foo() -> ?foo(0).
       """
 
     expected = """
@@ -630,9 +631,11 @@ defmodule PreprocessorTest do
 
   test "Redefine constant macro" do
     input = """
+      -export([foo/0, bar/0]).
       -define(HELLO, 1).
-      -define(HELLO, 2).
       foo() -> ?HELLO.
+      -define(HELLO, 2).
+      bar() -> ?HELLO.
       """
 
     expected = """
@@ -650,6 +653,11 @@ defmodule PreprocessorTest do
       @erlconst_HELLO :erlconst_HELLO
 
 
+      def foo() do
+        erlmacro(:erlconst_HELLO, [])
+      end
+
+
       defmacrop erlconst2_HELLO() do
         quote do
           2
@@ -658,20 +666,25 @@ defmodule PreprocessorTest do
       @erlconst_HELLO :erlconst2_HELLO
 
 
-      defp foo() do
-        erlmacro(:erlconst_HELLO)
+      def bar() do
+        erlmacro(:erlconst_HELLO, [])
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == 1
+    assert apply(result.module, :bar, []) == 2
   end
 
 
   test "Redefine function macro" do
     input = """
+      -export([foo/0, bar/0]).
       -define(HELLO(X), 1 + X).
-      -define(HELLO(X), 2 + X).
       foo() -> ?HELLO(3).
+      -define(HELLO(X), 2 + X).
+      bar() -> ?HELLO(3).
       """
 
     expected = """
@@ -689,6 +702,11 @@ defmodule PreprocessorTest do
       @erlmacro_HELLO :erlmacro_HELLO
 
 
+      def foo() do
+        erlmacro(:erlmacro_HELLO, [3])
+      end
+
+
       defmacrop erlmacro2_HELLO(x) do
         quote do
           2 + unquote(x)
@@ -697,20 +715,24 @@ defmodule PreprocessorTest do
       @erlmacro_HELLO :erlmacro2_HELLO
 
 
-      defp foo() do
+      def bar() do
         erlmacro(:erlmacro_HELLO, [3])
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == 4
+    assert apply(result.module, :bar, []) == 5
   end
 
 
   test "Invoking constant macro as function name" do
     input = """
+      -export([foo/0]).
       -define(HELLO, bar).
       foo() -> ?HELLO(3).
-      bar(X) -> X.
+      bar(X) -> X + 1.
       """
 
     expected = """
@@ -727,17 +749,19 @@ defmodule PreprocessorTest do
       end
 
 
-      defp foo() do
+      def foo() do
         erlmacro(erlconst_HELLO(), [3])
       end
 
 
       defp bar(x) do
-        x
+        x + 1
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == 4
   end
 
 end

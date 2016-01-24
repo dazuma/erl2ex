@@ -10,6 +10,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   If a function's argument pattern looks like a keyword block, it tried to codegen as such. Fixed.
 *   If an Erlang variable name was a capitalized version of an Elixir keyword (such as "End"), it would generate uncompilable Elixir code. Fixed.
 *   If the input did not end with a newline, the final form was dropped. Fixed.
+*   The "??" stringification preprocessor syntax generated binaries rather than char lists. Fixed.
 *   Created a mechanism to compile and run the generated code in unit tests, and started modifying a subset of the tests to use it.
 *   Started some optional end-to-end tests that convert and run against common Erlang libraries.
 *   Refactor: Break analysis out into a separate stage instead of combining with conversion context.

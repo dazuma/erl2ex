@@ -719,7 +719,7 @@ defmodule Erl2ex.Convert.Expressions do
     end
     if Analyze.macro_needs_dispatch?(context.analyzed_module, name) do
       dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
-      {{dispatcher, [], [macro_name]}, context}
+      {{dispatcher, [], [macro_name, []]}, context}
     else
       {{macro_name, [], []}, context}
     end

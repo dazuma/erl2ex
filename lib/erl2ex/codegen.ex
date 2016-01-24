@@ -254,7 +254,7 @@ defmodule Erl2ex.Codegen do
       |> write_string("defmacrop #{signature_to_string(signature)} do", io)
       |> increment_indent
       |> foreach(stringifications, fn(ctx, {var, str}) ->
-        write_string(ctx, "#{str} = Macro.to_string(quote do: unquote(#{var}))", io)
+        write_string(ctx, "#{str} = Macro.to_string(quote do: unquote(#{var})) |> String.to_char_list", io)
       end)
     if guard_expr != nil do
       context = context
