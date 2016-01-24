@@ -2,7 +2,7 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
-## v0.0.7 (not yet released)
+## v0.0.7 (2016-01-25)
 
 *   Overhauled the logic that reconciled imported vs defined functions, and fixed some related issues. Calls of functions with conflicting names are now properly qualified.
 *   Allow definition and calling of exported functions with names that the parser won't normally accept; e.g. Elixir keywords such as "do", or names with strange characters such as "E=mc^2".
