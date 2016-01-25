@@ -17,7 +17,9 @@ defmodule Erl2ex.Convert.Context do
             match_level: 0,
             in_func_params: false,
             match_vars: MapSet.new,
-            scopes: []
+            scopes: [],
+            macro_exports: %{},
+            macro_export_collection_stack: []
 
 
   def build(analyzed_module, opts) do
@@ -29,17 +31,81 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def set_variable_maps(context, expr, extra_omits \\ []) do
-    {variable_map, stringification_map} = compute_var_maps(context, expr, extra_omits)
+  def set_variable_maps(context, expr, macro_args \\ []) do
+    {variable_map, stringification_map} = compute_var_maps(context, expr, macro_args)
 
-    quoted_vars = extra_omits
+    quoted_vars = macro_args
       |> Enum.map(&(Map.fetch!(variable_map, &1)))
-    context = %Context{context |
+    %Context{context |
       quoted_variables: quoted_vars ++ Map.values(stringification_map),
       variable_map: variable_map,
       stringification_map: stringification_map
     }
-    context
+  end
+
+
+  def clear_variable_maps(context) do
+    %Context{context |
+      quoted_variables: [],
+      variable_map: %{},
+      stringification_map: %{}
+    }
+  end
+
+
+  def start_macro_export_collection(context, args) when is_list(args) do
+    index_map = args |> Enum.with_index |> Enum.into(%{})
+    collector = {MapSet.new, index_map}
+    %Context{context |
+      macro_export_collection_stack: [collector | context.macro_export_collection_stack]
+    }
+  end
+  def start_macro_export_collection(context, _args), do: context
+
+
+  def suspend_macro_export_collection(context) do
+    %Context{context |
+      macro_export_collection_stack: [{MapSet.new, %{}} | context.macro_export_collection_stack]
+    }
+  end
+
+
+  def resume_macro_export_collection(context) do
+    %Context{context |
+      macro_export_collection_stack: tl(context.macro_export_collection_stack)
+    }
+  end
+
+
+  def finish_macro_export_collection(context, name, arity) do
+    [{indexes, _} | macro_export_collection_stack] = context.macro_export_collection_stack
+    macro_exports = context.macro_exports |> Map.put({name, arity}, indexes)
+    %Context{context |
+      macro_exports: macro_exports,
+      macro_export_collection_stack: macro_export_collection_stack
+    }
+  end
+
+
+  def add_macro_export(context, erl_var) do
+    case context.macro_export_collection_stack do
+      [{indexes, index_map} | stack_tail] ->
+        case Map.fetch(index_map, erl_var) do
+          {:ok, index} ->
+            %Context{context |
+              macro_export_collection_stack: [{MapSet.put(indexes, index), index_map} | stack_tail]
+            }
+          :error ->
+            context
+        end
+      [] ->
+        context
+    end
+  end
+
+
+  def get_macro_export_indexes(%Context{macro_exports: macro_exports}, name, arity) do
+    Map.fetch!(macro_exports, {name, arity})
   end
 
 
@@ -133,11 +199,9 @@ defmodule Erl2ex.Convert.Context do
   def map_variable_name(context, name) do
     mapped_name = Map.fetch!(context.variable_map, name)
     needs_caret = false
-    if context.match_level > 0 do
-      needs_caret = not context.in_func_params and
-          name != :_ and
-          variable_seen?(context.scopes, name)
-      if not needs_caret and name != :_ do
+    if context.match_level > 0 and name != :_ do
+      needs_caret = not context.in_func_params and variable_seen?(context.scopes, name)
+      if not needs_caret do
         context = %Context{context |
           match_vars: MapSet.put(context.match_vars, name)
         }

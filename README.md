@@ -50,7 +50,6 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
-*   Need to analyze macro substitutions to determine whether variables matched in their arguments should be exported. A failure example is in https://github.com/talentdeficit/jsx/blob/develop/src/jsx.erl (function `end_stream_test_/0`) in which the references to F should not be exported because each call to `_assertEqual/2` wraps it in a fun.
 *   Defining a macro that attempts to assign to a substitution results in an exception. e.g. `-define(A(X), X = 1).` should be legal. This may also run into problems because Elixir's macros are hygenic.
 *   Returning a remote function reference from a macro is not supported: e.g. `-define(A, m:f).` generates illegal Elixir syntax.
 *   Function macros cannot return function names; Erlang's parser rejects the syntax `?A()()`. In Erlang, the preprocessor fixes this, but we're not running the Erlang preprocessor directly.

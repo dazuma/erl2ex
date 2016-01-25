@@ -764,4 +764,50 @@ defmodule PreprocessorTest do
     assert apply(result.module, :foo, []) == 4
   end
 
+
+  test "Variables exported from code passed to macros" do
+    input = """
+      -export([foo/0]).
+      -define(HELLO(A, B), {A, (fun () -> B end)()}).
+      -define(HELLO2(A, B), ?HELLO(B, A)).
+      foo() ->
+        self() ! hello,
+        A = ?HELLO2(begin X = 1, X end, Y = 2),
+        X = 1,
+        Y = 2,
+        {A, X}.
+      """
+
+    expected = """
+      defmacrop erlmacro_HELLO(a, b) do
+        quote do
+          {unquote(a), fn -> unquote(b) end.()}
+        end
+      end
+
+
+      defmacrop erlmacro_HELLO2(a, b) do
+        quote do
+          erlmacro_HELLO(unquote(b), unquote(a))
+        end
+      end
+
+
+      def foo() do
+        send(self(), :hello)
+        a = erlmacro_HELLO2((
+          x = 1
+          x
+        ), y = 2)
+        x = 1
+        ^y = 2
+        {a, x}
+      end
+      """
+
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == {{2, 1}, 1}
+  end
+
 end

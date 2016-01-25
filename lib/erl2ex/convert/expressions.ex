@@ -154,7 +154,9 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   def conv_expr({:fun, _, {:clauses, clauses}}, context) when is_list(clauses) do
+    context = Context.suspend_macro_export_collection(context)
     {ex_clauses, context} = conv_clause_list(:fun, clauses, context)
+    context = Context.resume_macro_export_collection(context)
     {{:fn, [], ex_clauses}, context}
   end
 
@@ -680,15 +682,14 @@ defmodule Erl2ex.Convert.Expressions do
   defp conv_normal_var(name, context) do
     {mapped_name, needs_caret, context} = Context.map_variable_name(context, name)
     var = {mapped_name, [], Elixir}
-    var = cond do
+    cond do
       Context.is_quoted_var?(context, mapped_name) ->
-        {:unquote, [], [var]}
+        {{:unquote, [], [var]}, Context.add_macro_export(context, name)}
       needs_caret ->
-        {:^, [], [var]}
+        {{:^, [], [var]}, context}
       true ->
-        var
+        {var, context}
     end
-    {var, context}
   end
 
 
@@ -783,29 +784,11 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_normal_call(func = {:var, line, name}, args, context) do
-    {ex_args, context} = conv_list(args, context)
     case Atom.to_string(name) do
       << "?" :: utf8, basename :: binary >> ->
-        arity = Enum.count(ex_args)
-        macro_raw_name = String.to_atom(basename)
-        func_name = Analyze.macro_function_name(context.analyzed_module, macro_raw_name, arity)
-        const_name = Analyze.macro_function_name(context.analyzed_module, macro_raw_name, nil)
-        cond do
-          func_name != nil ->
-            if Analyze.macro_needs_dispatch?(context.analyzed_module, macro_raw_name) do
-              dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
-              {{dispatcher, [], [func_name, ex_args]}, context}
-            else
-              {{func_name, [], ex_args}, context}
-            end
-          const_name != nil ->
-            dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
-            {macro_expr, context} = conv_const(macro_raw_name, line, context)
-            {{dispatcher, [], [macro_expr, ex_args]}, context}
-          true ->
-            Context.handle_error(context, func, "(no such macro)")
-        end
+        conv_macro_call(String.to_atom(basename), args, line, context)
       _ ->
+        {ex_args, context} = conv_list(args, context)
         {ex_func, context} = conv_expr(func, context)
         {{{:., [], [ex_func]}, [], ex_args}, context}
     end
@@ -815,6 +798,52 @@ defmodule Erl2ex.Convert.Expressions do
     {ex_args, context} = conv_list(args, context)
     {ex_func, context} = conv_expr(func, context)
     {{{:., [], [ex_func]}, [], ex_args}, context}
+  end
+
+
+  defp conv_macro_call(name, args, line, context) do
+    arity = Enum.count(args)
+    func_name = Analyze.macro_function_name(context.analyzed_module, name, arity)
+    const_name = Analyze.macro_function_name(context.analyzed_module, name, nil)
+    cond do
+      func_name != nil ->
+        exported_indexes = Context.get_macro_export_indexes(context, name, arity)
+        {ex_args, context} = conv_macro_arg_list(args, exported_indexes, context)
+        if Analyze.macro_needs_dispatch?(context.analyzed_module, name) do
+          dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
+          {{dispatcher, [], [func_name, ex_args]}, context}
+        else
+          {{func_name, [], ex_args}, context}
+        end
+      const_name != nil ->
+        {ex_args, context} = conv_list(args, context)
+        dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
+        {macro_expr, context} = conv_const(name, line, context)
+        {{dispatcher, [], [macro_expr, ex_args]}, context}
+      true ->
+        Context.handle_error(context, name, "(no such macro)")
+    end
+  end
+
+
+  defp conv_macro_arg_list(args, exported_indexes, context) do
+    args
+      |> Enum.with_index
+      |> Enum.map_reduce(context, fn {expr, index}, ctx ->
+        export_this_arg = MapSet.member?(exported_indexes, index)
+        if not export_this_arg do
+          ctx = ctx |> Context.suspend_macro_export_collection
+        end
+        ctx = ctx |> Context.clear_exports |> Context.push_scope
+        {ex_expr, ctx} = conv_expr(expr, ctx)
+        ctx = ctx |> Context.pop_scope
+        if export_this_arg do
+          ctx = ctx |> Context.apply_exports
+        else
+          ctx = ctx |> Context.resume_macro_export_collection
+        end
+        {ex_expr, ctx}
+      end)
   end
 
 

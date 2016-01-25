@@ -136,36 +136,41 @@ defmodule Erl2ex.Convert do
 
   defp conv_form(%ErlDefine{line: line, name: name, args: args, replacement: replacement, comments: comments}, context) do
     arity = if args == nil, do: nil, else: Enum.count(args)
-    if args == :nil, do: args = []
+    if args == nil, do: args = []
     {main_comments, inline_comments} = split_comments(comments, line)
     analysis = context.analyzed_module
-
-    replacement_context = context
-      |> Context.set_variable_maps(replacement, args)
-      |> Context.push_scope
     needs_dispatch = Analyze.macro_needs_dispatch?(analysis, name)
     ex_args = args |> Enum.map(fn arg -> {Utils.lower_atom(arg), [], Elixir} end)
     macro_name = Analyze.macro_function_name(analysis, name, arity)
-    {mapped_name, context} = if needs_dispatch do
-      Context.generate_macro_name(context, name, arity)
-    else
-      {macro_name, context}
+    mapped_name = macro_name
+    dispatch_name = nil
+    if needs_dispatch do
+      {mapped_name, context} = Context.generate_macro_name(context, name, arity)
+      dispatch_name = macro_name
     end
-    dispatch_name = if needs_dispatch, do: macro_name, else: nil
-    tracking_name = Analyze.tracking_attr_name(context.analyzed_module, name)
-    {normal_expr, guard_expr, _} = Expressions.conv_macro_expr(replacement, replacement_context)
+    tracking_name = Analyze.tracking_attr_name(analysis, name)
 
+    context = context
+      |> Context.set_variable_maps(replacement, args)
+      |> Context.push_scope
+      |> Context.start_macro_export_collection(args)
+    {normal_expr, guard_expr, context} = Expressions.conv_macro_expr(replacement, context)
     ex_macro = %ExMacro{
       macro_name: mapped_name,
       signature: {mapped_name, [], ex_args},
       tracking_name: tracking_name,
       dispatch_name: dispatch_name,
-      stringifications: replacement_context.stringification_map,
+      stringifications: context.stringification_map,
       expr: normal_expr,
       guard_expr: guard_expr,
       comments: main_comments |> convert_comments,
       inline_comments: inline_comments |> convert_comments
     }
+    context = context
+      |> Context.finish_macro_export_collection(name, arity)
+      |> Context.pop_scope
+      |> Context.clear_variable_maps
+
     {ex_macro, context}
   end
 
