@@ -5,6 +5,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 ## v0.0.8 (not yet released)
 
 *   Better analysis to determine when variables in arguments passed to macros should be exported.
+*   Better error reporting when an included file could not be found.
 
 ## v0.0.7 (2016-01-25)
 

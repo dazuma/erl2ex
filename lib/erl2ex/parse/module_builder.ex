@@ -42,11 +42,17 @@ defmodule Erl2ex.Parse.ModuleBuilder do
     }
   end
 
-  defp add_form(module, {:attribute, _line, :include, path}, _comments, context) do
+  defp add_form(module, {:attribute, line, :include, path}, _comments, context) do
     path = path
       |> List.to_string
       |> resolve_path_env
     file_path = Context.find_file(context, path)
+    if file_path == nil do
+      raise CompileError,
+        file: Context.cur_file_path_for_display(context),
+        line: line,
+        description: "Could not find file to include: #{path}"
+    end
     opts = Context.build_opts_for_include(context)
     included_module = Parse.from_file(file_path, opts)
     comment1 = %ErlComment{comments: ["% Begin included file: #{path}"]}
