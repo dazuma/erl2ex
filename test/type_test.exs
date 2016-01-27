@@ -246,11 +246,20 @@ defmodule TypeTest do
 
   test "Records" do
     input = """
-      -type type1() :: #myrecord{field1 :: any(), field2 :: atom() | integer()}.
+      -record(myrecord, {field1 :: any(), field2 :: atom() | integer(), field3}).
+      -type type1() :: #myrecord{}.
+      -type type2() :: #myrecord{field1 :: string()}.
       """
 
     expected = """
-      @typep type1() :: record(:myrecord, field1: any(), field2: atom() | integer())
+      require Record
+
+      @erlrecordfields_myrecord [:field1, :field2, :field3]
+      Record.defrecordp :erlrecord_myrecord, :myrecord, [field1: :undefined, field2: :undefined, field3: :undefined]
+
+      @typep type1() :: record(:erlrecord_myrecord, field1: :undefined | any(), field2: :undefined | atom() | integer(), field3: term())
+
+      @typep type2() :: record(:erlrecord_myrecord, field1: char_list(), field2: :undefined | atom() | integer(), field3: term())
       """
 
     assert Erl2ex.convert_str!(input, @opts) == expected

@@ -193,7 +193,9 @@ defmodule Erl2ex.Convert do
 
   defp conv_form(%ErlRecord{line: line, name: name, fields: fields, comments: comments}, context) do
     {main_comments, inline_comments} = split_comments(comments, line)
-    {ex_fields, _} = Expressions.conv_list(fields, context)
+    context = Context.start_record_types(context)
+    {ex_fields, context} = Expressions.conv_record_def_list(fields, context)
+    context = Context.finish_record_types(context, name)
 
     ex_record = %ExRecord{
       tag: name,

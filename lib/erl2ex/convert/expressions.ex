@@ -280,11 +280,6 @@ defmodule Erl2ex.Convert.Expressions do
     {{Analyze.record_function_name(context.analyzed_module, name), [], [ex_record, ex_field]}, context}
   end
 
-  # Elixir doesn't seem to support typed fields in record declarations
-  def conv_expr({:typed_record_field, record_field, _type}, context) do
-    conv_expr(record_field, context)
-  end
-
   def conv_expr({:type, _, type}, context) do
     conv_type(type, context)
   end
@@ -342,12 +337,31 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
 
+  def conv_record_def_list(exprs, context) when is_list(exprs) do
+    Enum.map_reduce(exprs, context, &conv_record_def_elem/2)
+  end
+
+
   def guard_seq([], context) do
     {[], context}
   end
   def guard_seq(guards, context) do
     {result, context} = guard_seq(guards, nil, context)
     {[result], context}
+  end
+
+
+  def conv_record_def_elem(record_elem, context) when elem(record_elem, 0) == :record_field do
+    {ex_name, context} = conv_expr(elem(record_elem, 2), context)
+    context = Context.add_record_type(context, ex_name, {:term, [], []})
+    conv_expr(record_elem, context)
+  end
+
+  def conv_record_def_elem(record_elem, context) when elem(record_elem, 0) == :typed_record_field do
+    {ex_type, context} = conv_expr(elem(record_elem, 2), context)
+    {ex_name, context} = conv_expr(elem(elem(record_elem, 1), 2), context)
+    context = Context.add_record_type(context, ex_name, ex_type)
+    conv_expr(elem(record_elem, 1), context)
   end
 
 
@@ -540,9 +554,19 @@ defmodule Erl2ex.Convert.Expressions do
     {{ex_key, ex_value}, context}
   end
 
-  defp conv_type(:record, [name | fields], context) do
+  defp conv_type(:record, [name | field_overrides], context) do
     {ex_name, context} = conv_expr(name, context)
-    {ex_fields, context} = conv_list(fields, context)
+    {field_overrides, context} = conv_list(field_overrides, context)
+    field_overrides = field_overrides |> Enum.into(%{})
+    ex_fields = context
+      |> Context.get_record_types(ex_name)
+      |> Enum.map(fn {ex_name, _} = default_type_tuple ->
+        case Map.fetch(field_overrides, ex_name) do
+          {:ok, type} -> {ex_name, type}
+          :error -> default_type_tuple
+        end
+      end)
+    ex_name = Analyze.record_function_name(context.analyzed_module, ex_name)
     {{:record, [], [ex_name, ex_fields]}, context}
   end
 

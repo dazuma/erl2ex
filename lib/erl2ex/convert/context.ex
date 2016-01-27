@@ -19,7 +19,9 @@ defmodule Erl2ex.Convert.Context do
             match_vars: MapSet.new,
             scopes: [],
             macro_exports: %{},
-            macro_export_collection_stack: []
+            macro_export_collection_stack: [],
+            cur_record_types: [],
+            record_types: %{}
 
 
   def build(analyzed_module, opts) do
@@ -216,6 +218,33 @@ defmodule Erl2ex.Convert.Context do
 
   def cur_file_path_for_display(%Context{cur_file_path: path}), do:
     path
+
+
+  def start_record_types(context) do
+    %Context{context |
+      cur_record_types: []
+    }
+  end
+
+
+  def add_record_type(context, field, type) do
+    %Context{context |
+      cur_record_types: [{field, type} | context.cur_record_types]
+    }
+  end
+
+
+  def finish_record_types(context, name) do
+    %Context{context |
+      record_types: Map.put(context.record_types, name, Enum.reverse(context.cur_record_types)),
+      cur_record_types: []
+    }
+  end
+
+
+  def get_record_types(%Context{record_types: record_types}, name) do
+    Map.fetch!(record_types, name)
+  end
 
 
   def handle_error(context, expr, ast_context \\ nil) do
