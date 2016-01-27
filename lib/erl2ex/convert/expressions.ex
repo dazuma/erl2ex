@@ -351,13 +351,13 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
 
-  def conv_record_def_elem(record_elem, context) when elem(record_elem, 0) == :record_field do
+  defp conv_record_def_elem(record_elem, context) when elem(record_elem, 0) == :record_field do
     {ex_name, context} = conv_expr(elem(record_elem, 2), context)
     context = Context.add_record_type(context, ex_name, {:term, [], []})
     conv_expr(record_elem, context)
   end
 
-  def conv_record_def_elem(record_elem, context) when elem(record_elem, 0) == :typed_record_field do
+  defp conv_record_def_elem(record_elem, context) when elem(record_elem, 0) == :typed_record_field do
     {ex_type, context} = conv_expr(elem(record_elem, 2), context)
     {ex_name, context} = conv_expr(elem(elem(record_elem, 1), 2), context)
     context = Context.add_record_type(context, ex_name, ex_type)
