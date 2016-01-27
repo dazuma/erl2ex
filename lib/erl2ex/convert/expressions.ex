@@ -654,7 +654,9 @@ defmodule Erl2ex.Convert.Expressions do
     {size, context}
   end
   defp bin_element_size(size, context) do
+    context = Context.start_bin_size_expr(context)
     {ex_size, context} = conv_expr(size, context)
+    context = Context.finish_bin_size_expr(context)
     {{:size, [], [ex_size]}, context}
   end
 

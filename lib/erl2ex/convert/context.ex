@@ -15,6 +15,7 @@ defmodule Erl2ex.Convert.Context do
             stringification_map: %{},
             quoted_variables: [],
             match_level: 0,
+            in_bin_size_expr: false,
             in_func_params: false,
             match_vars: MapSet.new,
             scopes: [],
@@ -201,7 +202,7 @@ defmodule Erl2ex.Convert.Context do
   def map_variable_name(context, name) do
     mapped_name = Map.fetch!(context.variable_map, name)
     needs_caret = false
-    if context.match_level > 0 and name != :_ do
+    if not context.in_bin_size_expr and context.match_level > 0 and name != :_ do
       needs_caret = not context.in_func_params and variable_seen?(context.scopes, name)
       if not needs_caret do
         context = %Context{context |
@@ -210,6 +211,16 @@ defmodule Erl2ex.Convert.Context do
       end
     end
     {mapped_name, needs_caret, context}
+  end
+
+
+  def start_bin_size_expr(context) do
+    %Context{context | in_bin_size_expr: true}
+  end
+
+
+  def finish_bin_size_expr(context) do
+    %Context{context | in_bin_size_expr: false}
   end
 
 

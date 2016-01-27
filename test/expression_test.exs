@@ -544,12 +544,12 @@ defmodule ExpressionTest do
 
   test "Bitstring literal with size expressions" do
     input = """
-      foo(A) -> <<1:10, 2:A>>.
+      foo(A, B) -> <<1:10, 2:A>> = B.
       """
 
     expected = """
-      defp foo(a) do
-        <<1::10, 2::size(a)>>
+      defp foo(a, b) do
+        <<1::10, 2::size(a)>> = b
       end
       """
 

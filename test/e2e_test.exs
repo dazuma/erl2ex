@@ -5,21 +5,33 @@ defmodule E2ETest do
   import Erl2ex.TestHelper
 
 
+  # Libraries that are working
+
   @tag :e2e
-  @tag :e2e_poolboy
   test "poolboy" do
     download_project("poolboy", "https://github.com/devinus/poolboy.git")
     clean_dir("poolboy", "src_ex")
     convert_dir("poolboy", "src", "src_ex")
     copy_dir("poolboy", "test", "src_ex")
     compile_dir("poolboy", "src_ex", display_output: true)
-    run_eunit_tests([:poolboy_tests], "poolboy", "src_ex", display_output: true)
+    run_eunit_tests([:poolboy], "poolboy", "src_ex", display_output: true)
   end
 
 
-  # Not yet working
+  @tag :e2e
+  test "jsx" do
+    download_project("jsx", "https://github.com/talentdeficit/jsx.git")
+    clean_dir("jsx", "src_ex")
+    convert_dir("jsx", "src", "src_ex")
+    compile_dir("jsx", "src_ex", display_output: true)
+    # JSX depends on EUnit's autoexport parse transform to materialize tests,
+    # so we can't actually run tests yet.
+  end
+
+
+  # Libraries that are not yet working
+
   @tag :skip
-  @tag :e2e_erlware_commons
   test "erlware_commons" do
     download_project("erlware_commons", "https://github.com/erlware/erlware_commons.git")
     clean_dir("erlware_commons", "src_ex")
@@ -31,9 +43,7 @@ defmodule E2ETest do
   end
 
 
-  # Not yet working
   @tag :skip
-  @tag :e2e_bbmustache
   test "bbmustache" do
     download_project("bbmustache", "https://github.com/soranoba/bbmustache.git")
     clean_dir("bbmustache", "src_ex")
@@ -44,20 +54,7 @@ defmodule E2ETest do
   end
 
 
-  # Not yet working
   @tag :skip
-  @tag :e2e_jsx
-  test "jsx" do
-    download_project("jsx", "https://github.com/talentdeficit/jsx.git")
-    clean_dir("jsx", "src_ex")
-    convert_dir("jsx", "src", "src_ex")
-    compile_dir("jsx", "src_ex", display_output: true)
-  end
-
-
-  # Not yet working
-  @tag :skip
-  @tag :e2e_elixir
   test "elixir" do
     download_project("elixir", "https://github.com/elixir-lang/elixir.git")
     clean_dir("elixir", "lib/elixir/src_ex")
