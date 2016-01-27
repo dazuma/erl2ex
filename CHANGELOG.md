@@ -5,6 +5,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 ## v0.0.8 (not yet released)
 
 *   Better analysis to determine when variables in arguments passed to macros should be exported.
+*   Unhygenize variables created in macro body, to match Erlang macro behavior.
 *   Recognize type info in record declarations, and emit them with record types.
 *   Variables passed to size() in a binary pattern match incorrectly had a caret. Fixed.
 *   Better error reporting when an included file could not be found.

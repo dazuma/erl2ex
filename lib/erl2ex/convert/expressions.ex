@@ -711,6 +711,8 @@ defmodule Erl2ex.Convert.Expressions do
     cond do
       Context.is_quoted_var?(context, mapped_name) ->
         {{:unquote, [], [var]}, Context.add_macro_export(context, name)}
+      Context.is_unhygenized_var?(context, mapped_name) ->
+        {{:var!, @import_kernel_metadata, [var]}, context}
       needs_caret ->
         {{:^, [], [var]}, context}
       true ->

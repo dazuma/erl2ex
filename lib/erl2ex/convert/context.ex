@@ -17,6 +17,7 @@ defmodule Erl2ex.Convert.Context do
             match_level: 0,
             in_bin_size_expr: false,
             in_func_params: false,
+            in_macro_def: false,
             match_vars: MapSet.new,
             scopes: [],
             macro_exports: %{},
@@ -56,19 +57,18 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
-  def start_macro_export_collection(context, args) when is_list(args) do
+  def start_macro_export_collection(context, args) do
     index_map = args |> Enum.with_index |> Enum.into(%{})
     collector = {MapSet.new, index_map}
     %Context{context |
       macro_export_collection_stack: [collector | context.macro_export_collection_stack]
     }
   end
-  def start_macro_export_collection(context, _args), do: context
 
 
   def suspend_macro_export_collection(context) do
     %Context{context |
-      macro_export_collection_stack: [{MapSet.new, %{}} | context.macro_export_collection_stack]
+      macro_export_collection_stack: [{MapSet.new, nil} | context.macro_export_collection_stack]
     }
   end
 
@@ -92,6 +92,8 @@ defmodule Erl2ex.Convert.Context do
 
   def add_macro_export(context, erl_var) do
     case context.macro_export_collection_stack do
+      [{_indexes, nil} | _tail] ->
+        context
       [{indexes, index_map} | stack_tail] ->
         case Map.fetch(index_map, erl_var) do
           {:ok, index} ->
@@ -186,6 +188,20 @@ defmodule Erl2ex.Convert.Context do
 
   def is_quoted_var?(%Context{quoted_variables: quoted_variables}, name) do
     Enum.member?(quoted_variables, name)
+  end
+
+
+  def is_unhygenized_var?(
+    %Context{
+      macro_export_collection_stack: macro_export_collection_stack,
+      match_level: match_level,
+      quoted_variables: quoted_variables
+    },
+    name)
+  do
+    not Enum.empty?(macro_export_collection_stack) and
+        elem(hd(macro_export_collection_stack), 1) != nil and
+        not Enum.member?(quoted_variables, name)
   end
 
 

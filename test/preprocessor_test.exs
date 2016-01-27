@@ -115,7 +115,7 @@ defmodule PreprocessorTest do
       -define(HELLO2(X), Y = 20, X < Y).
       foo(X) when ?HELLO(X) -> X;
       foo(_) -> ok.
-      bar(X) -> ?HELLO2(X).
+      bar(X) -> Z = ?HELLO2(X), {Y, Z}.
       """
 
     expected = """
@@ -138,13 +138,13 @@ defmodule PreprocessorTest do
       defmacrop erlmacro_HELLO2(x) do
         if Macro.Env.in_guard?(__CALLER__) do
           quote do
-            (y = 20) and unquote(x) < y
+            (var!(y) = 20) and unquote(x) < var!(y)
           end
         else
           quote do
             (
-              y = 20
-              unquote(x) < y
+              var!(y) = 20
+              unquote(x) < var!(y)
             )
           end
         end
@@ -161,7 +161,8 @@ defmodule PreprocessorTest do
 
 
       def bar(x) do
-        erlmacro_HELLO2(x)
+        z = erlmacro_HELLO2(x)
+        {y, z}
       end
       """
 
@@ -169,8 +170,8 @@ defmodule PreprocessorTest do
     assert result.output == expected
     assert apply(result.module, :foo, [:hi]) == :ok
     assert apply(result.module, :foo, [11]) == 11
-    assert apply(result.module, :bar, [19]) == true
-    assert apply(result.module, :bar, [21]) == false
+    assert apply(result.module, :bar, [19]) == {20, true}
+    assert apply(result.module, :bar, [21]) == {20, false}
   end
 
 
@@ -808,6 +809,33 @@ defmodule PreprocessorTest do
     result = test_conversion(input, @opts)
     assert result.output == expected
     assert apply(result.module, :foo, []) == {{2, 1}, 1}
+  end
+
+
+  test "Variables exported from the macro body" do
+    input = """
+      -export([foo/0]).
+      -define(HELLO(A), {A, B} = {1, 2}).
+      foo() -> ?HELLO(Z), {B, Z}.
+      """
+
+    expected = """
+      defmacrop erlmacro_HELLO(a) do
+        quote do
+          {unquote(a), var!(b)} = {1, 2}
+        end
+      end
+
+
+      def foo() do
+        erlmacro_HELLO(z)
+        {b, z}
+      end
+      """
+
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, []) == {2, 1}
   end
 
 end
