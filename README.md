@@ -50,6 +50,7 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
+*   Specs with wildcard types are not supported. (Examples: the spec for `system_terminate/4` in https://github.com/ninenines/ranch/blob/master/src/ranch_conns_sup.erl and the spec for `new/1` in https://github.com/erlware/erlware_commons/blob/master/src/ec_dictionary.erl)
 *   Returning a remote function reference from a macro is not supported: e.g. `-define(A, m:f).` generates illegal Elixir syntax.
 *   Function macros cannot return function names; Erlang's parser rejects the syntax `?A()()`. In Erlang, the preprocessor fixes this, but we're not running the Erlang preprocessor directly.
 *   Record names cannot be macro results; Erlang's parser rejects the syntax `-record(?MODULE, {...}).` and `#?MODULE{...}`. (Examples in https://github.com/soranoba/bbmustache/blob/master/src/bbmustache.erl)

@@ -194,7 +194,6 @@ defmodule Erl2ex.Convert.Context do
   def is_unhygenized_var?(
     %Context{
       macro_export_collection_stack: macro_export_collection_stack,
-      match_level: match_level,
       quoted_variables: quoted_variables
     },
     name)

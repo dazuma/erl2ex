@@ -42,6 +42,16 @@ defmodule E2ETest do
   # Libraries that are not yet working
 
   @tag :skip
+  test "ranch" do
+    download_project("ranch", "https://github.com/ninenines/ranch.git")
+    clean_dir("ranch", "src_ex")
+    convert_dir("ranch", "src", "src_ex")
+    compile_dir("ranch", "src_ex", display_output: true)
+    # Not sure how to run tests
+  end
+
+
+  @tag :skip
   test "erlware_commons" do
     download_project("erlware_commons", "https://github.com/erlware/erlware_commons.git")
     clean_dir("erlware_commons", "src_ex")
