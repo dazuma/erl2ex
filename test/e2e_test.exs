@@ -41,6 +41,45 @@ defmodule E2ETest do
 
   # Libraries that are not yet working
 
+  # Fails because a comprehension has an implicit generator
+  @tag :skip
+  test "gproc" do
+    download_project("gproc", "https://github.com/uwiger/gproc.git")
+    clean_dir("gproc", "src_ex")
+    convert_dir("gproc", "src", "src_ex",
+        include_dir: project_path("gproc", "include"),
+        auto_export_suffix: "_test_",
+        auto_export_suffix: "_test")
+    compile_dir("gproc", "src_ex", display_output: true)
+    run_eunit_tests([:gproc_tests, :gproc_dist_tests], "gproc", "src_ex", display_output: true)
+  end
+
+
+  # Fails because a macro appears in a typespec
+  @tag :skip
+  test "goldrush" do
+    download_project("goldrush", "https://github.com/DeadZen/goldrush.git")
+    clean_dir("goldrush", "src_ex")
+    convert_dir("goldrush", "src", "src_ex",
+        auto_export_suffix: "_test_",
+        auto_export_suffix: "_test")
+    compile_dir("goldrush", "src_ex", display_output: true)
+    run_eunit_tests([:glc], "goldrush", "src_ex", display_output: true)
+  end
+
+
+  # Fails because a macro appears in a typespec
+  @tag :skip
+  test "getopt" do
+    download_project("getopt", "https://github.com/jcomellas/getopt.git")
+    clean_dir("getopt", "src_ex")
+    convert_dir("getopt", "src", "src_ex", auto_export_suffix: "_test_")
+    compile_dir("getopt", "src_ex", display_output: true)
+    run_eunit_tests([:getopt_test], "getopt", "src_ex", display_output: true)
+  end
+
+
+  # Fails due to a spec with a wildcard type in ranch_conns_sup.erl
   @tag :skip
   test "ranch" do
     download_project("ranch", "https://github.com/ninenines/ranch.git")
@@ -51,6 +90,7 @@ defmodule E2ETest do
   end
 
 
+  # Fails due to a spec with a wildcard type in ec_dictionary.erl
   @tag :skip
   test "erlware_commons" do
     download_project("erlware_commons", "https://github.com/erlware/erlware_commons.git")
@@ -65,6 +105,7 @@ defmodule E2ETest do
   end
 
 
+  # Fails because a macro appears as a record name.
   @tag :skip
   test "bbmustache" do
     download_project("bbmustache", "https://github.com/soranoba/bbmustache.git")
@@ -76,6 +117,7 @@ defmodule E2ETest do
   end
 
 
+  # Fails because there is a capture with a variable arity in elixir_dispatch.erl
   @tag :skip
   test "elixir" do
     download_project("elixir", "https://github.com/elixir-lang/elixir.git")

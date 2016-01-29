@@ -51,9 +51,11 @@ This software is still under heavy development, and many capabilities are not ye
 ### Known issues
 
 *   Specs with wildcard types are not supported. (Examples: the spec for `system_terminate/4` in https://github.com/ninenines/ranch/blob/master/src/ranch_conns_sup.erl and the spec for `new/1` in https://github.com/erlware/erlware_commons/blob/master/src/ec_dictionary.erl)
+*   Erlang comprehensions seem to support "implicit" generators where Elixir doesn't. (Example in function `maybe_waiters/5` in https://github.com/uwiger/gproc/blob/master/src/gproc_lib.erl)
 *   Returning a remote function reference from a macro is not supported: e.g. `-define(A, m:f).` generates illegal Elixir syntax.
 *   Function macros cannot return function names; Erlang's parser rejects the syntax `?A()()`. In Erlang, the preprocessor fixes this, but we're not running the Erlang preprocessor directly.
 *   Record names cannot be macro results; Erlang's parser rejects the syntax `-record(?MODULE, {...}).` and `#?MODULE{...}`. (Examples in https://github.com/soranoba/bbmustache/blob/master/src/bbmustache.erl)
+*   Macros cannot appear in in typespecs; Elixir rejects the syntax.
 *   Elixir reserves the function name `__info__` and won't allow its definition. (Failure example in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl).
 *   Erlang allows variables for function name/arity in captures, whereas Elixir apparently doesn't. (Example in the `expand_macro_named/6` function in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_dispatch.erl)
 *   The Elixir compiler doesn't seem to like functions with too many clauses. (Example: https://github.com/benoitc/erlang-idna/blob/master/src/idna_unicode_data2.erl). Not sure if this is just an Elixir limitation.
