@@ -18,18 +18,17 @@ defmodule E2ETest do
   end
 
 
-  @tag :e2e
+  # Libraries that are not yet working
+
+  @tag :skip
   test "jsx" do
     download_project("jsx", "https://github.com/talentdeficit/jsx.git")
     clean_dir("jsx", "src_ex")
-    convert_dir("jsx", "src", "src_ex")
+    convert_dir("jsx", "src", "src_ex", auto_export_suffix: "_test_")
     compile_dir("jsx", "src_ex", display_output: true)
-    # JSX depends on EUnit's autoexport parse transform to materialize tests,
-    # so we can't actually run tests yet.
+    run_eunit_tests([:jsx], "jsx", "src_ex", display_output: true)
   end
 
-
-  # Libraries that are not yet working
 
   @tag :skip
   test "erlware_commons" do

@@ -8,7 +8,8 @@ defmodule Erl2ex.Parse.Context do
 
   defstruct include_path: [],
             cur_file_path: nil,
-            reverse_forms: false
+            reverse_forms: false,
+            auto_export_suffixes: []
 
 
   def build(opts) do
@@ -18,7 +19,8 @@ defmodule Erl2ex.Parse.Context do
     %Context{
       include_path: include_path,
       cur_file_path: Keyword.get(opts, :cur_file_path, nil),
-      reverse_forms: Keyword.get(opts, :reverse_forms, false)
+      reverse_forms: Keyword.get(opts, :reverse_forms, false),
+      auto_export_suffixes: Keyword.get_values(opts, :auto_export_suffix)
     }
   end
 
@@ -48,5 +50,10 @@ defmodule Erl2ex.Parse.Context do
 
   def cur_file_path_for_display(%Context{cur_file_path: path}), do:
     path
+
+
+  def is_auto_exported?(%Context{auto_export_suffixes: suffixes}, name) do
+    name |> Atom.to_string |> String.ends_with?(suffixes)
+  end
 
 end

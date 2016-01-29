@@ -30,9 +30,16 @@ defmodule Erl2ex.Parse.ModuleBuilder do
   end
 
 
-  defp add_form(module, {:function, _line, name, arity, clauses}, comments, _context) do
+  defp add_form(module, {:function, _line, name, arity, clauses}, comments, context) do
     func = %ErlFunc{name: name, arity: arity, clauses: clauses, comments: comments}
-    %ErlModule{module | forms: [func | module.forms]}
+    exports = module.exports
+    if Context.is_auto_exported?(context, name) do
+      exports = [{name, arity} | exports]
+    end
+    %ErlModule{module |
+      exports: exports,
+      forms: [func | module.forms]
+    }
   end
 
   defp add_form(module, {:attribute, _line, :module, arg}, comments, _context) do
