@@ -18,27 +18,40 @@ defmodule E2ETest do
   end
 
 
-  # Libraries that are not yet working
-
-  @tag :skip
+  @tag :e2e
   test "jsx" do
     download_project("jsx", "https://github.com/talentdeficit/jsx.git")
     clean_dir("jsx", "src_ex")
     convert_dir("jsx", "src", "src_ex", auto_export_suffix: "_test_")
     compile_dir("jsx", "src_ex", display_output: true)
-    run_eunit_tests([:jsx], "jsx", "src_ex", display_output: true)
+    run_eunit_tests(
+      [
+        :jsx,
+        :jsx_config,
+        :jsx_decoder,
+        :jsx_encoder,
+        :jsx_parser,
+        :jsx_to_json,
+        :jsx_to_term,
+        :jsx_verify
+      ],
+      "jsx", "src_ex", display_output: true)
   end
 
+
+  # Libraries that are not yet working
 
   @tag :skip
   test "erlware_commons" do
     download_project("erlware_commons", "https://github.com/erlware/erlware_commons.git")
     clean_dir("erlware_commons", "src_ex")
     convert_dir("erlware_commons", "src", "src_ex",
-       include_dir: project_path("erlware_commons", "include"))
+       include_dir: project_path("erlware_commons", "include"),
+       auto_export_suffix: "_test_",
+       auto_export_suffix: "_test")
     copy_dir("erlware_commons", "test", "src_ex")
     compile_dir("erlware_commons", "src_ex", display_output: true)
-    run_eunit_tests([:ec_plists_tests], "erlware_commons", "src_ex", display_output: true)
+    run_eunit_tests([:ec_plists], "erlware_commons", "src_ex", display_output: true)
   end
 
 

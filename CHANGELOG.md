@@ -4,6 +4,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 ## v0.0.8 (not yet released)
 
+*   Support full bitstring modifier syntax.
 *   Better analysis to determine when variables in arguments passed to macros should be exported.
 *   Unhygenize variables created in macro body, to match Erlang macro behavior.
 *   Recognize type info in record declarations, and emit them with record types.

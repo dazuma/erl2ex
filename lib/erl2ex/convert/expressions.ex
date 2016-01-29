@@ -235,16 +235,17 @@ defmodule Erl2ex.Convert.Expressions do
     bin_element_expr(val, context)
   end
 
-  def conv_expr({:bin_element, _, val, :default, [type]}, context) do
+  def conv_expr({:bin_element, _, val, size, :default}, context) do
     {ex_val, context} = bin_element_expr(val, context)
-    {{:::, [], [ex_val, {type, [], Elixir}]}, context}
+    {ex_size, context} = bin_element_size(size, false, context)
+    {{:::, [], [ex_val, ex_size]}, context}
   end
 
-  def conv_expr({:bin_element, _, val, size, typespec}, context)
-  when typespec == :default or typespec == [:binary] do
+  def conv_expr({:bin_element, _, val, size, modifiers}, context) do
     {ex_val, context} = bin_element_expr(val, context)
-    {ex_size, context} = bin_element_size(size, context)
-    {{:::, [], [ex_val, ex_size]}, context}
+    {ex_size, context} = bin_element_size(size, true, context)
+    {ex_modifiers, context} = bin_element_modifier_list(modifiers, ex_size, context)
+    {{:::, [], [ex_val, ex_modifiers]}, context}
   end
 
   def conv_expr({:record, _, name, fields}, context) do
@@ -650,14 +651,36 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
 
-  defp bin_element_size({:integer, _, size}, context) do
-    {size, context}
+  defp bin_element_size(:default, _verbose, context) do
+    {nil, context}
   end
-  defp bin_element_size(size, context) do
+  defp bin_element_size(size, verbose, context) do
     context = Context.start_bin_size_expr(context)
     {ex_size, context} = conv_expr(size, context)
     context = Context.finish_bin_size_expr(context)
-    {{:size, [], [ex_size]}, context}
+    if verbose or not is_integer(ex_size), do: ex_size = {:size, [], [ex_size]}
+    {ex_size, context}
+  end
+
+
+  defp bin_element_modifier_list([], ex_modifiers, context) do
+    {ex_modifiers, context}
+  end
+  defp bin_element_modifier_list([modifier | tail], nil, context) do
+    {ex_modifier, context} = bin_element_modifier(modifier, context)
+    bin_element_modifier_list(tail, ex_modifier, context)
+  end
+  defp bin_element_modifier_list([modifier | tail], ex_modifiers, context) do
+    {ex_modifier, context} = bin_element_modifier(modifier, context)
+    bin_element_modifier_list(tail, {:-, @import_kernel_metadata, [ex_modifiers, ex_modifier]}, context)
+  end
+
+
+  defp bin_element_modifier({:unit, val}, context) do
+    {{:unit, [], [val]}, context}
+  end
+  defp bin_element_modifier(modifier, context) do
+    {{modifier, [], Elixir}, context}
   end
 
 

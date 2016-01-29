@@ -559,14 +559,22 @@ defmodule ExpressionTest do
 
   test "Bitstring literal with size expressions and explicit binary type" do
     input = """
-      foo(A) -> <<1:10/binary, 2:A/binary>>.
+      -export([foo/1]).
+      foo(A) ->
+        <<B:2/binary, C:A/binary, D/binary>> = <<1, 2, 3, 4, 5>>,
+        {B, C, D}.
       """
 
     expected = """
-      defp foo(a) do
-        <<1::10, 2::size(a)>>
+      def foo(a) do
+        <<b::size(2)-binary, c::size(a)-binary, d::binary>> = <<1, 2, 3, 4, 5>>
+        {b, c, d}
       end
       """
+
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, [2]) == {<<1, 2>>, <<3, 4>>, <<5>>}
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
@@ -580,6 +588,21 @@ defmodule ExpressionTest do
     expected = """
       defp foo() do
         <<1::integer, 2::float, "hello"::utf16>>
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Bitstring literal with complex type specifiers" do
+    input = """
+      foo() -> <<1:4/integer-signed-unit:4-native>>.
+      """
+
+    expected = """
+      defp foo() do
+        <<1::size(4)-integer-signed-unit(4)-native>>
       end
       """
 

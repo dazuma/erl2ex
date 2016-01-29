@@ -53,7 +53,6 @@ This software is still under heavy development, and many capabilities are not ye
 *   Returning a remote function reference from a macro is not supported: e.g. `-define(A, m:f).` generates illegal Elixir syntax.
 *   Function macros cannot return function names; Erlang's parser rejects the syntax `?A()()`. In Erlang, the preprocessor fixes this, but we're not running the Erlang preprocessor directly.
 *   Record names cannot be macro results; Erlang's parser rejects the syntax `-record(?MODULE, {...}).` and `#?MODULE{...}`. (Examples in https://github.com/soranoba/bbmustache/blob/master/src/bbmustache.erl)
-*   Binary expressions with complex or combination size/type specs are not supported, and cause the converter to crash. An example is `<<1:16/integer-signed-native>>`. This seems to be a limitation of Elixir itself.
 *   Elixir reserves the function name `__info__` and won't allow its definition. (Failure example in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl).
 *   Erlang allows variables for function name/arity in captures, whereas Elixir apparently doesn't. (Example in the `expand_macro_named/6` function in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_dispatch.erl)
 *   The Elixir compiler doesn't seem to like functions with too many clauses. (Example: https://github.com/benoitc/erlang-idna/blob/master/src/idna_unicode_data2.erl). Not sure if this is just an Elixir limitation.
@@ -66,7 +65,8 @@ This software is still under heavy development, and many capabilities are not ye
 *   Provide an option to convert variable names from camelCase to snake_case.
 *   Provide (possibly optional) translation of include files (.hrl) to separate modules rather than copying into the including module, so the declarations can be shared after translation to Elixir.
 *   Correct the usage of leading underscores in variable names.
-*   Closer integration with EUnit. For example: perform auto-exporting of tests, or strip test code depending on settings. Needed to get JSX tests working (https://github.com/talentdeficit/jsx/blob/develop/src/jsx.erl)
+*   Closer integration with EUnit.
+*   Dead macro elimination, especially when inlining hrl files.
 *   Do better at determining when a macro contains content that is allowed in guard clauses. We may be able to do away with the generated `Macro.Env.in_guard?` check.
 
 ## Contributing
