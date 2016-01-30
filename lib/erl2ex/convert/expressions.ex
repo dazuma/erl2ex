@@ -285,16 +285,13 @@ defmodule Erl2ex.Convert.Expressions do
     conv_type(type, context)
   end
 
-  def conv_expr({:type, _, type, params}, context) do
+  def conv_expr({tag, _, type, params}, context)
+  when tag == :type or tag == :user_type do
     conv_type(type, params, context)
   end
 
   def conv_expr({:type, _, type, param1, param2}, context) do
     conv_type(type, param1, param2, context)
-  end
-
-  def conv_expr({:user_type, _, type, params}, context) do
-    conv_type(type, params, context)
   end
 
   def conv_expr({:remote_type, _, [remote, type, params]}, context) do
@@ -729,17 +726,21 @@ defmodule Erl2ex.Convert.Expressions do
 
 
   defp conv_normal_var(name, context) do
-    {mapped_name, needs_caret, context} = Context.map_variable_name(context, name)
-    var = {mapped_name, [], Elixir}
-    cond do
-      Context.is_quoted_var?(context, mapped_name) ->
-        {{:unquote, [], [var]}, Context.add_macro_export(context, name)}
-      Context.is_unhygenized_var?(context, mapped_name) ->
-        {{:var!, @import_kernel_metadata, [var]}, context}
-      needs_caret ->
-        {{:^, [], [var]}, context}
-      true ->
-        {var, context}
+    case Context.map_variable_name(context, name) do
+      {:normal_var, mapped_name, needs_caret, ctx} ->
+        var = {mapped_name, [], Elixir}
+        cond do
+          Context.is_quoted_var?(ctx, mapped_name) ->
+            {{:unquote, [], [var]}, Context.add_macro_export(ctx, name)}
+          Context.is_unhygenized_var?(ctx, mapped_name) ->
+            {{:var!, @import_kernel_metadata, [var]}, ctx}
+          needs_caret ->
+            {{:^, [], [var]}, ctx}
+          true ->
+            {var, ctx}
+        end
+      {:unknown_type_var, ctx} ->
+        {{:any, [], []}, ctx}
     end
   end
 

@@ -492,12 +492,12 @@ defmodule FunctionTest do
 
   test "Specs with variables" do
     input = """
-      -spec foo(A, B) -> A | B.
+      -spec foo(A, B) -> A | B | list(T).
       foo(A, B) -> A.
       """
 
     expected = """
-      @spec foo(a, b) :: a | b
+      @spec foo(a, b) :: a | b | list(t) when a: any(), b: any(), t: any()
 
       defp foo(a, b) do
         a
@@ -519,6 +519,24 @@ defmodule FunctionTest do
 
       defp foo(a, b) do
         a
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Specs with guards constraining other guards" do
+    input = """
+      -spec foo() -> A when A :: fun(() -> B), B :: atom().
+      foo() -> fun () -> ok end.
+      """
+
+    expected = """
+      @spec foo() :: a when a: (() -> b), b: atom()
+
+      defp foo() do
+        fn -> :ok end
       end
       """
 

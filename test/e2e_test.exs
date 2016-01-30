@@ -39,6 +39,16 @@ defmodule E2ETest do
   end
 
 
+  @tag :e2e
+  test "ranch" do
+    download_project("ranch", "https://github.com/ninenines/ranch.git")
+    clean_dir("ranch", "src_ex")
+    convert_dir("ranch", "src", "src_ex")
+    compile_dir("ranch", "src_ex", display_output: true)
+    # Not sure how to run tests
+  end
+
+
   # Libraries that are not yet working
 
   # Fails because a comprehension has an implicit generator
@@ -79,28 +89,19 @@ defmodule E2ETest do
   end
 
 
-  # Fails due to a spec with a wildcard type in ranch_conns_sup.erl
-  @tag :skip
-  test "ranch" do
-    download_project("ranch", "https://github.com/ninenines/ranch.git")
-    clean_dir("ranch", "src_ex")
-    convert_dir("ranch", "src", "src_ex")
-    compile_dir("ranch", "src_ex", display_output: true)
-    # Not sure how to run tests
-  end
-
-
-  # Fails due to a spec with a wildcard type in ec_dictionary.erl
+  # Fails due to incorrect @file attribute
   @tag :skip
   test "erlware_commons" do
     download_project("erlware_commons", "https://github.com/erlware/erlware_commons.git")
     clean_dir("erlware_commons", "src_ex")
     convert_dir("erlware_commons", "src", "src_ex",
-       include_dir: project_path("erlware_commons", "include"),
-       auto_export_suffix: "_test_",
-       auto_export_suffix: "_test")
+        include_dir: project_path("erlware_commons", "include"),
+        auto_export_suffix: "_test_",
+        auto_export_suffix: "_test")
     copy_dir("erlware_commons", "test", "src_ex")
-    compile_dir("erlware_commons", "src_ex", display_output: true)
+    compile_dir("erlware_commons", "src_ex",
+        display_output: true,
+        DEFINE_namespaced_types: "true")
     run_eunit_tests([:ec_plists], "erlware_commons", "src_ex", display_output: true)
   end
 

@@ -15,6 +15,7 @@ defmodule Erl2ex.Convert.Context do
             stringification_map: %{},
             quoted_variables: [],
             match_level: 0,
+            in_type_expr: false,
             in_bin_size_expr: false,
             in_func_params: false,
             in_macro_def: false,
@@ -55,6 +56,9 @@ defmodule Erl2ex.Convert.Context do
       stringification_map: %{}
     }
   end
+
+
+  def get_variable_map(%Context{variable_map: variable_map}), do: variable_map
 
 
   def start_macro_export_collection(context, args) do
@@ -152,6 +156,16 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  def set_type_expr_mode(context) do
+    %Context{context | in_type_expr: true}
+  end
+
+
+  def clear_type_expr_mode(context) do
+    %Context{context | in_type_expr: false}
+  end
+
+
   def push_scope(%Context{scopes: scopes} = context) do
     %Context{context | scopes: [{MapSet.new, MapSet.new} | scopes]}
   end
@@ -215,17 +229,25 @@ defmodule Erl2ex.Convert.Context do
 
 
   def map_variable_name(context, name) do
-    mapped_name = Map.fetch!(context.variable_map, name)
-    needs_caret = false
-    if not context.in_bin_size_expr and context.match_level > 0 and name != :_ do
-      needs_caret = not context.in_func_params and variable_seen?(context.scopes, name)
-      if not needs_caret do
-        context = %Context{context |
-          match_vars: MapSet.put(context.match_vars, name)
-        }
-      end
+    case Map.fetch(context.variable_map, name) do
+      {:ok, mapped_name} ->
+        needs_caret = false
+        if not context.in_bin_size_expr and context.match_level > 0 and name != :_ do
+          needs_caret = not context.in_func_params and variable_seen?(context.scopes, name)
+          if not needs_caret do
+            context = %Context{context |
+              match_vars: MapSet.put(context.match_vars, name)
+            }
+          end
+        end
+        {:normal_var, mapped_name, needs_caret, context}
+      :error ->
+        if context.in_type_expr do
+          {:unknown_type_var, context}
+        else
+          {:unknown_var, context}
+        end
     end
-    {mapped_name, needs_caret, context}
   end
 
 
@@ -304,6 +326,9 @@ defmodule Erl2ex.Convert.Context do
 
   defp collect_variable_names({:var, _, var}, var_names), do:
     MapSet.put(var_names, var)
+
+  defp collect_variable_names({:ann_type, _, [_var, type]}, var_names), do:
+    collect_variable_names(type, var_names)
 
   defp collect_variable_names(tuple, var_names) when is_tuple(tuple), do:
     collect_variable_names(Tuple.to_list(tuple), var_names)

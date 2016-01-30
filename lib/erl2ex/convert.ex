@@ -93,7 +93,10 @@ defmodule Erl2ex.Convert do
     {ex_clauses, _} = clauses
       |> Enum.map_reduce(clause_comments, &(conv_clause(context, &1, &2, mapped_name)))
     specs = spec_info.clauses
-      |> Enum.map(&(conv_spec_clause(context, mapped_name, &1)))
+      |> Enum.map(fn spec_clause ->
+        {ex_spec, _} = conv_spec_clause(mapped_name, spec_clause, context)
+        ex_spec
+      end)
 
     ex_func = %ExFunc{
       name: mapped_name,
@@ -211,7 +214,8 @@ defmodule Erl2ex.Convert do
   defp conv_form(%ErlType{line: line, kind: kind, name: name, params: params, defn: defn, comments: comments}, context) do
     {main_comments, inline_comments} = split_comments(comments, line)
     context = context
-      |> Context.set_variable_maps([params, defn])
+      |> Context.set_variable_maps(params)
+      |> Context.set_type_expr_mode()
 
     ex_kind = cond do
       kind == :opaque ->
@@ -223,6 +227,9 @@ defmodule Erl2ex.Convert do
     end
     {ex_params, _} = Expressions.conv_list(params, context)
     {ex_defn, _} = Expressions.conv_expr(defn, context)
+
+    context = context
+      |> Context.clear_type_expr_mode()
 
     ex_type = %ExType{
       kind: ex_kind,
@@ -236,7 +243,10 @@ defmodule Erl2ex.Convert do
 
   defp conv_form(%ErlSpec{line: line, name: name, clauses: clauses, comments: comments}, context) do
     {main_comments, inline_comments} = split_comments(comments, line)
-    specs = clauses |> Enum.map(&(conv_spec_clause(context, name, &1)))
+    specs = clauses |> Enum.map(fn spec_clause ->
+      {ex_spec, _} = conv_spec_clause(name, spec_clause, context)
+      ex_spec
+    end)
 
     ex_callback = %ExCallback{
       name: name,
@@ -253,28 +263,51 @@ defmodule Erl2ex.Convert do
   defp conv_attr(attr, val), do: {attr, val}
 
 
-  defp conv_spec_clause(context, name, clause) do
-    context
-      |> Context.set_variable_maps(clause)
-      |> conv_var_mapped_spec_clause(name, clause)
+  defp conv_spec_clause(name, {:type, _, :fun, [args, result]}, context) do
+    conv_spec_clause_impl(name, args, result, [], context)
   end
 
-  defp conv_var_mapped_spec_clause(context, name, {:type, _, :fun, [args, result]}) do
-    {ex_args, _} = Expressions.conv_expr(args, context)
-    {ex_result, _} = Expressions.conv_expr(result, context)
-    {:::, [], [{name, [], ex_args}, ex_result]}
+  defp conv_spec_clause(name, {:type, _, :bounded_fun, [{:type, _, :fun, [args, result]}, constraints]}, context) do
+    conv_spec_clause_impl(name, args, result, constraints, context)
   end
 
-  defp conv_var_mapped_spec_clause(context, name, {:type, _, :bounded_fun, [func, constraints]}) do
-    {:when, [], [conv_spec_clause(context, name, func), Enum.map(constraints, &(conv_spec_constraint(context, name, &1)))]}
-  end
-
-  defp conv_var_mapped_spec_clause(context, name, expr), do:
+  defp conv_spec_clause(name, expr, context), do:
     Context.handle_error(context, expr, "in spec for #{name}")
+
+
+  defp conv_spec_clause_impl(name, args, result, constraints, context) do
+    context = context
+      |> Context.set_type_expr_mode()
+      |> Context.set_variable_maps([args, result, constraints])
+
+    {ex_args, context} = Expressions.conv_expr(args, context)
+    {ex_result, context} = Expressions.conv_expr(result, context)
+    ex_expr = {:::, [], [{name, [], ex_args}, ex_result]}
+
+    ex_constraints = Enum.map(constraints, &(conv_spec_constraint(context, name, &1)))
+    ex_constraints = context
+      |> Context.get_variable_map()
+      |> Map.values()
+      |> Enum.sort()
+      |> Enum.reduce(ex_constraints, fn mapped_var, cur_constraints ->
+        if Keyword.has_key?(cur_constraints, mapped_var) do
+          cur_constraints
+        else
+          cur_constraints ++ [{mapped_var, {:any, [], []}}]
+        end
+      end)
+
+    if not Enum.empty?(ex_constraints) do
+      ex_expr = {:when, [], [ex_expr, ex_constraints]}
+    end
+    {ex_expr, context}
+  end
+
 
   defp conv_spec_constraint(context, _name, {:type, _, :constraint, [{:atom, _, :is_subtype}, [{:var, _, var}, type]]}) do
     {ex_type, _} = Expressions.conv_expr(type, context)
-    {Utils.lower_atom(var), ex_type}
+    {:normal_var, mapped_name, _, _} = Context.map_variable_name(context, var)
+    {mapped_name, ex_type}
   end
 
   defp conv_spec_constraint(context, name, expr), do:

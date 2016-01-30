@@ -266,6 +266,19 @@ defmodule TypeTest do
   end
 
 
+  test "Unknown parameters" do
+    input = """
+      -type type1(T) :: list(T) | {_}.
+      """
+
+    expected = """
+      @typep type1(t) :: list(t) | {any()}
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Custom type" do
     input = """
       -type type1() :: atom().
