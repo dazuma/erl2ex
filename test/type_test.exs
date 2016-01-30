@@ -308,4 +308,102 @@ defmodule TypeTest do
   end
 
 
+  test "Simple specs" do
+    input = """
+      -spec foo(A :: atom(), integer()) -> boolean()
+        ; (A :: integer(), B :: atom()) -> 'hello' | boolean().
+      foo(A, B) -> true.
+      """
+
+    expected = """
+      @spec foo(atom(), integer()) :: boolean()
+      @spec foo(integer(), atom()) :: :hello | boolean()
+
+      defp foo(a, b) do
+        true
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Specs with variables" do
+    input = """
+      -spec foo(A, B) -> A | B | list(T).
+      foo(A, B) -> A.
+      """
+
+    expected = """
+      @spec foo(a, b) :: a | b | list(t) when a: any(), b: any(), t: any()
+
+      defp foo(a, b) do
+        a
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Specs with guards" do
+    input = """
+      -spec foo(A, B) -> A | B when A :: tuple(), B :: atom().
+      foo(A, B) -> A.
+      """
+
+    expected = """
+      @spec foo(a, b) :: a | b when a: tuple(), b: atom()
+
+      defp foo(a, b) do
+        a
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Specs with guards constraining other guards" do
+    input = """
+      -spec foo() -> A when A :: fun(() -> B), B :: atom().
+      foo() -> fun () -> ok end.
+      """
+
+    expected = """
+      @spec foo() :: a when a: (() -> b), b: atom()
+
+      defp foo() do
+        fn -> :ok end
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Specs with module qualifiers" do
+    input = """
+      -module(mod).
+      -spec mod:foo(atom()) -> boolean().
+      -spec mod2:foo(integer()) -> boolean().
+      foo(A) -> true.
+      """
+
+    expected = """
+      defmodule :mod do
+
+        @spec foo(atom()) :: boolean()
+
+        defp foo(a) do
+          true
+        end
+
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
 end

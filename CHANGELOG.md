@@ -10,6 +10,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   Ensure all variables in specs are called out in constraints as required by Elixir.
 *   Recognize type info in record declarations, and emit them with record types.
 *   Variables passed to size() in a binary pattern match incorrectly had a caret. Fixed.
+*   A -file attribute no longer converts directly to Elixir (which would break compilation).
 *   Better error reporting when an included file could not be found.
 
 ## v0.0.7 (2016-01-25)

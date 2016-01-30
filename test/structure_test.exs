@@ -171,4 +171,17 @@ defmodule StructureTest do
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
+
+  test "file attribute" do
+    input = """
+      -file("myfile.erl", 10).
+      """
+
+    expected = """
+      # File "myfile.erl" Line 10
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
 end

@@ -149,6 +149,12 @@ defmodule Erl2ex.Parse.ModuleBuilder do
     %ErlModule{module | forms: [record | module.forms]}
   end
 
+  defp add_form(module, {:attribute, _line, :file, {file, fline}}, comments, _context) do
+    file_comment = "% File #{file |> List.to_string |> inspect} Line #{fline}"
+    form = %ErlComment{comments: comments ++ [file_comment]}
+    %ErlModule{module | forms: [form | module.forms]}
+  end
+
   defp add_form(module, {:attribute, line, directive}, comments, _context) do
     form = %ErlDirective{line: line, directive: directive, comments: comments}
     %ErlModule{module | forms: [form | module.forms]}

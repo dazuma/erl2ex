@@ -89,7 +89,7 @@ defmodule E2ETest do
   end
 
 
-  # Fails due to incorrect @file attribute
+  # Fails because a macro appears in a typespec
   @tag :skip
   test "erlware_commons" do
     download_project("erlware_commons", "https://github.com/erlware/erlware_commons.git")
