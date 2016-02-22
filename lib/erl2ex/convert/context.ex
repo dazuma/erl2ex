@@ -3,12 +3,13 @@ defmodule Erl2ex.Convert.Context do
 
   @moduledoc false
 
-  alias Erl2ex.Analyze
-  alias Erl2ex.Utils
+  alias Erl2ex.Pipeline.Names
+  alias Erl2ex.Pipeline.Utils
+
   alias Erl2ex.Convert.Context
 
 
-  defstruct analyzed_module: nil,
+  defstruct module_data: nil,
             cur_file_path: nil,
             used_func_names: MapSet.new,
             variable_map: %{},
@@ -27,11 +28,11 @@ defmodule Erl2ex.Convert.Context do
             record_types: %{}
 
 
-  def build(analyzed_module, opts) do
+  def build(module_data, opts) do
     %Context{
-      analyzed_module: analyzed_module,
+      module_data: module_data,
       cur_file_path: Keyword.get(opts, :cur_file_path, nil),
-      used_func_names: analyzed_module.used_func_names
+      used_func_names: module_data.used_func_names
     }
   end
 
@@ -315,7 +316,7 @@ defmodule Erl2ex.Convert.Context do
       |> MapSet.union(extra_omits |> Enum.into(MapSet.new))
       |> classify_var_names()
 
-    all_names = MapSet.union(context.used_func_names, Analyze.elixir_reserved_words)
+    all_names = MapSet.union(context.used_func_names, Names.elixir_reserved_words)
     {variables_map, all_names} = normal_vars
       |> Enum.reduce({%{}, all_names}, &map_variables/2)
     {stringification_map, variables_map, _all_names} = stringified_args

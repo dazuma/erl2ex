@@ -3,25 +3,26 @@ defmodule Erl2ex.Convert.Headers do
 
   @moduledoc false
 
-  alias Erl2ex.ExAttr
-  alias Erl2ex.ExClause
-  alias Erl2ex.ExFunc
-  alias Erl2ex.ExHeader
-  alias Erl2ex.ExMacro
 
-  alias Erl2ex.Analyze
+  alias Erl2ex.Pipeline.ExAttr
+  alias Erl2ex.Pipeline.ExClause
+  alias Erl2ex.Pipeline.ExFunc
+  alias Erl2ex.Pipeline.ExHeader
+  alias Erl2ex.Pipeline.ExMacro
+
+  alias Erl2ex.Pipeline.ModuleData
 
 
-  def build_header(analysis, forms) do
+  def build_header(module_data, forms) do
     header = forms
       |> Enum.reduce(%ExHeader{}, &header_check_form/2)
     %ExHeader{header |
-      records: Analyze.map_records(analysis, fn(name, fields) -> {name, fields} end),
-      init_macros: Analyze.macros_that_need_init(analysis),
-      macro_dispatcher: Analyze.macro_dispatcher_name(analysis),
-      record_size_macro: Analyze.record_size_macro(analysis),
-      record_index_macro: Analyze.record_index_macro(analysis),
-      func_renamer: Analyze.func_renamer_name(analysis),
+      records: ModuleData.map_records(module_data, fn(name, fields) -> {name, fields} end),
+      init_macros: ModuleData.macros_that_need_init(module_data),
+      macro_dispatcher: ModuleData.macro_dispatcher_name(module_data),
+      record_size_macro: ModuleData.record_size_macro(module_data),
+      record_index_macro: ModuleData.record_index_macro(module_data),
+      func_renamer: ModuleData.func_renamer_name(module_data),
     }
   end
 

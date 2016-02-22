@@ -57,7 +57,7 @@ This software is still under heavy development, and many capabilities are not ye
 *   Macros cannot appear in in typespecs; Elixir thinks they're type names and gets confused.
 *   Elixir reserves the function name `__info__` and won't allow its definition. (Failure example in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl).
 *   Erlang allows variables for function name/arity in captures, whereas Elixir apparently doesn't. (Example in the `expand_macro_named/6` function in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_dispatch.erl)
-*   The Elixir compiler doesn't seem to like functions with too many clauses. (Example: https://github.com/benoitc/erlang-idna/blob/master/src/idna_unicode_data2.erl). Not sure if this is just an Elixir limitation.
+*   The Elixir compiler doesn't seem to like functions with too many clauses. (Example: https://github.com/benoitc/erlang-idna/blob/master/src/idna_unicode_data2.erl). Not sure if this is just a performance issue or an Elixir limitation.
 
 ### Incomplete features
 

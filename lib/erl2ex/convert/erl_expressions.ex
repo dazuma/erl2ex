@@ -1,10 +1,11 @@
 
-defmodule Erl2ex.Convert.Expressions do
+defmodule Erl2ex.Convert.ErlExpressions do
 
   @moduledoc false
 
-  alias Erl2ex.Analyze
   alias Erl2ex.Convert.Context
+
+  alias Erl2ex.Pipeline.ModuleData
 
 
   @import_kernel_metadata [context: Elixir, import: Kernel]
@@ -250,18 +251,18 @@ defmodule Erl2ex.Convert.Expressions do
 
   def conv_expr({:record, _, name, fields}, context) do
     {ex_fields, context} = record_field_list(name, fields, context)
-    {{Analyze.record_function_name(context.analyzed_module, name), [], [ex_fields]}, context}
+    {{ModuleData.record_function_name(context.module_data, name), [], [ex_fields]}, context}
   end
 
   def conv_expr({:record, _, record, name, updates}, context) do
     {ex_record, context} = conv_expr(record, context)
     {ex_updates, context} = conv_list(updates, context)
-    {{Analyze.record_function_name(context.analyzed_module, name), [], [ex_record, ex_updates]}, context}
+    {{ModuleData.record_function_name(context.module_data, name), [], [ex_record, ex_updates]}, context}
   end
 
   def conv_expr({:record_index, _, name, field}, context) do
     {ex_field, context} = conv_expr(field, context)
-    {{Analyze.record_index_macro(context.analyzed_module), [], [Analyze.record_data_attr_name(context.analyzed_module, name), ex_field]}, context}
+    {{ModuleData.record_index_macro(context.module_data), [], [ModuleData.record_data_attr_name(context.module_data, name), ex_field]}, context}
   end
 
   def conv_expr({:record_field, _, name}, context) do
@@ -278,7 +279,7 @@ defmodule Erl2ex.Convert.Expressions do
   def conv_expr({:record_field, _, record, name, field}, context) do
     {ex_record, context} = conv_expr(record, context)
     {ex_field, context} = conv_expr(field, context)
-    {{Analyze.record_function_name(context.analyzed_module, name), [], [ex_record, ex_field]}, context}
+    {{ModuleData.record_function_name(context.module_data, name), [], [ex_record, ex_field]}, context}
   end
 
   def conv_expr({:type, _, type}, context) do
@@ -564,7 +565,7 @@ defmodule Erl2ex.Convert.Expressions do
           :error -> default_type_tuple
         end
       end)
-    ex_name = Analyze.record_function_name(context.analyzed_module, ex_name)
+    ex_name = ModuleData.record_function_name(context.module_data, ex_name)
     {{:record, [], [ex_name, ex_fields]}, context}
   end
 
@@ -620,7 +621,7 @@ defmodule Erl2ex.Convert.Expressions do
       [{_, value}] ->
         explicit_field_names = ex_fields
           |> Enum.map(fn {name, _} -> name end)
-        needed_field_names = Analyze.record_field_names(context.analyzed_module, record_name)
+        needed_field_names = ModuleData.record_field_names(context.module_data, record_name)
         extra_field_names = (needed_field_names -- explicit_field_names)
         extra_fields = extra_field_names
           |> Enum.map(fn name -> {name, value} end)
@@ -766,12 +767,12 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_const(name, line, context) do
-    macro_name = Analyze.macro_function_name(context.analyzed_module, name, nil)
+    macro_name = ModuleData.macro_function_name(context.module_data, name, nil)
     if macro_name == nil do
       Context.handle_error(context, {:atom, line, name}, "(no such macro)")
     end
-    if Analyze.macro_needs_dispatch?(context.analyzed_module, name) do
-      dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
+    if ModuleData.macro_needs_dispatch?(context.module_data, name) do
+      dispatcher = ModuleData.macro_dispatcher_name(context.module_data)
       {{dispatcher, [], [macro_name, []]}, context}
     else
       {{macro_name, [], []}, context}
@@ -791,11 +792,11 @@ defmodule Erl2ex.Convert.Expressions do
   end
 
   defp conv_call({:atom, _, :record_info}, [{:atom, _, :size}, {:atom, _, rec}], context) do
-    {{Analyze.record_size_macro(context.analyzed_module), [], [Analyze.record_data_attr_name(context.analyzed_module, rec)]}, context}
+    {{ModuleData.record_size_macro(context.module_data), [], [ModuleData.record_data_attr_name(context.module_data, rec)]}, context}
   end
 
   defp conv_call({:atom, _, :record_info}, [{:atom, _, :fields}, {:atom, _, rec}], context) do
-    {{:@, @import_kernel_metadata, [{Analyze.record_data_attr_name(context.analyzed_module, rec), [], Elixir}]}, context}
+    {{:@, @import_kernel_metadata, [{ModuleData.record_data_attr_name(context.module_data, rec), [], Elixir}]}, context}
   end
 
   defp conv_call(func, args, context) do
@@ -812,7 +813,7 @@ defmodule Erl2ex.Convert.Expressions do
   defp conv_normal_call({:atom, _, func}, args, context) do
     {ex_args, context} = conv_list(args, context)
     arity = Enum.count(ex_args)
-    ex_expr = case Analyze.local_call_strategy(context.analyzed_module, func, arity) do
+    ex_expr = case ModuleData.local_call_strategy(context.module_data, func, arity) do
       {:apply, mapped_name} ->
         {{:., [], [{:__aliases__, [alias: false], [:Kernel]}, :apply]}, [], [{:__MODULE__, [], Elixir}, mapped_name, ex_args]}
       {:apply, Kernel, mapped_name} ->
@@ -855,21 +856,21 @@ defmodule Erl2ex.Convert.Expressions do
 
   defp conv_macro_call(name, args, line, context) do
     arity = Enum.count(args)
-    func_name = Analyze.macro_function_name(context.analyzed_module, name, arity)
-    const_name = Analyze.macro_function_name(context.analyzed_module, name, nil)
+    func_name = ModuleData.macro_function_name(context.module_data, name, arity)
+    const_name = ModuleData.macro_function_name(context.module_data, name, nil)
     cond do
       func_name != nil ->
         exported_indexes = Context.get_macro_export_indexes(context, name, arity)
         {ex_args, context} = conv_macro_arg_list(args, exported_indexes, context)
-        if Analyze.macro_needs_dispatch?(context.analyzed_module, name) do
-          dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
+        if ModuleData.macro_needs_dispatch?(context.module_data, name) do
+          dispatcher = ModuleData.macro_dispatcher_name(context.module_data)
           {{dispatcher, [], [func_name, ex_args]}, context}
         else
           {{func_name, [], ex_args}, context}
         end
       const_name != nil ->
         {ex_args, context} = conv_list(args, context)
-        dispatcher = Analyze.macro_dispatcher_name(context.analyzed_module)
+        dispatcher = ModuleData.macro_dispatcher_name(context.module_data)
         {macro_expr, context} = conv_const(name, line, context)
         {{dispatcher, [], [macro_expr, ex_args]}, context}
       true ->

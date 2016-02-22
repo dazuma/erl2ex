@@ -1,5 +1,5 @@
 
-defmodule Erl2ex.ExComment do
+defmodule Erl2ex.Pipeline.ExComment do
   @moduledoc false
 
   defstruct comments: []
@@ -7,7 +7,7 @@ defmodule Erl2ex.ExComment do
 end
 
 
-defmodule Erl2ex.ExAttr do
+defmodule Erl2ex.Pipeline.ExAttr do
   @moduledoc false
 
   defstruct name: nil,
@@ -19,7 +19,7 @@ defmodule Erl2ex.ExAttr do
 end
 
 
-defmodule Erl2ex.ExDirective do
+defmodule Erl2ex.Pipeline.ExDirective do
   @moduledoc false
 
   defstruct directive: nil,
@@ -30,7 +30,7 @@ defmodule Erl2ex.ExDirective do
 end
 
 
-defmodule Erl2ex.ExImport do
+defmodule Erl2ex.Pipeline.ExImport do
   @moduledoc false
 
   defstruct module: nil,
@@ -41,7 +41,7 @@ defmodule Erl2ex.ExImport do
 end
 
 
-defmodule Erl2ex.ExMacro do
+defmodule Erl2ex.Pipeline.ExMacro do
   @moduledoc false
 
   defstruct signature: nil,
@@ -57,7 +57,7 @@ defmodule Erl2ex.ExMacro do
 end
 
 
-defmodule Erl2ex.ExRecord do
+defmodule Erl2ex.Pipeline.ExRecord do
   @moduledoc false
 
   defstruct tag: nil,
@@ -70,7 +70,7 @@ defmodule Erl2ex.ExRecord do
 end
 
 
-defmodule Erl2ex.ExType do
+defmodule Erl2ex.Pipeline.ExType do
   @moduledoc false
 
   defstruct kind: nil,
@@ -82,10 +82,11 @@ defmodule Erl2ex.ExType do
 end
 
 
-defmodule Erl2ex.ExCallback do
+defmodule Erl2ex.Pipeline.ExSpec do
   @moduledoc false
 
-  defstruct name: nil,
+  defstruct kind: nil,
+            name: nil,
             specs: [],
             comments: [],
             inline_comments: []
@@ -93,7 +94,7 @@ defmodule Erl2ex.ExCallback do
 end
 
 
-defmodule Erl2ex.ExHeader do
+defmodule Erl2ex.Pipeline.ExHeader do
   @moduledoc false
 
   defstruct use_bitwise: false,
@@ -107,7 +108,7 @@ defmodule Erl2ex.ExHeader do
 end
 
 
-defmodule Erl2ex.ExFunc do
+defmodule Erl2ex.Pipeline.ExFunc do
   @moduledoc false
 
   defstruct name: nil,
@@ -121,7 +122,7 @@ defmodule Erl2ex.ExFunc do
 end
 
 
-defmodule Erl2ex.ExClause do
+defmodule Erl2ex.Pipeline.ExClause do
   @moduledoc false
 
   defstruct signature: nil,
@@ -132,7 +133,7 @@ defmodule Erl2ex.ExClause do
 end
 
 
-defmodule Erl2ex.ExModule do
+defmodule Erl2ex.Pipeline.ExModule do
   @moduledoc false
 
   defstruct name: nil,

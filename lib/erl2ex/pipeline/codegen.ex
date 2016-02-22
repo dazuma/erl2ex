@@ -1,26 +1,19 @@
 
-defmodule Erl2ex.Codegen do
+defmodule Erl2ex.Pipeline.Codegen do
 
   @moduledoc false
 
-  alias Erl2ex.ExAttr
-  alias Erl2ex.ExCallback
-  alias Erl2ex.ExComment
-  alias Erl2ex.ExDirective
-  alias Erl2ex.ExFunc
-  alias Erl2ex.ExHeader
-  alias Erl2ex.ExImport
-  alias Erl2ex.ExMacro
-  alias Erl2ex.ExModule
-  alias Erl2ex.ExRecord
-  alias Erl2ex.ExType
-
-
-  def to_file(module, path, opts \\ []) do
-    File.open!(path, [:write], fn io ->
-      to_io(module, io, opts)
-    end)
-  end
+  alias Erl2ex.Pipeline.ExAttr
+  alias Erl2ex.Pipeline.ExComment
+  alias Erl2ex.Pipeline.ExDirective
+  alias Erl2ex.Pipeline.ExFunc
+  alias Erl2ex.Pipeline.ExHeader
+  alias Erl2ex.Pipeline.ExImport
+  alias Erl2ex.Pipeline.ExMacro
+  alias Erl2ex.Pipeline.ExModule
+  alias Erl2ex.Pipeline.ExRecord
+  alias Erl2ex.Pipeline.ExSpec
+  alias Erl2ex.Pipeline.ExType
 
 
   def to_io(ex_module, io, opts \\ []) do
@@ -31,9 +24,9 @@ defmodule Erl2ex.Codegen do
   end
 
 
-  def to_str(module, opts \\ []) do
+  def to_str(ex_module, opts \\ []) do
     {:ok, io} = StringIO.open("")
-    to_io(module, io, opts)
+    to_io(ex_module, io, opts)
     {:ok, {_, str}} = StringIO.close(io)
     str
   end
@@ -225,12 +218,12 @@ defmodule Erl2ex.Codegen do
       |> write_string("@#{kind} #{expr_to_string(signature)} :: #{expr_to_string(defn)}", io)
   end
 
-  defp write_form(context, %ExCallback{specs: specs, comments: comments}, io) do
+  defp write_form(context, %ExSpec{kind: kind, specs: specs, comments: comments}, io) do
     context
       |> skip_lines(:attr, io)
       |> foreach(comments, io, &write_string/3)
       |> foreach(specs, fn(ctx, spec) ->
-        write_string(ctx, "@callback #{expr_to_string(spec)}", io)
+        write_string(ctx, "@#{kind} #{expr_to_string(spec)}", io)
       end)
   end
 

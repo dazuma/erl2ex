@@ -319,6 +319,7 @@ defmodule TypeTest do
       @spec foo(atom(), integer()) :: boolean()
       @spec foo(integer(), atom()) :: :hello | boolean()
 
+
       defp foo(a, b) do
         true
       end
@@ -336,6 +337,7 @@ defmodule TypeTest do
 
     expected = """
       @spec foo(a, b) :: a | b | list(t) when a: any(), b: any(), t: any()
+
 
       defp foo(a, b) do
         a
@@ -355,6 +357,7 @@ defmodule TypeTest do
     expected = """
       @spec foo(a, b) :: a | b when a: tuple(), b: atom()
 
+
       defp foo(a, b) do
         a
       end
@@ -372,6 +375,7 @@ defmodule TypeTest do
 
     expected = """
       @spec foo() :: a when a: (() -> b), b: atom()
+
 
       defp foo() do
         fn -> :ok end
@@ -394,6 +398,7 @@ defmodule TypeTest do
       defmodule :mod do
 
         @spec foo(atom()) :: boolean()
+
 
         defp foo(a) do
           true

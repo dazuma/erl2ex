@@ -13,10 +13,14 @@ defmodule Erl2ex do
   This module provides the main entry points into Erl2ex.
   """
 
-  alias Erl2ex.Parse
-  alias Erl2ex.Analyze
-  alias Erl2ex.Convert
-  alias Erl2ex.Codegen
+  alias Erl2ex.Sink
+  alias Erl2ex.Source
+
+  alias Erl2ex.Pipeline.Analyze
+  alias Erl2ex.Pipeline.Codegen
+  alias Erl2ex.Pipeline.Convert
+  alias Erl2ex.Pipeline.InlineIncludes
+  alias Erl2ex.Pipeline.Parse
 
 
   @typedoc """
@@ -81,12 +85,18 @@ defmodule Erl2ex do
 
   @spec convert_str!(String.t, options) :: String.t
 
-  def convert_str!(source, opts \\ []) do
-    source
-      |> Parse.from_str(opts)
-      |> Analyze.module(opts)
-      |> Convert.module(opts)
-      |> Codegen.to_str(opts)
+  def convert_str!(source_str, opts \\ []) do
+    opts = Keyword.merge(opts, source_data: source_str)
+    source = Source.start_link(opts)
+    sink = Sink.start_link(allow_get: true)
+    try do
+      convert!(source, sink, nil, nil, opts)
+      {:ok, str} = Sink.get_string(sink, nil)
+      str
+    after
+      Source.stop(source)
+      Sink.stop(sink)
+    end
   end
 
 
@@ -134,11 +144,16 @@ defmodule Erl2ex do
     if dest_path == nil do
       dest_path = "#{Path.rootname(source_path)}.ex"
     end
-    source_path
-      |> Parse.from_file(opts)
-      |> Analyze.module(opts)
-      |> Convert.module([{:cur_file_path, source_path} | opts])
-      |> Codegen.to_file(dest_path, opts)
+    cur_dir = File.cwd!
+    include_dirs = Keyword.get_values(opts, :include_dir)
+    source = Source.start_link(source_dir: cur_dir, include_dirs: include_dirs)
+    sink = Sink.start_link(dest_dir: cur_dir)
+    try do
+      convert!(source, sink, source_path, dest_path, opts)
+    after
+      Source.stop(source)
+      Sink.stop(sink)
+    end
     if Keyword.get(opts, :verbosity, 0) > 0 do
       IO.puts(:stderr, "Converted #{source_path} -> #{dest_path}")
     end
@@ -190,15 +205,50 @@ defmodule Erl2ex do
     if dest_dir == nil do
       dest_dir = source_dir
     end
-    "#{source_dir}/**/*.erl"
-      |> Path.wildcard
-      |> Enum.map(fn source_path ->
-        dest_path = Path.relative_to(source_path, source_dir)
-        dest_path = Path.join(dest_dir, dest_path)
-        dest_path = "#{Path.rootname(dest_path)}.ex"
-        {source_path, convert_file!(source_path, dest_path, opts)}
-      end)
-      |> Enum.into(%{})
+    include_dirs = Keyword.get_values(opts, :include_dir)
+    source = Source.start_link(source_dir: source_dir, include_dirs: include_dirs)
+    sink = Sink.start_link(dest_dir: dest_dir)
+    try do
+      "#{source_dir}/**/*.erl"
+        |> Path.wildcard
+        |> Enum.map(fn source_full_path ->
+          source_rel_path = Path.relative_to(source_full_path, source_dir)
+          dest_rel_path = "#{Path.rootname(source_rel_path)}.ex"
+          dest_full_path = Path.join(dest_dir, dest_rel_path)
+          convert!(source, sink, source_rel_path, dest_rel_path, opts)
+          if Keyword.get(opts, :verbosity, 0) > 0 do
+            IO.puts(:stderr, "Converted #{source_full_path} -> #{dest_full_path}")
+          end
+          {source_full_path, dest_full_path}
+        end)
+        |> Enum.into(%{})
+    after
+      Source.stop(source)
+      Sink.stop(sink)
+    end
+  end
+
+
+  @doc """
+  Given a source and a sink, and the source path for one Erlang source file,
+  converts to Elixir and writes the result to the sink at the given destination
+  path. Returns :ok on success, or raises CompileError if an error occurs.
+  """
+
+  @spec convert!(Source.t, Sink.t, Path.t, Path.t, options) :: :ok
+
+  def convert!(source, sink, source_path, dest_path, opts \\ []) do
+    {source_str, actual_source_path} = Source.read_source(source, source_path)
+    if actual_source_path != nil do
+      opts = [{:cur_file_path, actual_source_path} | opts]
+    end
+    str = source_str
+      |> Parse.string(opts)
+      |> InlineIncludes.process(source, actual_source_path)
+      |> Analyze.forms(opts)
+      |> Convert.module(opts)
+      |> Codegen.to_str(opts)
+    :ok = Sink.write(sink, dest_path, str)
   end
 
 end

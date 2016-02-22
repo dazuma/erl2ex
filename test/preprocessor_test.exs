@@ -617,7 +617,7 @@ defmodule PreprocessorTest do
   end
 
 
-  test "Library include with an environment ariable" do
+  test "Library include with an environment variable" do
     System.put_env("ERL2EX_LIBRARY_NAME", "kernel")
 
     input = """

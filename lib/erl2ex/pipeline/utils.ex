@@ -1,5 +1,5 @@
 
-defmodule Erl2ex.Utils do
+defmodule Erl2ex.Pipeline.Utils do
 
   @moduledoc false
 
