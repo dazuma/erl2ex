@@ -436,6 +436,44 @@ defmodule ExpressionTest do
   end
 
 
+  test "List comprehension with no generator" do
+    input = """
+      foo(X) -> [x || X].
+      """
+
+    expected = """
+      defp foo(x) do
+        if(x) do
+          for(into: [], do: :x)
+        else
+          []
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "List comprehension starting with static qualifiers" do
+    input = """
+      foo(X, Y, Z) -> [A || X, Y, Z, A <- [1,2], A > 1].
+      """
+
+    expected = """
+      defp foo(x, y, z) do
+        if(x and y and z) do
+          for(a <- [1, 2], a > 1, into: [], do: a)
+        else
+          []
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Binary comprehension with binary generator" do
     input = """
       foo() -> << <<B, A>> || <<A, B>> <= <<1, 2, 3, 4>> >>.
@@ -443,7 +481,45 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo() do
-        for(<<a, (b <- <<1, 2, 3, 4>>)>>, into: "", do: <<b, a>>)
+        for(<<a, (b <- <<1, 2, 3, 4>>)>>, into: <<>>, do: <<b, a>>)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Binary comprehension with no generator" do
+    input = """
+      foo(X) -> << <<1>> || X>>.
+      """
+
+    expected = """
+      defp foo(x) do
+        if(x) do
+          for(into: <<>>, do: <<1>>)
+        else
+          <<>>
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "Binary comprehension starting with static qualifiers" do
+    input = """
+      foo(X, Y, Z) -> << <<A>> || X, Y, Z, <<A>> <= <<1,2>>, A > 1>>.
+      """
+
+    expected = """
+      defp foo(x, y, z) do
+        if(x and y and z) do
+          for(<<(a <- <<1, 2>>)>>, a > 1, into: <<>>, do: <<a>>)
+        else
+          <<>>
+        end
       end
       """
 

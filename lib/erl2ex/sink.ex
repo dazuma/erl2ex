@@ -71,7 +71,7 @@ defmodule Erl2ex.Sink do
     end
   end
 
-  def handle_call({:get_string, path}, _from, %State{allow_get: nil} = state) do
+  def handle_call({:get_string, _path}, _from, %State{allow_get: nil} = state) do
     {:reply, {:error, :not_supported}, state}
   end
 

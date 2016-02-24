@@ -205,8 +205,10 @@ defmodule Erl2ex do
     if dest_dir == nil do
       dest_dir = source_dir
     end
-    include_dirs = Keyword.get_values(opts, :include_dir)
-    source = Source.start_link(source_dir: source_dir, include_dirs: include_dirs)
+    Keyword.put(opts, :source_dir, source_dir)
+    source = opts
+      |> Keyword.put(:source_dir, source_dir)
+      |> Source.start_link
     sink = Sink.start_link(dest_dir: dest_dir)
     try do
       "#{source_dir}/**/*.erl"

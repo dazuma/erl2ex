@@ -183,9 +183,9 @@ defmodule ScopeTest do
 
     expected = """
       defp foo() do
-        for(<<(x <- <<2, 3>>)>>, into: "", do: <<x>>)
+        for(<<(x <- <<2, 3>>)>>, into: <<>>, do: <<x>>)
         x = 1
-        for(<<(x <- <<2, 3>>)>>, into: "", do: <<x>>)
+        for(<<(x <- <<2, 3>>)>>, into: <<>>, do: <<x>>)
       end
       """
 

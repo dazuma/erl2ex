@@ -50,7 +50,6 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
-*   Erlang comprehensions seem to support "implicit" generators where Elixir doesn't. (Example in function `maybe_waiters/5` in https://github.com/uwiger/gproc/blob/master/src/gproc_lib.erl)
 *   Returning a remote function reference from a macro is not supported: e.g. `-define(A, m:f).` generates illegal Elixir syntax.
 *   Function macros cannot return function names; Erlang's parser rejects the syntax `?A()()`. In Erlang, the preprocessor fixes this, but we're not running the Erlang preprocessor directly.
 *   Record names cannot be macro results; Erlang's parser rejects the syntax `-record(?MODULE, {...}).` and `#?MODULE{...}`. (Examples in https://github.com/soranoba/bbmustache/blob/master/src/bbmustache.erl)

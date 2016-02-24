@@ -139,7 +139,7 @@ defmodule Erl2ex.Source do
         data = io |> IO.read(:all) |> IO.chardata_to_string
         {:ok, data, path}
       :error ->
-        Enum.find_value(search_dirs, {:error, :not_found}, fn dir ->
+        Enum.find_value(search_dirs, {:error, :not_found, path}, fn dir ->
           actual_path = Path.expand(path, dir)
           if File.exists?(actual_path) do
             case File.read(actual_path) do

@@ -187,15 +187,11 @@ defmodule Erl2ex.Convert.ErlExpressions do
   end
 
   def conv_expr({:lc, _, expr, qualifiers}, context) do
-    {ex_expr, context} = conv_expr(expr, context)
-    {ex_qualifiers, context} = conv_list(qualifiers, context)
-    {{:for, [], ex_qualifiers ++ [[into: [], do: ex_expr]]}, context}
+    conv_generator([], expr, qualifiers, context)
   end
 
   def conv_expr({:bc, _, expr, qualifiers}, context) do
-    {ex_expr, context} = conv_expr(expr, context)
-    {ex_qualifiers, context} = conv_list(qualifiers, context)
-    {{:for, [], ex_qualifiers ++ [[into: "", do: ex_expr]]}, context}
+    conv_generator({:<<>>, [], []}, expr, qualifiers, context)
   end
 
   def conv_expr({:try, _, expr, of_clauses, catches, after_expr}, context) do
@@ -316,6 +312,42 @@ defmodule Erl2ex.Convert.ErlExpressions do
 
   def conv_list(expr, context) do
     Context.handle_error(context, expr, "when expecting a list")
+  end
+
+
+  def conv_generator(base, expr, qualifiers, context) do
+    {ex_expr, context} = conv_expr(expr, context)
+    {prequalifiers, qualifiers} = split_qualifiers(qualifiers)
+    {ex_qualifiers, context} = conv_list(qualifiers, context)
+    {ex_prequalifiers, context} = conv_list(prequalifiers, context)
+    generator_clause = {:for, [], ex_qualifiers ++ [[into: base, do: ex_expr]]}
+    if not Enum.empty?(prequalifiers) do
+      prequalifiers_clause = combine_prequalifiers(ex_prequalifiers)
+      generator_clause = {
+        :if, @import_kernel_metadata,
+        [prequalifiers_clause, [do: generator_clause, else: base]]
+      }
+    end
+    {generator_clause, context}
+  end
+
+
+  def split_qualifiers(list) do
+    Enum.split_while(list, fn
+      {:generate, _, _, _} -> false
+      {:b_generate, _, _, _} -> false
+      _ -> true
+    end)
+  end
+
+
+  def combine_prequalifiers(prequalifiers) do
+    Enum.reduce(prequalifiers, nil, fn
+      (prequalifier, nil) ->
+        prequalifier
+      (prequalifier, expr) ->
+        {:and, @import_kernel_metadata, [expr, prequalifier]}
+    end)
   end
 
 
