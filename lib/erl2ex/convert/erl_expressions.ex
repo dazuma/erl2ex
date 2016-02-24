@@ -128,6 +128,10 @@ defmodule Erl2ex.Convert.ErlExpressions do
     {metadata, ex_op} = Map.fetch!(@op_map, op)
     {ex_arg1, context} = conv_expr(arg1, context)
     {ex_arg2, context} = conv_expr(arg2, context)
+    if ModuleData.binary_bif_requires_qualification?(context.module_data, ex_op) do
+      ex_op = {:., [], [Kernel, ex_op]}
+      metadata = []
+    end
     {{ex_op, metadata, [ex_arg1, ex_arg2]}, context}
   end
 

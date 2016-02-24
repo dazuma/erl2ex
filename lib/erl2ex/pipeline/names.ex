@@ -9,6 +9,7 @@ defmodule Erl2ex.Pipeline.Names do
   # handling in both definition and calling.
   @elixir_reserved_words [
     :after,
+    :and,
     :catch,
     :do,
     :else,
@@ -16,6 +17,8 @@ defmodule Erl2ex.Pipeline.Names do
     :false,
     :fn,
     :nil,
+    :not,
+    :or,
     :rescue,
     :true,
     :__CALLER__,

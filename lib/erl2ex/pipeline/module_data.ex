@@ -57,6 +57,17 @@ defmodule Erl2ex.Pipeline.ModuleData do
   end
 
 
+  def binary_bif_requires_qualification?(
+    %ModuleData{local_funcs: local_funcs, imported_funcs: imported_funcs},
+    func_name)
+  do
+    is_atom(func_name) and Regex.match?(~r/^[a-z]+$/, Atom.to_string(func_name)) and
+      (MapSet.member?(local_funcs, {func_name, 2}) or
+        Map.has_key?(Map.get(imported_funcs, func_name, %{}), 2)) and
+      not MapSet.member?(Names.elixir_reserved_words, func_name)
+  end
+
+
   def local_function_name(%ModuleData{func_rename_map: func_rename_map}, name) do
     Map.fetch!(func_rename_map, name)
   end

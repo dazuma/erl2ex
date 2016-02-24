@@ -10,6 +10,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   Refactored and rearranged the internal pipeline modules.
 *   Support full bitstring modifier syntax.
 *   Support comprehensions whose first qualifier isn't a generator. (Thanks to eproxus for the tip.)
+*   If an operator is translated to an Elixir BIF with the same name as an exported function, it is now properly qualified.
 *   Better analysis to determine when variables in arguments passed to macros should be exported.
 *   Unhygenize variables created in macro body, to match Erlang macro behavior.
 *   Ensure all variables in specs are called out in constraints as required by Elixir.

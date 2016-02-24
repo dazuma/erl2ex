@@ -455,6 +455,29 @@ defmodule FunctionTest do
   end
 
 
+  test "Local exported function named 'send'" do
+    input = """
+      -export([send/2]).
+      send(X, Y) -> {X, Y}.
+      foo(X, Y) -> X ! Y, send(X, Y).
+      """
+
+    expected = """
+      def send(x, y) do
+        {x, y}
+      end
+
+
+      defp foo(x, y) do
+        Kernel.send(x, y)
+        __MODULE__.send(x, y)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Function pattern looks like keyword block" do
     input = """
       foo([{do, a}, {else, b}]) -> ok.

@@ -49,10 +49,7 @@ defmodule E2ETest do
   end
 
 
-  # Libraries that are not yet working
-
-  # Fails because a comprehension has an implicit generator
-  @tag :skip
+  @tag :e2e
   test "gproc" do
     download_project("gproc", "https://github.com/uwiger/gproc.git")
     clean_dir("gproc", "src_ex")
@@ -60,10 +57,15 @@ defmodule E2ETest do
         include_dir: project_path("gproc", "include"),
         auto_export_suffix: "_test_",
         auto_export_suffix: "_test")
+    copy_dir("gproc", "test", "src_ex", ["gproc_tests.erl", "gproc_test_lib.erl", "gproc_dist_tests.erl"])
+    copy_file("gproc", "src/gproc.app.src", "src_ex/gproc.app")
     compile_dir("gproc", "src_ex", display_output: true)
+    # Note: gproc_dist_tests are not running (not sure why)
     run_eunit_tests([:gproc_tests, :gproc_dist_tests], "gproc", "src_ex", display_output: true)
   end
 
+
+  # Libraries that are not yet working
 
   # Fails because a macro appears in a typespec
   @tag :skip

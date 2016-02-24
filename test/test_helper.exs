@@ -31,6 +31,20 @@ defmodule Erl2ex.TestHelper do
   end
 
 
+  def copy_dir(name, src_path, dest_path, files) do
+    File.mkdir_p!(project_path(name, dest_path))
+    Enum.each(files, fn file ->
+      File.cp(project_path(name, "#{src_path}/#{file}"), project_path(name, "#{dest_path}/#{file}"))
+    end)
+  end
+
+
+  def copy_file(name, src_path, dest_path) do
+    File.mkdir_p!(Path.dirname(project_path(name, dest_path)))
+    File.cp(project_path(name, src_path), project_path(name, dest_path))
+  end
+
+
   def compile_dir(name, path, opts \\ []) do
     if Path.wildcard("#{project_path(name, path)}/*.ex") != [] do
       run_cmd("elixirc", [{"*.ex"}],
