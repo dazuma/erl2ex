@@ -22,7 +22,7 @@ To run the mix task, first add Erl2ex as a dependency to your existing Elixir pr
 
 ```elixir
 def deps do
-  [ {:erl2ex, ">= 0.0.7", only: :dev} ]
+  [ {:erl2ex, ">= 0.0.8", only: :dev} ]
 end
 ```
 
@@ -60,8 +60,8 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Incomplete features
 
+*   Preserve comments from the Erlang source.
 *   Generate exdoc comments, probably based on heuristics on the funtion comments.
-*   Do something reasonable with inline comments.
 *   Provide an option to elixirize module names (e.g. instead of generating `defmodule :my_erlang_module`, generate `defmodule MyErlangModule`)
 *   Provide an option to convert variable names from camelCase to snake_case.
 *   Provide (possibly optional) translation of include files (.hrl) to separate modules rather than copying into the including module, so the declarations can be shared after translation to Elixir.

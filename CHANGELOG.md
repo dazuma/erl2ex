@@ -2,7 +2,7 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
-## v0.0.8 (not yet released)
+## v0.0.8 (2016-02-25)
 
 *   Factored out source and sink processes, to make testing easier and secondary jobs cleaner.
 *   Perform `epp_dodger` parsing in addition to `erl_parse`. We're not taking full advantage of this yet, but it should eventually help preserve comments better, as well as handle some more preprocessor edge cases.
