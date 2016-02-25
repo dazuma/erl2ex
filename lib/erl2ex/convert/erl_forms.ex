@@ -240,7 +240,7 @@ defmodule Erl2ex.Convert.ErlForms do
     tracking_name = if name == {} do
       nil
     else
-      ModuleData.tracking_attr_name(context.module_data, macro_name(name))
+      ModuleData.tracking_attr_name(context.module_data, interpret_macro_name(name))
     end
 
     ex_directive = %ExDirective{
@@ -309,20 +309,20 @@ defmodule Erl2ex.Convert.ErlForms do
 
 
   defp interpret_macro_expr({:call, _, name_expr, arg_exprs}) do
-    name = macro_name(name_expr)
+    name = interpret_macro_name(name_expr)
     args = arg_exprs |> Enum.map(fn {:var, _, n} -> n end)
     {name, args}
   end
 
   defp interpret_macro_expr(macro_expr) do
-    name = macro_name(macro_expr)
+    name = interpret_macro_name(macro_expr)
     {name, nil}
   end
 
 
-  defp macro_name({:var, _, name}), do: name
-  defp macro_name({:atom, _, name}), do: name
-  defp macro_name(name) when is_atom(name), do: name
+  defp interpret_macro_name({:var, _, name}), do: name
+  defp interpret_macro_name({:atom, _, name}), do: name
+  defp interpret_macro_name(name) when is_atom(name), do: name
 
 
   defp conv_clause(context, clause, name) do

@@ -205,7 +205,6 @@ defmodule Erl2ex do
     if dest_dir == nil do
       dest_dir = source_dir
     end
-    Keyword.put(opts, :source_dir, source_dir)
     source = opts
       |> Keyword.put(:source_dir, source_dir)
       |> Source.start_link

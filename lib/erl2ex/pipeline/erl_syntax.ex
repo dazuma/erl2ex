@@ -4,7 +4,7 @@ defmodule Erl2ex.Pipeline.ErlSyntax do
   @moduledoc false
 
 
-  def on_trees1([node], _default, func), do: func.(node)
+  def on_trees1([node1], _default, func), do: func.(node1)
   def on_trees1(_nodes, default, _func), do: handle_default(default)
 
 
@@ -12,17 +12,17 @@ defmodule Erl2ex.Pipeline.ErlSyntax do
   def on_trees2(_nodes, default, _func), do: handle_default(default)
 
 
-  def on_list_skeleton(node, default, func) do
-    if :erl_syntax.is_list_skeleton(node) do
-      func.(:erl_syntax.list_elements(node))
+  def on_list_skeleton(list_node, default, func) do
+    if :erl_syntax.is_list_skeleton(list_node) do
+      func.(:erl_syntax.list_elements(list_node))
     else
       handle_default(default)
     end
   end
 
 
-  def on_type(node, expected_type, default, func) do
-    if :erl_syntax.type(node) == expected_type do
+  def on_type(tree_node, expected_type, default, func) do
+    if :erl_syntax.type(tree_node) == expected_type do
       func.()
     else
       handle_default(default)
@@ -30,15 +30,15 @@ defmodule Erl2ex.Pipeline.ErlSyntax do
   end
 
 
-  def on_atom(node, default, func) do
-    on_type(node, :atom, default, fn ->
-      func.(:erl_syntax.atom_value(node))
+  def on_atom(atom_node, default, func) do
+    on_type(atom_node, :atom, default, fn ->
+      func.(:erl_syntax.atom_value(atom_node))
     end)
   end
 
 
-  def on_atom_value(node, expected_value, default, func) do
-    on_atom(node, default, fn value ->
+  def on_atom_value(atom_node, expected_value, default, func) do
+    on_atom(atom_node, default, fn value ->
       if value == expected_value do
         func.()
       else
@@ -48,23 +48,23 @@ defmodule Erl2ex.Pipeline.ErlSyntax do
   end
 
 
-  def on_integer(node, default, func) do
-    on_type(node, :integer, default, fn ->
-      func.(:erl_syntax.integer_value(node))
+  def on_integer(integer_node, default, func) do
+    on_type(integer_node, :integer, default, fn ->
+      func.(:erl_syntax.integer_value(integer_node))
     end)
   end
 
 
-  def on_string(node, default, func) do
-    on_type(node, :string, default, fn ->
-      func.(node |> :erl_syntax.string_value |> List.to_string)
+  def on_string(string_node, default, func) do
+    on_type(string_node, :string, default, fn ->
+      func.(string_node |> :erl_syntax.string_value |> List.to_string)
     end)
   end
 
 
-  def on_tuple(node, default, func) do
-    on_type(node, :tuple, default, fn ->
-      func.(:erl_syntax.tuple_size(node), :erl_syntax.tuple_elements(node))
+  def on_tuple(tuple_node, default, func) do
+    on_type(tuple_node, :tuple, default, fn ->
+      func.(:erl_syntax.tuple_size(tuple_node), :erl_syntax.tuple_elements(tuple_node))
     end)
   end
 

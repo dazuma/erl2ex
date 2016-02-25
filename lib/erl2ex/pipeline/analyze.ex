@@ -10,19 +10,19 @@ defmodule Erl2ex.Pipeline.Analyze do
   alias Erl2ex.Pipeline.Utils
 
 
-  def forms(forms, opts \\ []) do
-    forms
+  def forms(forms_list, opts \\ []) do
+    forms_list
       |> build_base_data(opts)
-      |> collect(forms, &handle_form_for_name_and_exports/2)
-      |> collect(forms, &handle_form_for_used_attr_names/2)
-      |> collect(forms, &handle_form_for_funcs/2)
+      |> collect(forms_list, &handle_form_for_name_and_exports/2)
+      |> collect(forms_list, &handle_form_for_used_attr_names/2)
+      |> collect(forms_list, &handle_form_for_funcs/2)
       |> assign_local_func_names
-      |> collect(forms, &handle_form_for_records/2)
-      |> collect(forms, &handle_form_for_macros/2)
+      |> collect(forms_list, &handle_form_for_records/2)
+      |> collect(forms_list, &handle_form_for_macros/2)
   end
 
 
-  defp build_base_data(forms, opts) do
+  defp build_base_data(forms_list, opts) do
     default_imports = Names.elixir_auto_imports
       |> Enum.map(fn {name, arities} ->
         arity_info = arities
@@ -34,7 +34,7 @@ defmodule Erl2ex.Pipeline.Analyze do
     auto_export_suffixes = Keyword.get_values(opts, :auto_export_suffix)
 
     %ModuleData{
-      forms: forms,
+      forms: forms_list,
       imported_funcs: default_imports,
       used_func_names: default_imports |> Map.keys |> Enum.into(MapSet.new),
       auto_export_suffixes: auto_export_suffixes
@@ -262,7 +262,7 @@ defmodule Erl2ex.Pipeline.Analyze do
     {{:attribute, _line, directive, name}, _form_node}, module_data)
   when directive == :ifdef or directive == :ifndef or directive == :undef
   do
-    name = macro_name(name)
+    name = interpret_macro_name(name)
     macro = Map.get(module_data.macros, name, %MacroData{})
     if macro.define_tracker == nil do
       tracker_name = Utils.find_available_name(name, module_data.used_attr_names, "defined")
@@ -289,20 +289,20 @@ defmodule Erl2ex.Pipeline.Analyze do
 
 
   defp interpret_macro_expr({:call, _, name_expr, arg_exprs}) do
-    name = macro_name(name_expr)
+    name = interpret_macro_name(name_expr)
     args = arg_exprs |> Enum.map(fn {:var, _, n} -> n end)
     {name, args}
   end
 
   defp interpret_macro_expr(macro_expr) do
-    name = macro_name(macro_expr)
+    name = interpret_macro_name(macro_expr)
     {name, nil}
   end
 
 
-  defp macro_name({:var, _, name}), do: name
-  defp macro_name({:atom, _, name}), do: name
-  defp macro_name(name) when is_atom(name), do: name
+  defp interpret_macro_name({:var, _, name}), do: name
+  defp interpret_macro_name({:atom, _, name}), do: name
+  defp interpret_macro_name(name) when is_atom(name), do: name
 
 
   defp detect_func_style_call(
