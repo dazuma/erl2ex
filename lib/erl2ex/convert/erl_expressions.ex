@@ -811,7 +811,12 @@ defmodule Erl2ex.Convert.ErlExpressions do
       dispatcher = ModuleData.macro_dispatcher_name(context.module_data)
       {{dispatcher, [], [macro_name, []]}, context}
     else
-      {{macro_name, [], []}, context}
+      if context.in_type_expr do
+        replacement = ModuleData.macro_eager_replacement(context.module_data, name)
+        conv_expr(replacement, context)
+      else
+        {{macro_name, [], []}, context}
+      end
     end
   end
 

@@ -50,10 +50,11 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
+*   When a function gets renamed by the transpiler, associated specs don't get renamed accordingly.
 *   Returning a remote function reference from a macro is not supported: e.g. `-define(A, m:f).` generates illegal Elixir syntax.
 *   Function macros cannot return function names; Erlang's parser rejects the syntax `?A()()`. In Erlang, the preprocessor fixes this, but we're not running the Erlang preprocessor directly.
 *   Record names cannot be macro results; Erlang's parser rejects the syntax `-record(?MODULE, {...}).` and `#?MODULE{...}`. (Examples in https://github.com/soranoba/bbmustache/blob/master/src/bbmustache.erl)
-*   Macros cannot appear in in typespecs; Elixir thinks they're type names and gets confused.
+*   Fully-qualified macros cannot appear in in typespecs; Erlang's parse won't handle it. (Example in the spec for abstract_module_/2 in https://github.com/DeadZen/goldrush/blob/master/src/glc_code.erl)
 *   Elixir reserves the function name `__info__` and won't allow its definition. (Failure example in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl).
 *   Erlang allows variables for function name/arity in captures, whereas Elixir apparently doesn't. (Example in the `expand_macro_named/6` function in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_dispatch.erl)
 *   The Elixir compiler doesn't seem to like functions with too many clauses. (Example: https://github.com/benoitc/erlang-idna/blob/master/src/idna_unicode_data2.erl). Not sure if this is just a performance issue or an Elixir limitation.

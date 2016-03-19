@@ -254,7 +254,7 @@ defmodule Erl2ex.Pipeline.Analyze do
     requires_init = update_requires_init(macro.requires_init, false)
     macro = %MacroData{macro | requires_init: requires_init}
     next_is_redefined = update_is_redefined(macro.is_redefined, args)
-    module_data = update_macro_info(macro, next_is_redefined, args, name, module_data)
+    module_data = update_macro_info(macro, next_is_redefined, args, name, replacement, module_data)
     detect_func_style_call(replacement, module_data)
   end
 
@@ -345,7 +345,7 @@ defmodule Erl2ex.Pipeline.Analyze do
       const_name: const_name,
       is_redefined: true
     } = macro,
-    true, nil, name,
+    true, nil, name, _replacement,
     %ModuleData{
       macros: macros,
       used_attr_names: used_attr_names
@@ -366,7 +366,7 @@ defmodule Erl2ex.Pipeline.Analyze do
       func_name: func_name,
       is_redefined: true
     } = macro,
-    true, _args, name,
+    true, _args, name, _replacement,
     %ModuleData{
       macros: macros,
       used_attr_names: used_attr_names
@@ -387,7 +387,7 @@ defmodule Erl2ex.Pipeline.Analyze do
       const_name: const_name,
       func_name: func_name
     } = macro,
-    true, args, name,
+    true, args, name, _replacement,
     %ModuleData{
       macros: macros,
       macro_dispatcher: macro_dispatcher,
@@ -425,16 +425,18 @@ defmodule Erl2ex.Pipeline.Analyze do
     %MacroData{
       const_name: const_name,
     } = macro,
-    is_redefined, nil, name,
+    is_redefined, nil, name, replacement,
     %ModuleData{
       macros: macros,
       used_func_names: used_func_names
     } = module_data)
   do
+    replacement_expr = extract_replacement_expr(replacement)
     {const_name, used_func_names} = update_macro_name(name, const_name, used_func_names, "erlconst")
     macro = %MacroData{macro |
       is_redefined: is_redefined,
-      const_name: const_name
+      const_name: const_name,
+      const_expr: replacement_expr
     }
     %ModuleData{module_data |
       macros: Map.put(macros, name, macro),
@@ -446,7 +448,7 @@ defmodule Erl2ex.Pipeline.Analyze do
     %MacroData{
       func_name: func_name,
     } = macro,
-    is_redefined, _args, name,
+    is_redefined, _args, name, _replacement,
     %ModuleData{
       macros: macros,
       used_func_names: used_func_names
@@ -462,6 +464,10 @@ defmodule Erl2ex.Pipeline.Analyze do
       used_func_names: used_func_names
     }
   end
+
+
+  defp extract_replacement_expr([[expr]]), do: expr
+  defp extract_replacement_expr(_), do: nil
 
 
   defp update_macro_name(given_name, nil, used_names, prefix) do

@@ -66,34 +66,7 @@ defmodule E2ETest do
   end
 
 
-  # Libraries that are not yet working
-
-  # Fails because a macro appears in a typespec
-  @tag :skip
-  test "goldrush" do
-    download_project("goldrush", "https://github.com/DeadZen/goldrush.git")
-    clean_dir("goldrush", "src_ex")
-    convert_dir("goldrush", "src", "src_ex",
-        auto_export_suffix: "_test_",
-        auto_export_suffix: "_test")
-    compile_dir("goldrush", "src_ex", display_output: true)
-    run_eunit_tests([:glc], "goldrush", "src_ex", display_output: true)
-  end
-
-
-  # Fails because a macro appears in a typespec
-  @tag :skip
-  test "getopt" do
-    download_project("getopt", "https://github.com/jcomellas/getopt.git")
-    clean_dir("getopt", "src_ex")
-    convert_dir("getopt", "src", "src_ex", auto_export_suffix: "_test_")
-    compile_dir("getopt", "src_ex", display_output: true)
-    run_eunit_tests([:getopt_test], "getopt", "src_ex", display_output: true)
-  end
-
-
-  # Fails because a macro appears in a typespec
-  @tag :skip
+  @tag :e2e
   test "erlware_commons" do
     download_project("erlware_commons", "https://github.com/erlware/erlware_commons.git")
     clean_dir("erlware_commons", "src_ex")
@@ -106,6 +79,32 @@ defmodule E2ETest do
         display_output: true,
         DEFINE_namespaced_types: "true")
     run_eunit_tests([:ec_plists], "erlware_commons", "src_ex", display_output: true)
+  end
+
+
+  # Libraries that are not yet working
+
+  # Fails because a fully qualified macro appears in a typespec
+  @tag :skip
+  test "goldrush" do
+    download_project("goldrush", "https://github.com/DeadZen/goldrush.git")
+    clean_dir("goldrush", "src_ex")
+    convert_dir("goldrush", "src", "src_ex",
+        auto_export_suffix: "_test_",
+        auto_export_suffix: "_test")
+    compile_dir("goldrush", "src_ex", display_output: true)
+    run_eunit_tests([:glc], "goldrush", "src_ex", display_output: true)
+  end
+
+
+  # Fails because a spec refers to a function that gets mangled
+  @tag :skip
+  test "getopt" do
+    download_project("getopt", "https://github.com/jcomellas/getopt.git")
+    clean_dir("getopt", "src_ex")
+    convert_dir("getopt", "src", "src_ex", auto_export_suffix: "_test_")
+    compile_dir("getopt", "src_ex", display_output: true)
+    run_eunit_tests([:getopt_test], "getopt", "src_ex", display_output: true)
   end
 
 

@@ -37,7 +37,8 @@ defmodule Erl2ex.Pipeline.ModuleData do
               define_tracker: nil,
               requires_init: nil,
               has_func_style_call: false,
-              is_redefined: MapSet.new
+              is_redefined: MapSet.new,
+              const_expr: nil
   end
 
 
@@ -139,6 +140,12 @@ defmodule Erl2ex.Pipeline.ModuleData do
 
   def macro_dispatcher_name(%ModuleData{macro_dispatcher: macro_name}) do
     macro_name
+  end
+
+
+  def macro_eager_replacement(%ModuleData{macros: macros}, name) do
+    macro_info = Map.fetch!(macros, name)
+    macro_info.const_expr
   end
 
 

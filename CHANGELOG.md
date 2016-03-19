@@ -2,6 +2,10 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
+## v0.0.9 (not yet released)
+
+*   Simple macros can now appear in typespecs. The transpiler substitutes the replacement value because Elixir syntax can't handle a macro call at that location.
+
 ## v0.0.8 (2016-02-25)
 
 *   Factored out source and sink processes, to make testing easier and secondary jobs cleaner.
