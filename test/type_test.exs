@@ -411,4 +411,23 @@ defmodule TypeTest do
   end
 
 
+  test "Specs for function that gets renamed" do
+    input = """
+      -spec to_string(any()) -> any().
+      to_string(A) -> A.
+      """
+
+    expected = """
+      @spec func_to_string(any()) :: any()
+
+
+      defp func_to_string(a) do
+        a
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
 end

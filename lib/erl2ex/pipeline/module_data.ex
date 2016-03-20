@@ -74,6 +74,11 @@ defmodule Erl2ex.Pipeline.ModuleData do
   end
 
 
+  def has_local_function_name?(%ModuleData{func_rename_map: func_rename_map}, name) do
+    Map.has_key?(func_rename_map, name)
+  end
+
+
   def local_call_strategy(
     %ModuleData{
       local_funcs: local_funcs,

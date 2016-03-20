@@ -82,6 +82,17 @@ defmodule E2ETest do
   end
 
 
+  @tag :e2e
+  test "getopt" do
+    download_project("getopt", "https://github.com/jcomellas/getopt.git")
+    clean_dir("getopt", "src_ex")
+    convert_dir("getopt", "src", "src_ex")
+    copy_dir("getopt", "test", "src_ex")
+    compile_dir("getopt", "src_ex", display_output: true)
+    run_eunit_tests([:getopt_test], "getopt", "src_ex", display_output: true)
+  end
+
+
   # Libraries that are not yet working
 
   # Fails because a fully qualified macro appears in a typespec
@@ -94,17 +105,6 @@ defmodule E2ETest do
         auto_export_suffix: "_test")
     compile_dir("goldrush", "src_ex", display_output: true)
     run_eunit_tests([:glc], "goldrush", "src_ex", display_output: true)
-  end
-
-
-  # Fails because a spec refers to a function that gets mangled
-  @tag :skip
-  test "getopt" do
-    download_project("getopt", "https://github.com/jcomellas/getopt.git")
-    clean_dir("getopt", "src_ex")
-    convert_dir("getopt", "src", "src_ex", auto_export_suffix: "_test_")
-    compile_dir("getopt", "src_ex", display_output: true)
-    run_eunit_tests([:getopt_test], "getopt", "src_ex", display_output: true)
   end
 
 

@@ -260,11 +260,35 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo() do
-        cond() do
-          b and c or d == 2 ->
+        case(:if) do
+          :if when b and c or d == 2 ->
             e = 3
             e
-          true ->
+          :if when true ->
+            2
+        end
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "If statement that generates errors" do
+    input = """
+      foo() ->
+        if
+          hd([]) -> 1;
+          true -> 2
+        end.
+      """
+
+    expected = """
+      defp foo() do
+        case(:if) do
+          :if when hd([]) ->
+            1
+          :if when true ->
             2
         end
       end

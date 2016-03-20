@@ -147,6 +147,9 @@ defmodule Erl2ex.Convert.ErlForms do
 
   defp conv_spec_form(attr_name, mod_name, name, clauses, context) do
     if mod_name == {} or mod_name == context.module_data.name do
+      if ModuleData.has_local_function_name?(context.module_data, name) do
+        name = ModuleData.local_function_name(context.module_data, name)
+      end
       specs = clauses |> Enum.map(fn spec_clause ->
         {ex_spec, _} = conv_spec_clause(name, spec_clause, context)
         ex_spec

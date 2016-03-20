@@ -143,7 +143,7 @@ defmodule Erl2ex.Convert.ErlExpressions do
 
   def conv_expr({:if, _, clauses}, context) when is_list(clauses) do
     {ex_clauses, context} = conv_clause_list(:if, clauses, context)
-    {{:cond, [], [[do: ex_clauses]]}, context}
+    {{:case, [], [:if, [do: ex_clauses]]}, context}
   end
 
   def conv_expr({:receive, _, clauses}, context) when is_list(clauses) do
@@ -405,8 +405,11 @@ defmodule Erl2ex.Convert.ErlExpressions do
       context = Context.clear_exports(context)
     end
     {result, context} = Enum.map_reduce(clauses, context, fn
-      ({:clause, _, params, guards, arg}, context) ->
+      ({:clause, line, params, guards, arg}, context) ->
         context = Context.push_scope(context)
+        if type == :if and Enum.empty?(params) do
+          params = [{:atom, line, :if}]
+        end
         {result, context} = conv_clause(type, params, guards, arg, context)
         context = Context.pop_scope(context)
         {result, context}
@@ -423,6 +426,7 @@ defmodule Erl2ex.Convert.ErlExpressions do
   end
 
   defp conv_clause(_type, [], guards, expr, context) do
+    # Shouldn't ever see this?
     {ex_guards, context} = guard_seq(guards, context)
     {ex_expr, context} = conv_block(expr, context)
     {{:"->", [], [ex_guards, ex_expr]}, context}
