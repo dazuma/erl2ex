@@ -1,11 +1,16 @@
 
 defmodule Erl2ex.Source do
 
-  @moduledoc false
+  @moduledoc """
+  Erl2ex.Source is a process that produces Erlang source, normally reading
+  files from the file system.
+  """
 
 
   @type t :: pid()
 
+
+  @spec start_link(list) :: t
 
   def start_link(opts) do
     {:ok, pid} = GenServer.start_link(__MODULE__, opts)

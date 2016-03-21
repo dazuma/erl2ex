@@ -10,7 +10,11 @@ defmodule ErrorTest do
         bar(.
       """
 
-    expected = {"(unknown source file)", 2, "syntax error before: '.'"}
+    expected = %CompileError{
+      file: "(unknown source file)",
+      line: 2,
+      description: "syntax error before: '.'"
+    }
 
     assert Erl2ex.convert_str(input, @opts) == {:error, expected}
   end

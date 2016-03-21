@@ -1,11 +1,16 @@
 
 defmodule Erl2ex.Sink do
 
-  @moduledoc false
+  @moduledoc """
+  Erl2ex.Sink is a process that consumes generated Elixir source, normally
+  writing files to the file system.
+  """
 
 
   @type t :: pid()
 
+
+  @spec start_link(list) :: t
 
   def start_link(opts \\ []) do
     {:ok, pid} = GenServer.start_link(__MODULE__, opts)
