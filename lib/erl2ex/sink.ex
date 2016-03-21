@@ -7,8 +7,23 @@ defmodule Erl2ex.Sink do
   """
 
 
+  @typedoc """
+  The ProcessID of a sink process.
+  """
+
   @type t :: pid()
 
+
+  @typedoc """
+  A file identifier, which may be a filesystem path or a symbolic id.
+  """
+
+  @type file_id :: Path.t | atom
+
+
+  @doc """
+  Starts a sink and returns its PID.
+  """
 
   @spec start_link(list) :: t
 
@@ -18,20 +33,46 @@ defmodule Erl2ex.Sink do
   end
 
 
+  @doc """
+  Writes data to a sink, at the given path.
+  """
+
+  @spec write(t, file_id, String.t) :: :ok | {:error, term}
+
   def write(sink, path, str) do
     GenServer.call(sink, {:write, path, str})
   end
 
+
+  @doc """
+  Gets the file contents written to the given ID.
+
+  Available only if the `allow_get` configuration is in effect.
+  """
+
+  @spec get_string(t, file_id) :: {:ok, String.t} | {:error, term}
 
   def get_string(sink, path) do
     GenServer.call(sink, {:get_string, path})
   end
 
 
+  @doc """
+  Returns whether the given file identifier has been written to.
+  """
+
+  @spec path_written?(t, file_id) :: boolean
+
   def path_written?(sink, path) do
     GenServer.call(sink, {:path_written, path})
   end
 
+
+  @doc """
+  Stops the sink process.
+  """
+
+  @spec stop(t) :: :ok
 
   def stop(sink) do
     GenServer.cast(sink, {:stop})

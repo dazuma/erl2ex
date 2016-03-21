@@ -8,6 +8,9 @@ defmodule Erl2ex.Cli do
   """
 
 
+  alias Erl2ex.Results
+
+
   @doc """
   Runs the erl2ex binary, given a set of command line arguments.
   Returns the OS result code, which is 0 for success or nonzero for failure.
@@ -137,10 +140,14 @@ defmodule Erl2ex.Cli do
   end
 
 
-  defp handle_result({:ok, _}), do: 0
-  defp handle_result({:error, {file, line, description}}) do
-    IO.puts(:stderr, "Error converting #{file}, line #{line}: #{description}")
-    1
+  defp handle_result(results) do
+    error = Results.get_error(results)
+    if error == nil do
+      0
+    else
+      IO.puts(:stderr, "Error converting #{error.file}, line #{error.line}: #{error.description}")
+      1
+    end
   end
 
 

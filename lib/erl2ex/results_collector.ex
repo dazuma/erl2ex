@@ -1,11 +1,32 @@
 
 defmodule Erl2ex.Results.Collector do
 
+  @moduledoc """
+  Erl2ex.Results.Collector is a process that accumulates results of a
+  conversion run.
+  """
+
+
   alias Erl2ex.Results
 
 
+  @typedoc """
+  The ProcessID of a results collector process.
+  """
+
   @type t :: pid()
 
+
+  @typedoc """
+  A file identifier, which may be a filesystem path or a symbolic id.
+  """
+
+  @type file_id :: Path.t | atom
+
+
+  @doc """
+  Starts a result collector and returns its PID.
+  """
 
   @spec start_link(list) :: t
 
@@ -15,25 +36,55 @@ defmodule Erl2ex.Results.Collector do
   end
 
 
-  def write_success(results, input_path, output_path) do
+  @doc """
+  Record that a conversion was successful for the given input and output paths.
+  """
+
+  @spec put_success(t, file_id, file_id) :: :ok | {:error, term}
+
+  def put_success(results, input_path, output_path) do
     GenServer.call(results, {:success, input_path, output_path})
   end
 
 
-  def write_error(results, input_path, error) do
+  @doc """
+  Record that a conversion was unsuccessful for the given input path.
+  """
+
+  @spec put_error(t, file_id, %CompileError{}) :: :ok | {:error, term}
+
+  def put_error(results, input_path, error) do
     GenServer.call(results, {:error, input_path, error})
   end
 
+
+  @doc """
+  Returns the results for the given input path.
+  """
+
+  @spec get_file(t, file_id) :: {:ok, Results.File.t} | {:error, term}
 
   def get_file(results, path) do
     GenServer.call(results, {:get_file, path})
   end
 
 
+  @doc """
+  Returns the results for the entire conversion so far.
+  """
+
+  @spec get(t) :: Results.t
+
   def get(results) do
     GenServer.call(results, {:get})
   end
 
+
+  @doc """
+  Stops the collector process.
+  """
+
+  @spec stop(t) :: :ok
 
   def stop(results) do
     GenServer.cast(results, {:stop})

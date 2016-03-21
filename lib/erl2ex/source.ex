@@ -7,8 +7,23 @@ defmodule Erl2ex.Source do
   """
 
 
+  @typedoc """
+  The ProcessID of a source process.
+  """
+
   @type t :: pid()
 
+
+  @typedoc """
+  A file identifier, which may be a filesystem path or a symbolic id.
+  """
+
+  @type file_id :: Path.t | atom
+
+
+  @doc """
+  Starts a source and returns its PID.
+  """
 
   @spec start_link(list) :: t
 
@@ -18,12 +33,26 @@ defmodule Erl2ex.Source do
   end
 
 
+  @doc """
+  Reads the source file at the given path or symbolic location, and returns a
+  tuple comprising the data in the file and the full path to it.
+  """
+
+  @spec read_source(t, file_id) :: {String.t, file_id}
+
   def read_source(source, path) do
     source
       |> GenServer.call({:read_source, path})
       |> handle_result
   end
 
+
+  @doc """
+  Reads the include file at the given path, given a context directory, and
+  returns a tuple comprising the data in the file and the full path to it.
+  """
+
+  @spec read_include(t, Path.t, Path.t | nil) :: {String.t, Path.t}
 
   def read_include(source, path, cur_dir) do
     source
@@ -32,12 +61,25 @@ defmodule Erl2ex.Source do
   end
 
 
+  @doc """
+  Reads the include file at the given path, given a context library, and
+  returns a tuple comprising the data in the file and the full path to it.
+  """
+
+  @spec read_lib_include(t, atom, Path.t) :: {String.t, Path.t}
+
   def read_lib_include(source, lib, path) do
     source
       |> GenServer.call({:read_lib_include, lib, path})
       |> handle_result
   end
 
+
+  @doc """
+  Stops the source process.
+  """
+
+  @spec stop(t) :: :ok
 
   def stop(source) do
     GenServer.cast(source, {:stop})

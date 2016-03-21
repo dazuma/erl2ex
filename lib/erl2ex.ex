@@ -205,10 +205,10 @@ defmodule Erl2ex do
         |> Convert.module(opts)
         |> Codegen.to_str(opts)
       :ok = Sink.write(sink, dest_path, str)
-      :ok = Results.Collector.write_success(results_collector, source_path, dest_path)
+      :ok = Results.Collector.put_success(results_collector, source_path, dest_path)
     rescue
       error in CompileError ->
-        :ok = Results.Collector.write_error(results_collector, source_path, error)
+        :ok = Results.Collector.put_error(results_collector, source_path, error)
     end
     :ok
   end
