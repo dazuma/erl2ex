@@ -48,6 +48,13 @@ defmodule Erl2ex do
   ]
 
 
+  @typedoc """
+  A file identifier, which may be a filesystem path or a symbolic id.
+  """
+
+  @type file_id :: Path.t | atom
+
+
   @doc """
   Converts the source for an Erlang module, represented as a string.
 
@@ -116,7 +123,7 @@ defmodule Erl2ex do
   Returns a results object.
   """
 
-  @spec convert_file(Path.t, Path.t, options) :: Results.t
+  @spec convert_file(Path.t, Path.t | nil, options) :: Results.t
 
   def convert_file(source_path, dest_path \\ nil, opts \\ []) do
     if dest_path == nil do
@@ -152,7 +159,7 @@ defmodule Erl2ex do
   Returns a results object.
   """
 
-  @spec convert_dir(Path.t, Path.t, options) :: Results.t
+  @spec convert_dir(Path.t, Path.t | nil, options) :: Results.t
 
   def convert_dir(source_dir, dest_dir \\ nil, opts \\ []) do
     if dest_dir == nil do
@@ -190,7 +197,7 @@ defmodule Erl2ex do
   path. Writes the result to the given results collector. Returns :ok.
   """
 
-  @spec convert(Source.t, Sink.t, Results.Collector.t, Path.t, Path.t, options) :: :ok
+  @spec convert(Source.t, Sink.t, Results.Collector.t, Erl2ex.file_id, Erl2ex.file_id, options) :: :ok
 
   def convert(source, sink, results_collector, source_path, dest_path, opts \\ []) do
     {source_str, actual_source_path} = Source.read_source(source, source_path)

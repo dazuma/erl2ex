@@ -14,13 +14,6 @@ defmodule Erl2ex.Source do
   @type t :: pid()
 
 
-  @typedoc """
-  A file identifier, which may be a filesystem path or a symbolic id.
-  """
-
-  @type file_id :: Path.t | atom
-
-
   @doc """
   Starts a source and returns its PID.
   """
@@ -38,7 +31,7 @@ defmodule Erl2ex.Source do
   tuple comprising the data in the file and the full path to it.
   """
 
-  @spec read_source(t, file_id) :: {String.t, file_id}
+  @spec read_source(t, Erl2ex.file_id) :: {String.t, Erl2ex.file_id}
 
   def read_source(source, path) do
     source
