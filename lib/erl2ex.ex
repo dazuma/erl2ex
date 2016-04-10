@@ -29,6 +29,7 @@ defmodule Erl2ex do
 
   Recognized options are:
   *   `:include_dir` Add a directory to the include path.
+  *   `:lib_dir` Specifies the directory for a named application.
   *   `:define_prefix` Prefix added to the environment variable or config key
       names that are read to initialize macro definitions. Default: "DEFINE_".
   *   `:defines_from_config` An application whose config should be used to
@@ -41,6 +42,7 @@ defmodule Erl2ex do
   """
   @type options :: [
     include_dir: Path.t,
+    lib_dir: {atom, Path.t} | %{atom => Path.t},
     define_prefix: String.t,
     defines_from_config: atom,
     emit_file_headers: boolean,

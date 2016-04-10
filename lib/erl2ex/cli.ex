@@ -24,6 +24,7 @@ defmodule Erl2ex.Cli do
         strict: [
           output: :string,
           include_dir: [:string, :keep],
+          lib_dir: [:string, :keep],
           emit_file_headers: :boolean,
           define_prefix: :string,
           defines_from_config: :string,
@@ -38,10 +39,8 @@ defmodule Erl2ex.Cli do
         ]
       )
 
-    verbose_count = options
-      |> Keyword.get_values(:verbose)
-      |> Enum.count
-    options = Keyword.put(options, :verbosity, verbose_count)
+    {options, errors2} = decode_options(options)
+    errors = errors ++ errors2
 
     cond do
       not Enum.empty?(errors) ->
@@ -87,8 +86,8 @@ defmodule Erl2ex.Cli do
         --output, -o "path"          (Set the output file or directory path)
         --include-dir, -I "dir"      (Add a directory to the include path)
         --[no-]emit-file-headers     (Emit a header comment in each file)
-        --define_prefix "prefix"     (Prefix for variables used to define macros)
-        --defines_from_config "app"  (Define macros from this application's config)
+        --define-prefix "prefix"     (Prefix for variables used to define macros)
+        --defines-from-config "app"  (Define macros from this application's config)
         --verbose, -v                (Display verbose status)
         --help, -?                   (Display help text)
 
@@ -110,10 +109,32 @@ defmodule Erl2ex.Cli do
   end
 
 
+  defp decode_options(options) do
+    verbose_count = options
+      |> Keyword.get_values(:verbose)
+      |> Enum.count
+    {lib_dirs, errors} = options
+      |> Keyword.get_values(:lib_dir)
+      |> Enum.reduce({%{}, []}, fn (str, {map, errs}) ->
+        case Regex.run(~r{^([^=]+)=([^=]+)$}, str) do
+          nil ->
+            {map, [{:lib_dir, str} | errs]}
+          [_, key, val] ->
+            {Map.put(map, String.to_atom(key), val), errs}
+        end
+      end)
+
+    options = options
+      |> Keyword.put(:verbosity, verbose_count)
+      |> Keyword.put(:lib_dir, lib_dirs)
+    {options, errors}
+  end
+
+
   defp run_conversion([], options) do
     :all
       |> IO.read
-      |> Erl2ex.convert_str(options)
+      |> Erl2ex.convert_str!(options)
       |> IO.write
     0
   end
@@ -154,7 +175,7 @@ defmodule Erl2ex.Cli do
   defp display_errors(errors) do
     Enum.each(errors, fn
       {switch, val} ->
-        IO.puts(:stderr, "Unrecognized switch: #{switch} #{val}")
+        IO.puts(:stderr, "Unrecognized or malformed switch: #{switch}=#{val}")
       end)
     IO.puts(:stderr, "")
     display_help

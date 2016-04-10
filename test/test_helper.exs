@@ -8,7 +8,7 @@ defmodule Erl2ex.TestHelper do
     if File.dir?(project_path(name, ".git")) do
       run_cmd("git", ["pull"])
     else
-      run_cmd("git", ["clone", url])
+      run_cmd("git", ["clone", url, name])
     end
   end
 
@@ -21,7 +21,8 @@ defmodule Erl2ex.TestHelper do
 
   def convert_dir(name, src_path, dest_path, opts \\ []) do
     File.mkdir_p!(project_path(name, dest_path))
-    Erl2ex.convert_dir!(project_path(name, src_path), project_path(name, dest_path), opts)
+    results = Erl2ex.convert_dir(project_path(name, src_path), project_path(name, dest_path), opts)
+    Erl2ex.Results.throw_error(results)
   end
 
 

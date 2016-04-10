@@ -97,6 +97,7 @@ defmodule Erl2ex.Source do
       source_data: %{},
       include_dirs: [],
       include_data: %{},
+      lib_dirs: %{},
       lib_data: %{}
     )
   end
@@ -113,6 +114,9 @@ defmodule Erl2ex.Source do
     include_data = opts
       |> Keyword.get_values(:include_data)
       |> Enum.reduce(%{}, &(add_to_map(&2, &1)))
+    lib_dirs = opts
+      |> Keyword.get_values(:lib_dir)
+      |> Enum.reduce(%{}, &(add_to_map(&2, &1)))
     lib_data = opts
       |> Keyword.get_values(:lib_data)
       |> Enum.reduce(%{}, &(add_to_map(&2, &1)))
@@ -123,6 +127,7 @@ defmodule Erl2ex.Source do
         source_data: source_data,
         include_dirs: include_dirs,
         include_data: include_data,
+        lib_dirs: lib_dirs,
         lib_data: lib_data,
       }
     }
@@ -154,12 +159,12 @@ defmodule Erl2ex.Source do
   def handle_call(
     {:read_lib_include, lib, path},
     _from,
-    %State{lib_data: lib_data} = state)
+    %State{lib_data: lib_data, lib_dirs: lib_dirs} = state)
   do
-    case :code.lib_dir(lib) do
+    case get_lib_dir(lib_dirs, lib) do
       {:error, code} ->
         {:reply, {:error, code, path}, state}
-      lib_dir ->
+      {:ok, lib_dir} ->
         result = read_impl(path, lib_data, [lib_dir])
         {:reply, result, state}
     end
@@ -194,9 +199,24 @@ defmodule Erl2ex.Source do
   end
 
 
-  defp add_to_map(map, value) when is_binary(value), do:
-    Map.put(map, nil, value)
+  defp get_lib_dir(lib_dirs, lib) do
+    case Map.fetch(lib_dirs, lib) do
+      {:ok, dir} ->
+        {:ok, dir}
+      :error ->
+        case :code.lib_dir(lib) do
+          {:error, code} -> {:error, code}
+          dir -> {:ok, dir}
+        end
+    end
+  end
+
+
   defp add_to_map(map, value) when is_map(value), do:
     Map.merge(map, value)
+  defp add_to_map(map, {key, value}), do:
+    Map.put(map, key, value)
+  defp add_to_map(map, value), do:
+    Map.put(map, nil, value)
 
 end

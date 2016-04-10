@@ -120,6 +120,46 @@ defmodule E2ETest do
   end
 
 
+  # Fails because of a strange missing file in the public_key application.
+  @tag :skip
+  test "ssl_verify_fun" do
+    download_project("ssl_verify_fun", "https://github.com/deadtrickster/ssl_verify_fun.erl.git")
+    clean_dir("ssl_verify_fun", "src_ex")
+    convert_dir("ssl_verify_fun", "src", "src_ex")
+    copy_dir("ssl_verify_fun", "test", "src_ex")
+    compile_dir("ssl_verify_fun", "src_ex", display_output: true)
+    run_eunit_tests(
+        [:ssl_verify_fingerprint_tests, :ssl_verify_hostname_tests, :ssl_verify_pk_tests],
+        "ssl_verify_fun", "src_ex", display_output: true)
+  end
+
+
+  # Fails because of a tricky macro
+  @tag :skip
+  test "cowlib" do
+    download_project("ranch", "https://github.com/ninenines/cowlib.git")
+    clean_dir("cowlib", "src_ex")
+    convert_dir("cowlib", "src", "src_ex",
+        include_dir: project_path("cowlib", "include"))
+    compile_dir("cowlib", "src_ex", display_output: true)
+    # Not sure how to run tests
+  end
+
+
+  # Fails because cowlib fails
+  @tag :skip
+  test "cowboy" do
+    download_project("cowboy", "https://github.com/ninenines/cowboy.git")
+    download_project("cowlib", "https://github.com/ninenines/cowlib.git")
+    download_project("ranch", "https://github.com/ninenines/ranch.git")
+    clean_dir("cowboy", "src_ex")
+    convert_dir("cowboy", "src", "src_ex",
+        lib_dir: %{cowlib: project_path("cowlib"), ranch: project_path("ranch")})
+    compile_dir("cowboy", "src_ex", display_output: true)
+    # Not sure how to run tests
+  end
+
+
   # Fails because there is a capture with a variable arity in elixir_dispatch.erl
   @tag :skip
   test "elixir" do
@@ -135,6 +175,5 @@ defmodule E2ETest do
     copy_dir("elixir", "lib/elixir/test/erlang", "lib/elixir/src_ex")
     compile_dir("elixir", "lib/elixir/src_ex", display_output: true)
   end
-
 
 end
