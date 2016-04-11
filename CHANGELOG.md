@@ -2,7 +2,7 @@
 
 Erl2ex is currently pre-alpha software. Expect significant backwards-incompatible changes for the time being.
 
-## v0.0.9 (not yet released)
+## v0.0.9 (2016-04-11)
 
 *   Created a structure representing the results and status of a conversion, and reworked the main entry point functions to use it.
 *   Allow specification of the directory for application dependencies (i.e. where to look for include_lib files.)
