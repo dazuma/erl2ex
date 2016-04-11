@@ -27,7 +27,8 @@ defmodule Erl2ex.Pipeline.ModuleData do
     macro_dispatcher: nil,
     func_renamer: nil,
     record_size_macro: nil,
-    record_index_macro: nil
+    record_index_macro: nil,
+    has_is_record: false
   )
 
 
@@ -104,9 +105,11 @@ defmodule Erl2ex.Pipeline.ModuleData do
       {imported, which_module, mapped_name} = case Map.fetch(import_info, arity) do
         {:ok, mod} -> {true, mod, name}
         :error ->
-          case Names.check_autoimport(name) do
-            {:ok, kernel_func} ->
-              {true, Kernel, kernel_func}
+          case Names.map_bif(name) do
+            {:ok, Kernel, mapped_func} ->
+              {true, Kernel, mapped_func}
+            {:ok, mapped_mod, mapped_func} ->
+              {false, mapped_mod, mapped_func}
             :error ->
               {false, :erlang, name}
           end

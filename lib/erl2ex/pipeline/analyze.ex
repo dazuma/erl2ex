@@ -202,6 +202,8 @@ defmodule Erl2ex.Pipeline.Analyze do
   defp interpret_record_field({:record_field, _, {:atom, line, name}}), do: {name, line}
   defp interpret_record_field({:record_field, _, {:atom, line, name}, _}), do: {name, line}
 
+  defp detect_record_query_presence({:call, _, {:atom, _, :is_record}, _}, module_data), do:
+    %ModuleData{module_data | has_is_record: true}
   defp detect_record_query_presence(
     {:call, _, {:atom, _, :record_info}, [{:atom, _, :size}, _]}, module_data)
   do

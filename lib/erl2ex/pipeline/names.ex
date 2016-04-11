@@ -39,8 +39,8 @@ defmodule Erl2ex.Pipeline.Names do
   ] |> Enum.into(MapSet.new)
 
 
-  # This is a map of Erlang BIFs to equivalent Elixir Kernel functions.
-  @autoimport_map %{
+  # This is a map of Erlang BIFs to equivalent Elixir functions.
+  @bif_map %{
     abs: :abs,
     apply: :apply,
     bit_size: :bit_size,
@@ -58,6 +58,7 @@ defmodule Erl2ex.Pipeline.Names do
     is_number: :is_number,
     is_pid: :is_pid,
     is_port: :is_port,
+    is_record: {Record, :is_record},
     is_reference: :is_reference,
     is_tuple: :is_tuple,
     length: :length,
@@ -260,9 +261,14 @@ defmodule Erl2ex.Pipeline.Names do
     deffable_function_name?(name) and not MapSet.member?(@elixir_special_forms, name)
 
 
-  # Returns {:ok, elixir_name} or :error depending on whether the given
-  # Erlang BIF corresponds to an Elixir autoimport.
-  def check_autoimport(name), do:
-    Map.fetch(@autoimport_map, name)
+  # Returns {:ok, elixir_module, elixir_func} or :error depending on whether
+  # the given Erlang BIF corresponds to an Elixir autoimport.
+  def map_bif(name) do
+    case Map.fetch(@bif_map, name) do
+      {:ok, {mod, func}} -> {:ok, mod, func}
+      {:ok, kernel_func} -> {:ok, Kernel, kernel_func}
+      :error -> :error
+    end
+  end
 
 end

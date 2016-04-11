@@ -20,6 +20,7 @@ defmodule Erl2ex.Convert.Context do
             in_bin_size_expr: false,
             in_func_params: false,
             in_macro_def: false,
+            in_eager_macro_replacement: false,
             match_vars: MapSet.new,
             scopes: [],
             macro_exports: %{},
@@ -158,12 +159,12 @@ defmodule Erl2ex.Convert.Context do
 
 
   def set_type_expr_mode(context) do
-    %Context{context | in_type_expr: true}
+    %Context{context | in_type_expr: true, in_eager_macro_replacement: true}
   end
 
 
   def clear_type_expr_mode(context) do
-    %Context{context | in_type_expr: false}
+    %Context{context | in_type_expr: false, in_eager_macro_replacement: false}
   end
 
 
@@ -271,7 +272,8 @@ defmodule Erl2ex.Convert.Context do
 
   def start_record_types(context) do
     %Context{context |
-      cur_record_types: []
+      cur_record_types: [],
+      in_eager_macro_replacement: true
     }
   end
 
@@ -286,7 +288,8 @@ defmodule Erl2ex.Convert.Context do
   def finish_record_types(context, name) do
     %Context{context |
       record_types: Map.put(context.record_types, name, Enum.reverse(context.cur_record_types)),
-      cur_record_types: []
+      cur_record_types: [],
+      in_eager_macro_replacement: false
     }
   end
 

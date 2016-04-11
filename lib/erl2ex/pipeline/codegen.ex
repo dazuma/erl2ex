@@ -98,7 +98,7 @@ defmodule Erl2ex.Pipeline.Codegen do
         end
         ctx |> write_string("@#{defined_name} #{get_env_syntax} != nil", io)
       end)
-    if not Enum.empty?(header.records) do
+    if not Enum.empty?(header.records) or header.has_is_record do
       context = context
         |> skip_lines(:attr, io)
         |> write_string("require Record", io)

@@ -6,12 +6,13 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 *   Created a structure representing the results and status of a conversion, and reworked the main entry point functions to use it.
 *   Allow specification of the directory for application dependencies (i.e. where to look for include_lib files.)
-*   Simple macros can now appear in typespecs. The transpiler substitutes the replacement value because Elixir syntax can't handle a macro call at that location.
+*   Simple macros can now appear in typespecs and record fields (but not yet the record name). The transpiler substitutes the replacement value because Elixir syntax can't handle a macro call at those locations.
 *   Rename specs when the transpiler renames the associated function.
 *   Reworked conversion of public functions whose names can't be deffed directly, to use a simpler technique that now also works for "unquote".
 *   Calls to remote functions with names that can't be referenced directly (like "1func" or "unquote") failed. Fixed using Kernel.apply.
 *   Reworked conversion of "if" statements so it supports expressions that cause errors.
 *   Add "when" to the list of reserved names.
+*   The Erlang is_record BIF is now mapped to the Elixir Record.is_record macro so it's compatible with Elixir-defined records.
 
 ## v0.0.8 (2016-02-25)
 

@@ -98,6 +98,7 @@ defmodule Erl2ex.Pipeline.ExHeader do
   @moduledoc false
 
   defstruct use_bitwise: false,
+            has_is_record: false,
             records: [],
             init_macros: [],
             macro_dispatcher: nil,

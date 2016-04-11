@@ -74,6 +74,28 @@ defmodule E2ETest do
 
 
   @tag :e2e
+  test "mochiweb" do
+    download_project("mochiweb", "https://github.com/mochi/mochiweb.git")
+    clean_dir("mochiweb", "src_ex")
+    convert_dir("mochiweb", "src", "src_ex",
+        include_dir: project_path("mochiweb", "include"))
+    copy_dir("mochiweb", "test", "src_ex")
+    compile_dir("mochiweb", "src_ex", display_output: true)
+    run_eunit_tests(
+      [
+        :mochiweb_base64url_tests,
+        :mochiweb_html_tests,
+        :mochiweb_http_tests,
+        :mochiweb_request_tests,
+        :mochiweb_socket_server_tests,
+        :mochiweb_tests,
+        :mochiweb_websocket_tests
+      ],
+      "mochiweb", "src_ex", display_output: true)
+  end
+
+
+  @tag :e2e
   test "poolboy" do
     download_project("poolboy", "https://github.com/devinus/poolboy.git")
     clean_dir("poolboy", "src_ex")
@@ -176,29 +198,6 @@ defmodule E2ETest do
         auto_export_suffix: "_test")
     compile_dir("goldrush", "src_ex", display_output: true)
     run_eunit_tests([:glc], "goldrush", "src_ex", display_output: true)
-  end
-
-
-  # Fails because a macro call is made in a record definition.
-  @tag :skip
-  test "mochiweb" do
-    download_project("mochiweb", "https://github.com/mochi/mochiweb.git")
-    clean_dir("mochiweb", "src_ex")
-    convert_dir("mochiweb", "src", "src_ex",
-        include_dir: project_path("mochiweb", "include"))
-    copy_dir("mochiweb", "test", "src_ex")
-    compile_dir("mochiweb", "src_ex", display_output: true)
-    run_eunit_tests(
-      [
-        :mochiweb_base64url_tests,
-        :mochiweb_html_tests,
-        :mochiweb_httl_tests,
-        :mochiweb_request_tests,
-        :mochiweb_socket_server_tests,
-        :mochiweb_tests,
-        :mochiweb_websocket_tests
-      ],
-      "mochiweb", "src_ex", display_output: true)
   end
 
 

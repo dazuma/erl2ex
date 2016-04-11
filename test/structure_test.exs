@@ -104,6 +104,24 @@ defmodule StructureTest do
   end
 
 
+  test "is_record BIF" do
+    input = """
+      foo() -> is_record(foo, bar).
+      """
+
+    expected = """
+      require Record
+
+
+      defp foo() do
+        Record.is_record(:foo, :bar)
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "on_load attribute" do
     input = """
       -on_load(foo/0).
