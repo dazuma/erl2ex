@@ -20,7 +20,9 @@ defmodule E2ETest do
     compile_dir("erlware_commons", "src_ex",
         display_output: true,
         DEFINE_namespaced_types: "true")
-    run_eunit_tests([:ec_plists], "erlware_commons", "src_ex", display_output: true)
+    run_eunit_tests(
+        [:ec_plists],
+        "erlware_commons", "src_ex", display_output: true)
   end
 
 
@@ -31,7 +33,9 @@ defmodule E2ETest do
     convert_dir("getopt", "src", "src_ex")
     copy_dir("getopt", "test", "src_ex")
     compile_dir("getopt", "src_ex", display_output: true)
-    run_eunit_tests([:getopt_test], "getopt", "src_ex", display_output: true)
+    run_eunit_tests(
+        [:getopt_test],
+        "getopt", "src_ex", display_output: true)
   end
 
 
@@ -47,8 +51,21 @@ defmodule E2ETest do
     copy_file("gproc", "src/gproc.app.src", "src_ex/gproc.app")
     compile_dir("gproc", "src_ex", display_output: true)
     run_eunit_tests(
-      [:gproc_tests],
-      "gproc", "src_ex", display_output: true)
+        [:gproc_tests],
+        "gproc", "src_ex", display_output: true)
+  end
+
+
+  @tag :e2e
+  test "idna" do
+    download_project("idna", "https://github.com/benoitc/erlang-idna.git")
+    clean_dir("idna", "src_ex")
+    convert_dir("idna", "src", "src_ex")
+    copy_dir("idna", "test", "src_ex")
+    compile_dir("idna", "src_ex", display_output: true)
+    run_eunit_tests(
+        [:idna_test],
+        "idna", "src_ex", display_output: true)
   end
 
 
@@ -59,17 +76,17 @@ defmodule E2ETest do
     convert_dir("jsx", "src", "src_ex", auto_export_suffix: "_test_")
     compile_dir("jsx", "src_ex", display_output: true)
     run_eunit_tests(
-      [
-        :jsx,
-        :jsx_config,
-        :jsx_decoder,
-        :jsx_encoder,
-        :jsx_parser,
-        :jsx_to_json,
-        :jsx_to_term,
-        :jsx_verify
-      ],
-      "jsx", "src_ex", display_output: true)
+        [
+          :jsx,
+          :jsx_config,
+          :jsx_decoder,
+          :jsx_encoder,
+          :jsx_parser,
+          :jsx_to_json,
+          :jsx_to_term,
+          :jsx_verify
+        ],
+        "jsx", "src_ex", display_output: true)
   end
 
 
@@ -82,16 +99,16 @@ defmodule E2ETest do
     copy_dir("mochiweb", "test", "src_ex")
     compile_dir("mochiweb", "src_ex", display_output: true)
     run_eunit_tests(
-      [
-        :mochiweb_base64url_tests,
-        :mochiweb_html_tests,
-        :mochiweb_http_tests,
-        :mochiweb_request_tests,
-        :mochiweb_socket_server_tests,
-        :mochiweb_tests,
-        :mochiweb_websocket_tests
-      ],
-      "mochiweb", "src_ex", display_output: true)
+        [
+          :mochiweb_base64url_tests,
+          :mochiweb_html_tests,
+          :mochiweb_http_tests,
+          :mochiweb_request_tests,
+          :mochiweb_socket_server_tests,
+          :mochiweb_tests,
+          :mochiweb_websocket_tests
+        ],
+        "mochiweb", "src_ex", display_output: true)
   end
 
 
@@ -102,7 +119,9 @@ defmodule E2ETest do
     convert_dir("poolboy", "src", "src_ex")
     copy_dir("poolboy", "test", "src_ex")
     compile_dir("poolboy", "src_ex", display_output: true)
-    run_eunit_tests([:poolboy], "poolboy", "src_ex", display_output: true)
+    run_eunit_tests(
+        [:poolboy],
+        "poolboy", "src_ex", display_output: true)
   end
 
 
@@ -127,7 +146,9 @@ defmodule E2ETest do
     convert_dir("bbmustache", "src", "src_ex")
     copy_dir("bbmustache", "test", "src_ex")
     compile_dir("bbmustache", "src_ex", display_output: true)
-    run_eunit_tests([:bbmustache_tests], "bbmustache", "src_ex", display_output: true)
+    run_eunit_tests(
+        [:bbmustache_tests],
+        "bbmustache", "src_ex", display_output: true)
   end
 
 
@@ -183,7 +204,8 @@ defmodule E2ETest do
         include_dir: project_path("eredis", "include"))
     copy_dir("eredis", "test", "src_ex")
     compile_dir("eredis", "src_ex", display_output: true)
-    run_eunit_tests([:eredis_parser_tests, :eredis_sub_tests, :eredis_tests],
+    run_eunit_tests(
+        [:eredis_parser_tests, :eredis_sub_tests, :eredis_tests],
         "eredis", "src_ex", display_output: true)
   end
 
@@ -197,7 +219,9 @@ defmodule E2ETest do
         auto_export_suffix: "_test_",
         auto_export_suffix: "_test")
     compile_dir("goldrush", "src_ex", display_output: true)
-    run_eunit_tests([:glc], "goldrush", "src_ex", display_output: true)
+    run_eunit_tests(
+        [:glc],
+        "goldrush", "src_ex", display_output: true)
   end
 
 
