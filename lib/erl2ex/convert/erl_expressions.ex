@@ -6,6 +6,7 @@ defmodule Erl2ex.Convert.ErlExpressions do
   alias Erl2ex.Convert.Context
 
   alias Erl2ex.Pipeline.ModuleData
+  alias Erl2ex.Pipeline.Names
 
 
   @import_kernel_metadata [context: Elixir, import: Kernel]
@@ -849,10 +850,15 @@ defmodule Erl2ex.Convert.ErlExpressions do
   end
 
 
-  defp conv_normal_call(func = {:remote, _, _, _}, args, context) do
-    {ex_args, context} = conv_list(args, context)
+  defp conv_normal_call({:remote, _, mod, func}, args, context) do
+    {ex_mod, context} = conv_expr(mod, context)
     {ex_func, context} = conv_expr(func, context)
-    {{ex_func, [], ex_args}, context}
+    {ex_args, context} = conv_list(args, context)
+    if Names.callable_function_name?(ex_func) do
+      {{{:., [], [ex_mod, ex_func]}, [], ex_args}, context}
+    else
+      {{{:., [], [{:__aliases__, [alias: false], [:Kernel]}, :apply]}, [], [ex_mod, ex_func, ex_args]}, context}
+    end
   end
 
   defp conv_normal_call({:atom, _, func}, args, context) do

@@ -37,8 +37,7 @@ defmodule Erl2ex.Pipeline.Codegen do
     defstruct indent: 0,
               last_form: :start,
               define_prefix: "",
-              defines_from_config: nil,
-              func_renamer: nil
+              defines_from_config: nil
   end
 
 
@@ -59,14 +58,6 @@ defmodule Erl2ex.Pipeline.Codegen do
 
   def decrement_indent(context) do
     %Context{context | indent: context.indent - 1}
-  end
-
-  def set_func_renamer(context, func_renamer) do
-    %Context{context | func_renamer: func_renamer}
-  end
-
-  def clear_func_renamer(context) do
-    %Context{context | func_renamer: nil}
   end
 
 
@@ -143,16 +134,6 @@ defmodule Erl2ex.Pipeline.Codegen do
         |> write_string("{Macro.expand(macro, __CALLER__), [], args}", io)
         |> decrement_indent
     end
-    if header.func_renamer != nil do
-      context = context
-        |> skip_lines(:attr, io)
-        |> write_string("@#{header.func_renamer} fn(name, expr) ->", io)
-        |> increment_indent
-        |> write_string("renamer = fn n, {:def, a, [{_, b, c}, d]} -> {:def, a, [{n, b, c}, d]} end", io)
-        |> write_string("Module.eval_quoted(__MODULE__, renamer.(name, expr))", io)
-        |> decrement_indent
-        |> write_string("end", io)
-    end
     context
   end
 
@@ -164,10 +145,11 @@ defmodule Erl2ex.Pipeline.Codegen do
   defp write_form(
     context,
     %ExFunc{
+      name: name,
+      name_var: name_var,
       comments: comments,
       clauses: [first_clause | remaining_clauses],
       public: public,
-      func_renamer: func_renamer,
       specs: specs
     },
     io)
@@ -175,9 +157,9 @@ defmodule Erl2ex.Pipeline.Codegen do
     context
       |> write_comment_list(comments, :func_header, io)
       |> write_func_specs(specs, io)
-      |> write_func_clause(public, func_renamer, first_clause, :func_clause_first, io)
+      |> write_func_clause(public, name, name_var, first_clause, :func_clause_first, io)
       |> foreach(remaining_clauses, fn (ctx, clause) ->
-        write_func_clause(ctx, public, func_renamer, clause, :func_clause, io)
+        write_func_clause(ctx, public, name, name_var, clause, :func_clause, io)
       end)
   end
 
@@ -342,20 +324,15 @@ defmodule Erl2ex.Pipeline.Codegen do
   end
 
 
-  defp write_func_clause(context, public, func_renamer, clause, form_type, io) do
+  defp write_func_clause(context, public, name, name_var, clause, form_type, io) do
     decl = if public, do: "def", else: "defp"
     sig = clause.signature
-    name = elem(sig, 0)
-    if func_renamer != nil do
-      sig = put_elem(sig, 0, :func)
-    end
     context = context
       |> skip_lines(form_type, io)
       |> foreach(clause.comments, io, &write_string/3)
-    if func_renamer != nil do
+    if name_var != nil do
       context = context
-        |> write_string("@#{func_renamer}.(#{expr_to_string(name)}, quote do", io)
-        |> increment_indent
+        |> write_string("#{name_var} = #{expr_to_string(name)}", io)
     end
     context = context
       |> write_string("#{decl} #{signature_to_string(sig)} do", io)
@@ -365,11 +342,6 @@ defmodule Erl2ex.Pipeline.Codegen do
       end)
       |> decrement_indent
       |> write_string("end", io)
-    if func_renamer != nil do
-      context = context
-        |> decrement_indent
-        |> write_string("end)", io)
-    end
     context
   end
 

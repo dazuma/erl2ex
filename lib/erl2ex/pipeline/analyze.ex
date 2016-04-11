@@ -117,8 +117,6 @@ defmodule Erl2ex.Pipeline.Analyze do
       name_node = :erl_syntax.function_name(form_node)
       ErlSyntax.on_atom(name_node, module_data, fn name ->
         local_funcs = MapSet.put(module_data.local_funcs, {name, arity})
-        func_renamer = module_data.func_renamer
-        used_attr_names = module_data.used_attr_names
         used_func_names = module_data.used_func_names
         func_rename_map = module_data.func_rename_map
         if not Map.has_key?(func_rename_map, name) and
@@ -128,16 +126,10 @@ defmodule Erl2ex.Pipeline.Analyze do
         do
           func_rename_map = Map.put_new(func_rename_map, name, name)
           used_func_names = MapSet.put(used_func_names, name)
-          if func_renamer == nil and not Names.deffable_function_name?(name) do
-            func_renamer = Utils.find_available_name("defrenamed", used_attr_names)
-            used_attr_names = MapSet.put(used_attr_names, func_renamer)
-          end
         end
         %ModuleData{module_data |
           local_funcs: local_funcs,
-          func_renamer: func_renamer,
           func_rename_map: func_rename_map,
-          used_attr_names: used_attr_names,
           used_func_names: used_func_names
         }
       end)

@@ -7,64 +7,6 @@ defmodule E2ETest do
 
   # Libraries that are working
 
-  @tag :e2e
-  test "poolboy" do
-    download_project("poolboy", "https://github.com/devinus/poolboy.git")
-    clean_dir("poolboy", "src_ex")
-    convert_dir("poolboy", "src", "src_ex")
-    copy_dir("poolboy", "test", "src_ex")
-    compile_dir("poolboy", "src_ex", display_output: true)
-    run_eunit_tests([:poolboy], "poolboy", "src_ex", display_output: true)
-  end
-
-
-  @tag :e2e
-  test "jsx" do
-    download_project("jsx", "https://github.com/talentdeficit/jsx.git")
-    clean_dir("jsx", "src_ex")
-    convert_dir("jsx", "src", "src_ex", auto_export_suffix: "_test_")
-    compile_dir("jsx", "src_ex", display_output: true)
-    run_eunit_tests(
-      [
-        :jsx,
-        :jsx_config,
-        :jsx_decoder,
-        :jsx_encoder,
-        :jsx_parser,
-        :jsx_to_json,
-        :jsx_to_term,
-        :jsx_verify
-      ],
-      "jsx", "src_ex", display_output: true)
-  end
-
-
-  @tag :e2e
-  test "ranch" do
-    download_project("ranch", "https://github.com/ninenines/ranch.git")
-    clean_dir("ranch", "src_ex")
-    convert_dir("ranch", "src", "src_ex")
-    compile_dir("ranch", "src_ex", display_output: true)
-    # Not sure how to run tests
-  end
-
-
-  @tag :e2e
-  test "gproc" do
-    download_project("gproc", "https://github.com/uwiger/gproc.git")
-    clean_dir("gproc", "src_ex")
-    convert_dir("gproc", "src", "src_ex",
-        include_dir: project_path("gproc", "include"),
-        auto_export_suffix: "_test_",
-        auto_export_suffix: "_test")
-    copy_dir("gproc", "test", "src_ex", ["gproc_tests.erl", "gproc_test_lib.erl"])
-    copy_file("gproc", "src/gproc.app.src", "src_ex/gproc.app")
-    compile_dir("gproc", "src_ex", display_output: true)
-    run_eunit_tests(
-      [:gproc_tests],
-      "gproc", "src_ex", display_output: true)
-  end
-
 
   @tag :e2e
   test "erlware_commons" do
@@ -93,19 +35,66 @@ defmodule E2ETest do
   end
 
 
-  # Libraries that are not yet working
-
-  # Fails because a fully qualified macro appears in a typespec
-  @tag :skip
-  test "goldrush" do
-    download_project("goldrush", "https://github.com/DeadZen/goldrush.git")
-    clean_dir("goldrush", "src_ex")
-    convert_dir("goldrush", "src", "src_ex",
+  @tag :e2e
+  test "gproc" do
+    download_project("gproc", "https://github.com/uwiger/gproc.git")
+    clean_dir("gproc", "src_ex")
+    convert_dir("gproc", "src", "src_ex",
+        include_dir: project_path("gproc", "include"),
         auto_export_suffix: "_test_",
         auto_export_suffix: "_test")
-    compile_dir("goldrush", "src_ex", display_output: true)
-    run_eunit_tests([:glc], "goldrush", "src_ex", display_output: true)
+    copy_dir("gproc", "test", "src_ex", ["gproc_tests.erl", "gproc_test_lib.erl"])
+    copy_file("gproc", "src/gproc.app.src", "src_ex/gproc.app")
+    compile_dir("gproc", "src_ex", display_output: true)
+    run_eunit_tests(
+      [:gproc_tests],
+      "gproc", "src_ex", display_output: true)
   end
+
+
+  @tag :e2e
+  test "jsx" do
+    download_project("jsx", "https://github.com/talentdeficit/jsx.git")
+    clean_dir("jsx", "src_ex")
+    convert_dir("jsx", "src", "src_ex", auto_export_suffix: "_test_")
+    compile_dir("jsx", "src_ex", display_output: true)
+    run_eunit_tests(
+      [
+        :jsx,
+        :jsx_config,
+        :jsx_decoder,
+        :jsx_encoder,
+        :jsx_parser,
+        :jsx_to_json,
+        :jsx_to_term,
+        :jsx_verify
+      ],
+      "jsx", "src_ex", display_output: true)
+  end
+
+
+  @tag :e2e
+  test "poolboy" do
+    download_project("poolboy", "https://github.com/devinus/poolboy.git")
+    clean_dir("poolboy", "src_ex")
+    convert_dir("poolboy", "src", "src_ex")
+    copy_dir("poolboy", "test", "src_ex")
+    compile_dir("poolboy", "src_ex", display_output: true)
+    run_eunit_tests([:poolboy], "poolboy", "src_ex", display_output: true)
+  end
+
+
+  @tag :e2e
+  test "ranch" do
+    download_project("ranch", "https://github.com/ninenines/ranch.git")
+    clean_dir("ranch", "src_ex")
+    convert_dir("ranch", "src", "src_ex")
+    compile_dir("ranch", "src_ex", display_output: true)
+    # Not sure how to run tests
+  end
+
+
+  # Libraries that are not yet working
 
 
   # Fails because a macro appears as a record name.
@@ -120,32 +109,6 @@ defmodule E2ETest do
   end
 
 
-  # Fails because of a strange missing file in the public_key application.
-  @tag :skip
-  test "ssl_verify_fun" do
-    download_project("ssl_verify_fun", "https://github.com/deadtrickster/ssl_verify_fun.erl.git")
-    clean_dir("ssl_verify_fun", "src_ex")
-    convert_dir("ssl_verify_fun", "src", "src_ex")
-    copy_dir("ssl_verify_fun", "test", "src_ex")
-    compile_dir("ssl_verify_fun", "src_ex", display_output: true)
-    run_eunit_tests(
-        [:ssl_verify_fingerprint_tests, :ssl_verify_hostname_tests, :ssl_verify_pk_tests],
-        "ssl_verify_fun", "src_ex", display_output: true)
-  end
-
-
-  # Fails because of a tricky macro
-  @tag :skip
-  test "cowlib" do
-    download_project("ranch", "https://github.com/ninenines/cowlib.git")
-    clean_dir("cowlib", "src_ex")
-    convert_dir("cowlib", "src", "src_ex",
-        include_dir: project_path("cowlib", "include"))
-    compile_dir("cowlib", "src_ex", display_output: true)
-    # Not sure how to run tests
-  end
-
-
   # Fails because cowlib fails
   @tag :skip
   test "cowboy" do
@@ -156,6 +119,18 @@ defmodule E2ETest do
     convert_dir("cowboy", "src", "src_ex",
         lib_dir: %{cowlib: project_path("cowlib"), ranch: project_path("ranch")})
     compile_dir("cowboy", "src_ex", display_output: true)
+    # Not sure how to run tests
+  end
+
+
+  # Fails because a comprehension contains a macro invocation
+  @tag :skip
+  test "cowlib" do
+    download_project("ranch", "https://github.com/ninenines/cowlib.git")
+    clean_dir("cowlib", "src_ex")
+    convert_dir("cowlib", "src", "src_ex",
+        include_dir: project_path("cowlib", "include"))
+    compile_dir("cowlib", "src_ex", display_output: true)
     # Not sure how to run tests
   end
 
@@ -174,6 +149,70 @@ defmodule E2ETest do
 
     copy_dir("elixir", "lib/elixir/test/erlang", "lib/elixir/src_ex")
     compile_dir("elixir", "lib/elixir/src_ex", display_output: true)
+  end
+
+
+  # Fails because a binary literal contains a macro invocation returning a list.
+  @tag :skip
+  test "eredis" do
+    download_project("eredis", "https://github.com/wooga/eredis.git")
+    clean_dir("eredis", "src_ex")
+    convert_dir("eredis", "src", "src_ex",
+        include_dir: project_path("eredis", "include"))
+    copy_dir("eredis", "test", "src_ex")
+    compile_dir("eredis", "src_ex", display_output: true)
+    run_eunit_tests([:eredis_parser_tests, :eredis_sub_tests, :eredis_tests],
+        "eredis", "src_ex", display_output: true)
+  end
+
+
+  # Fails because a fully qualified macro appears in a typespec
+  @tag :skip
+  test "goldrush" do
+    download_project("goldrush", "https://github.com/DeadZen/goldrush.git")
+    clean_dir("goldrush", "src_ex")
+    convert_dir("goldrush", "src", "src_ex",
+        auto_export_suffix: "_test_",
+        auto_export_suffix: "_test")
+    compile_dir("goldrush", "src_ex", display_output: true)
+    run_eunit_tests([:glc], "goldrush", "src_ex", display_output: true)
+  end
+
+
+  # Fails because a macro call is made in a record definition.
+  @tag :skip
+  test "mochiweb" do
+    download_project("mochiweb", "https://github.com/mochi/mochiweb.git")
+    clean_dir("mochiweb", "src_ex")
+    convert_dir("mochiweb", "src", "src_ex",
+        include_dir: project_path("mochiweb", "include"))
+    copy_dir("mochiweb", "test", "src_ex")
+    compile_dir("mochiweb", "src_ex", display_output: true)
+    run_eunit_tests(
+      [
+        :mochiweb_base64url_tests,
+        :mochiweb_html_tests,
+        :mochiweb_httl_tests,
+        :mochiweb_request_tests,
+        :mochiweb_socket_server_tests,
+        :mochiweb_tests,
+        :mochiweb_websocket_tests
+      ],
+      "mochiweb", "src_ex", display_output: true)
+  end
+
+
+  # Fails because of a strange missing file in the public_key application.
+  @tag :skip
+  test "ssl_verify_fun" do
+    download_project("ssl_verify_fun", "https://github.com/deadtrickster/ssl_verify_fun.erl.git")
+    clean_dir("ssl_verify_fun", "src_ex")
+    convert_dir("ssl_verify_fun", "src", "src_ex")
+    copy_dir("ssl_verify_fun", "test", "src_ex")
+    compile_dir("ssl_verify_fun", "src_ex", display_output: true)
+    run_eunit_tests(
+        [:ssl_verify_fingerprint_tests, :ssl_verify_hostname_tests, :ssl_verify_pk_tests],
+        "ssl_verify_fun", "src_ex", display_output: true)
   end
 
 end

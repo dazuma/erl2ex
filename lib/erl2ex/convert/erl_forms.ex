@@ -93,18 +93,18 @@ defmodule Erl2ex.Convert.ErlForms do
     module_data = context.module_data
     mapped_name = ModuleData.local_function_name(module_data, name)
     is_exported = ModuleData.is_exported?(module_data, name, arity)
-    func_renamer = if Names.deffable_function_name?(mapped_name) do
+    name_var = if Names.deffable_function_name?(mapped_name) do
       nil
     else
-      ModuleData.func_renamer_name(module_data)
+      ModuleData.func_name_var(module_data)
     end
-    ex_clauses = Enum.map(clauses, &(conv_clause(context, &1, mapped_name)))
+    ex_clauses = Enum.map(clauses, &(conv_clause(context, &1, mapped_name, name_var)))
 
     ex_func = %ExFunc{
       name: mapped_name,
+      name_var: name_var,
       arity: arity,
       public: is_exported,
-      func_renamer: func_renamer,
       clauses: ex_clauses
     }
     {[ex_func], context}
@@ -328,15 +328,15 @@ defmodule Erl2ex.Convert.ErlForms do
   defp interpret_macro_name(name) when is_atom(name), do: name
 
 
-  defp conv_clause(context, clause, name) do
+  defp conv_clause(context, clause, name, name_var) do
     context
       |> Context.set_variable_maps(clause)
-      |> conv_var_mapped_clause(clause, name)
+      |> conv_var_mapped_clause(clause, name, name_var)
   end
 
-  defp conv_var_mapped_clause(context, {:clause, _line, args, guards, exprs}, name) do
+  defp conv_var_mapped_clause(context, {:clause, _line, args, guards, exprs}, name, name_var) do
     context = Context.push_scope(context)
-    {ex_signature, context} = clause_signature(name, args, guards, context)
+    {ex_signature, context} = clause_signature(name, name_var, args, guards, context)
     {ex_exprs, _} = ErlExpressions.conv_list(exprs, context)
 
     %ExClause{
@@ -346,18 +346,22 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
-  defp clause_signature(name, params, [], context) do
+  defp clause_signature(name, name_var, params, [], context) do
     context = Context.push_match_level(context, true)
     {ex_params, context} = ErlExpressions.conv_list(params, context)
     context = Context.pop_match_level(context)
-    {{name, [], ex_params}, context}
+    {{signature_name(name, name_var), [], ex_params}, context}
   end
 
-  defp clause_signature(name, params, guards, context) do
+  defp clause_signature(name, name_var, params, guards, context) do
     {ex_guards, context} = ErlExpressions.guard_seq(guards, context)
-    {sig_without_guards, context} = clause_signature(name, params, [], context)
+    {sig_without_guards, context} = clause_signature(name, name_var, params, [], context)
     {{:when, [], [sig_without_guards | ex_guards]}, context}
   end
+
+
+  defp signature_name(name, nil), do: name
+  defp signature_name(_, name_var), do: {:unquote, [], [{name_var, [], Elixir}]}
 
 
   defp convert_comments(comments) do

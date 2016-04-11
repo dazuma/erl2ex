@@ -222,42 +222,58 @@ defmodule FunctionTest do
 
   test "Local exported function name is reserved or has strange characters" do
     input = """
-      -export([do/0, 'E=mc^2'/0, foo/0]).
+      -export([do/0, unquote/0, 'E=mc^2'/0, foo/0]).
       do() -> hello.
+      unquote() -> world.
       'E=mc^2'() -> bye.
-      foo() -> {do(), 'E=mc^2'()}.
+      foo() -> {do(), unquote(), 'E=mc^2'()}.
       """
 
     expected = """
-      @defrenamed fn(name, expr) ->
-        renamer = fn n, {:def, a, [{_, b, c}, d]} -> {:def, a, [{n, b, c}, d]} end
-        Module.eval_quoted(__MODULE__, renamer.(name, expr))
+      function_name = :do
+      def unquote(function_name)() do
+        :hello
       end
 
 
-      @defrenamed.(:do, quote do
-        def func() do
-          :hello
-        end
-      end)
+      function_name = :unquote
+      def unquote(function_name)() do
+        :world
+      end
 
 
-      @defrenamed.(:"E=mc^2", quote do
-        def func() do
-          :bye
-        end
-      end)
+      function_name = :"E=mc^2"
+      def unquote(function_name)() do
+        :bye
+      end
 
 
       def foo() do
-        {__MODULE__.do(), Kernel.apply(__MODULE__, :"E=mc^2", [])}
+        {__MODULE__.do(), Kernel.apply(__MODULE__, :unquote, []), Kernel.apply(__MODULE__, :"E=mc^2", [])}
       end
       """
 
     result = test_conversion(input, @opts)
     assert result.output == expected
     assert apply(result.module, :do, []) == :hello
-    assert apply(result.module, :foo, []) == {:hello, :bye}
+    assert apply(result.module, :unquote, []) == :world
+    assert apply(result.module, :"E=mc^2", []) == :bye
+    assert apply(result.module, :foo, []) == {:hello, :world, :bye}
+  end
+
+
+  test "Call to remote functions whose name is reserved or has strange characters" do
+    input = """
+      foo() -> {blah:do(), blah:unquote(), blah:'E=mc^2'()}.
+      """
+
+    expected = """
+      defp foo() do
+        {:blah.do(), Kernel.apply(:blah, :unquote, []), Kernel.apply(:blah, :"E=mc^2", [])}
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
 

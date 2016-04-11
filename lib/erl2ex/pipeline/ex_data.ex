@@ -102,8 +102,7 @@ defmodule Erl2ex.Pipeline.ExHeader do
             init_macros: [],
             macro_dispatcher: nil,
             record_size_macro: nil,
-            record_index_macro: nil,
-            func_renamer: nil
+            record_index_macro: nil
 
 end
 
@@ -112,9 +111,9 @@ defmodule Erl2ex.Pipeline.ExFunc do
   @moduledoc false
 
   defstruct name: nil,
+            name_var: nil,
             arity: nil,
             public: false,
-            func_renamer: nil,
             specs: [],
             clauses: [],
             comments: []

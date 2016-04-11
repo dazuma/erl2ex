@@ -8,7 +8,10 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 *   Allow specification of the directory for application dependencies (i.e. where to look for include_lib files.)
 *   Simple macros can now appear in typespecs. The transpiler substitutes the replacement value because Elixir syntax can't handle a macro call at that location.
 *   Rename specs when the transpiler renames the associated function.
+*   Reworked conversion of public functions whose names can't be deffed directly, to use a simpler technique that now also works for "unquote".
+*   Calls to remote functions with names that can't be referenced directly (like "1func" or "unquote") failed. Fixed using Kernel.apply.
 *   Reworked conversion of "if" statements so it supports expressions that cause errors.
+*   Add "when" to the list of reserved names.
 
 ## v0.0.8 (2016-02-25)
 

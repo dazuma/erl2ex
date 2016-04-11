@@ -838,4 +838,31 @@ defmodule PreprocessorTest do
     assert apply(result.module, :foo, []) == {2, 1}
   end
 
+
+  @tag :skip
+  test "Macro invocation in a binary comprehension" do
+    input = """
+      -export([foo/0]).
+      -define(HELLO(A), A).
+      foo(B) -> << << HELLO(A) >> || << A >> <= B >>.
+      """
+
+    expected = """
+      defmacrop erlmacro_HELLO(a) do
+        quote do
+          unquote(a)
+        end
+      end
+
+
+      defp foo(b) do
+        for(<<a <- b>>, into: <<>>, do: <<erlmacro_HELLO(a)>>)
+      end
+      """
+
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    assert apply(result.module, :foo, <<1>>) == <<1>>
+  end
+
 end

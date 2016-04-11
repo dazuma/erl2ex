@@ -21,12 +21,21 @@ defmodule Erl2ex.Pipeline.Names do
     :or,
     :rescue,
     :true,
+    :unquote,
+    :unquote_splicing,
+    :when,
     :__CALLER__,
     :__DIR__,
     :__ENV__,
     :__MODULE__,
     :__aliases__,
     :__block__
+  ] |> Enum.into(MapSet.new)
+
+
+  @elixir_uncallable_functions [
+    :unquote,
+    :unquote_splicing
   ] |> Enum.into(MapSet.new)
 
 
@@ -82,8 +91,6 @@ defmodule Erl2ex.Pipeline.Names do
     :require,
     :super,
     :try,
-    :unquote,
-    :unquote_splicing,
     :with
   ] |> Enum.into(MapSet.new)
 
@@ -236,7 +243,8 @@ defmodule Erl2ex.Pipeline.Names do
   # can say Kernel.nil(). However, :"9foo" is not callable. If a function name
   # is not callable, you have to use Kernel.apply() to call it.
   def callable_function_name?(name), do:
-    Regex.match?(~r/^[_a-z]\w*$/, Atom.to_string(name))
+    Regex.match?(~r/^[_a-z]\w*$/, Atom.to_string(name)) and
+        not MapSet.member?(@elixir_uncallable_functions, name)
 
 
   # Returns true if the given name can be a function defined using "def"

@@ -22,7 +22,6 @@ defmodule Erl2ex.Convert.Headers do
       macro_dispatcher: ModuleData.macro_dispatcher_name(module_data),
       record_size_macro: ModuleData.record_size_macro(module_data),
       record_index_macro: ModuleData.record_index_macro(module_data),
-      func_renamer: ModuleData.func_renamer_name(module_data),
     }
   end
 

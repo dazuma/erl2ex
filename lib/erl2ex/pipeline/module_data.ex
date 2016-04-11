@@ -6,6 +6,7 @@ defmodule Erl2ex.Pipeline.ModuleData do
 
   alias Erl2ex.Pipeline.ModuleData
   alias Erl2ex.Pipeline.Names
+  alias Erl2ex.Pipeline.Utils
 
 
   defstruct(
@@ -154,8 +155,8 @@ defmodule Erl2ex.Pipeline.ModuleData do
   end
 
 
-  def func_renamer_name(%ModuleData{func_renamer: func_renamer}) do
-    func_renamer
+  def func_name_var(%ModuleData{used_func_names: used_func_names}) do
+    Utils.find_available_name("function_name", used_func_names)
   end
 
 
