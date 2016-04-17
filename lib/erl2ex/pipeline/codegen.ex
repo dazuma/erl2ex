@@ -1,3 +1,6 @@
+# This is the final stage of the pipeline, after conversion.
+# It takes as input a data structure as defined in ex_data.ex that includes
+# Elixir AST and some accompanying metadata, and generates Elixir source code.
 
 defmodule Erl2ex.Pipeline.Codegen do
 
@@ -16,6 +19,8 @@ defmodule Erl2ex.Pipeline.Codegen do
   alias Erl2ex.Pipeline.ExType
 
 
+  # Generate code and write to the given IO.
+
   def to_io(ex_module, io, opts \\ []) do
     opts
       |> build_context
@@ -23,6 +28,8 @@ defmodule Erl2ex.Pipeline.Codegen do
     :ok
   end
 
+
+  # Generate code and return a generated string.
 
   def to_str(ex_module, opts \\ []) do
     {:ok, io} = StringIO.open("")
@@ -32,14 +39,25 @@ defmodule Erl2ex.Pipeline.Codegen do
   end
 
 
+  # An internal codegen context structure used to decide indentation and
+  # vertical whitespace.
+
   defmodule Context do
     @moduledoc false
-    defstruct indent: 0,
-              last_form: :start,
-              define_prefix: "",
-              defines_from_config: nil
+    defstruct(
+      # The current indentation level (1 level = 2 spaces)
+      indent: 0,
+      # The kind of text last generated.
+      last_form: :start,
+      # A prefix string for environment variables used to define macros.
+      define_prefix: "",
+      # A string to pass to Application.get_env, or nil to use System.get_env.
+      defines_from_config: nil
+    )
   end
 
+
+  # Initializes the context struct given options.
 
   defp build_context(opts) do
     defines_from_config = Keyword.get(opts, :defines_from_config, nil)
@@ -51,6 +69,9 @@ defmodule Erl2ex.Pipeline.Codegen do
       defines_from_config: defines_from_config
     }
   end
+
+
+  # Update the indent level.
 
   def increment_indent(context) do
     %Context{context | indent: context.indent + 1}

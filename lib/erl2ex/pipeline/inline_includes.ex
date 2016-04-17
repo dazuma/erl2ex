@@ -1,3 +1,6 @@
+# This is the second phase in the pipeline, after parse. It goes through
+# the parsed forms, looking for include and include_lib calls. Any included
+# files are parsed and its forms inlined into the form list.
 
 defmodule Erl2ex.Pipeline.InlineIncludes do
 
@@ -9,10 +12,17 @@ defmodule Erl2ex.Pipeline.InlineIncludes do
   alias Erl2ex.Pipeline.Parse
 
 
+  # Entry point into InlineIncludes. Takes a list of forms, a Source
+  # process, and the path to the main file.
+
   def process(forms, source, main_source_path) do
     forms |> Enum.flat_map(&(handle_form(&1, source, main_source_path)))
   end
 
+
+  # Handles a single form, using the extended (epp_dodger) AST. If the
+  # form is an include or include_lib directive, replaces it with the
+  # contents of the referenced file.
 
   defp handle_form({_erl_ast, form_node} = form, source, main_source_path) do
     ErlSyntax.on_static_attribute(form_node, [form], fn name, arg_nodes ->
@@ -44,6 +54,10 @@ defmodule Erl2ex.Pipeline.InlineIncludes do
     end)
   end
 
+
+  # Loads a file to be included. Runs the Parse and (recursively) the
+  # InlineIncludes phases on the file contents to obtain parsed forms. Also
+  # generates comments delineating the file inclusion.
 
   defp do_include(include_str, include_path, display_path, source, main_source_path) do
     include_forms = include_str

@@ -1,3 +1,6 @@
+# This is the third phase in the pipeline, after file include inlining.
+# We analyze the parsed forms and gather a set of module-wide information
+# needed for later phases. The information is represented by ModuleData.
 
 defmodule Erl2ex.Pipeline.Analyze do
 
@@ -6,9 +9,12 @@ defmodule Erl2ex.Pipeline.Analyze do
   alias Erl2ex.Pipeline.ErlSyntax
   alias Erl2ex.Pipeline.ModuleData
   alias Erl2ex.Pipeline.ModuleData.MacroData
+  alias Erl2ex.Pipeline.ModuleData.RecordData
   alias Erl2ex.Pipeline.Names
   alias Erl2ex.Pipeline.Utils
 
+
+  # Run all the analyses on the given list of forms, and return a ModuleData.
 
   def forms(forms_list, opts \\ []) do
     forms_list
@@ -21,6 +27,8 @@ defmodule Erl2ex.Pipeline.Analyze do
       |> collect(forms_list, &handle_form_for_macros/2)
   end
 
+
+  # Initialize the ModuleData.
 
   defp build_base_data(forms_list, opts) do
     default_imports = Names.elixir_auto_imports
@@ -42,9 +50,16 @@ defmodule Erl2ex.Pipeline.Analyze do
   end
 
 
+  # A version of Enum.reduce with the accumulator and elements arguments
+  # reversed. Useful for chaining: the result of one reduction can be passed
+  # into the next.
+
   defp collect(accumulator, elements, fun), do:
     Enum.reduce(elements, accumulator, fun)
 
+
+  # An analysis of the extended (epp_dodger) AST that extracts the module
+  # name, exports, and imports.
 
   defp handle_form_for_name_and_exports({_erl_ast, form_node}, module_data) do
     ErlSyntax.on_static_attribute(form_node, module_data, fn attr_name, arg_nodes ->
@@ -98,6 +113,9 @@ defmodule Erl2ex.Pipeline.Analyze do
   end
 
 
+  # An analysis of the extended (epp_dodger) AST that extracts the names of
+  # attributes defined in the module.
+
   defp handle_form_for_used_attr_names({_erl_ast, form_node}, module_data) do
     ErlSyntax.on_static_attribute(form_node, module_data, fn attr_name, _arg_nodes ->
       if Names.special_attr_name?(attr_name) do
@@ -110,6 +128,20 @@ defmodule Erl2ex.Pipeline.Analyze do
     end)
   end
 
+
+  # An analysis of the extended (epp_dodger) AST that extracts names of all
+  # the functions defined in the module. It also decides which functions
+  # should be renamed because of name collision with imports, reserved words,
+  # and other Elixir naming inconveniences.
+  #
+  # Note that renaming will take place only for private functions. An exported
+  # function is part of the module interface and cannot be renamed. This
+  # analysis must therefore take place after the import/export analysis.
+  #
+  # After this analysis, local_funcs will have a complete list of functions
+  # in this module. func_rename_map will contain only non-renamed functions.
+  # Any local_funcs not already in func_rename_map need to have new names
+  # assigned.
 
   defp handle_form_for_funcs({_erl_ast, form_node}, module_data) do
     ErlSyntax.on_type(form_node, :function, module_data, fn ->
@@ -137,6 +169,10 @@ defmodule Erl2ex.Pipeline.Analyze do
   end
 
 
+  # This analysis actually assigns names for renamed functions. It is done
+  # strictly after the function name analysis, so that we have a complete list
+  # of which names are already taken by exported functions.
+
   defp assign_local_func_names(module_data) do
     module_data.local_funcs
       |> Enum.reduce(module_data, fn({name, _arity}, cur_data) ->
@@ -158,6 +194,16 @@ defmodule Erl2ex.Pipeline.Analyze do
   end
 
 
+  # An analysis of the erl_parse AST that extracts info about every record,
+  # primarily the list of fields.
+  # It decides two additional items: a name to use for the record's macro, and
+  # a name to use for the attribute that holds its field info. Those names
+  # are uniquified; thus, this analysis must run after the function and
+  # attribute analyses so we don't take names needed by exported items.
+  #
+  # The analysis also digs through function and macro definitions looking for
+  # record queries so we can determine whether to emit code to support them.
+
   defp handle_form_for_records(
     {{:attribute, _line, :record, {recname, fields}}, _form_node}, module_data)
   do
@@ -166,10 +212,13 @@ defmodule Erl2ex.Pipeline.Analyze do
     data_name = Utils.find_available_name(
         recname, module_data.used_attr_names, "erlrecordfields")
     field_info = fields |> Enum.map(&extract_record_field_info/1)
+    record_info = %RecordData{
+      func_name: macro_name,
+      data_attr_name: data_name,
+      fields: field_info
+    }
     %ModuleData{module_data |
-      record_func_names: Map.put(module_data.record_func_names, recname, macro_name),
-      record_data_names: Map.put(module_data.record_data_names, recname, data_name),
-      record_fields: Map.put(module_data.record_fields, recname, field_info),
+      records: Map.put(module_data.records, recname, record_info),
       used_func_names: MapSet.put(module_data.used_func_names, macro_name),
       used_attr_names: MapSet.put(module_data.used_attr_names, data_name)
     }
@@ -190,6 +239,8 @@ defmodule Erl2ex.Pipeline.Analyze do
   defp handle_form_for_records(_form, module_data), do: module_data
 
 
+  # Extract information from a record field node in the erl_parse tree.
+
   defp extract_record_field_info({:typed_record_field, record_field, type}) do
     {name, _line} = interpret_record_field(record_field)
     {name, type}
@@ -201,6 +252,10 @@ defmodule Erl2ex.Pipeline.Analyze do
 
   defp interpret_record_field({:record_field, _, {:atom, line, name}}), do: {name, line}
   defp interpret_record_field({:record_field, _, {:atom, line, name}, _}), do: {name, line}
+
+
+  # Look for record_info and record_index expressions in the erl_parse AST,
+  # and, if found, allocate a name for the corresponding Elixir macros.
 
   defp detect_record_query_presence({:call, _, {:atom, _, :is_record}, _}, module_data), do:
     %ModuleData{module_data | has_is_record: true}
@@ -240,6 +295,16 @@ defmodule Erl2ex.Pipeline.Analyze do
   defp set_record_index_macro(module_data), do: module_data
 
 
+  # An analysis of the erl_parse AST that extracts info about every macro.
+  # This collects a wide variety of information, represented in the
+  # ModuleData.MacroData structure. In particular, we follow uses and
+  # definitions of the macro, and determine whether the macro is defined
+  # once and can be invoked directly from Elixir, or whether it may be
+  # redefined in Erlang, which means it needs to be dispatched in Elixir
+  # because Elixir does not allow macro redefinition.
+
+  # When we encounter a macro definition form, analyze and update the data
+  # on that macro. Also look for macro calls.
   defp handle_form_for_macros(
     {{:define, _line, macro, replacement}, _form_node}, module_data)
   do
@@ -252,6 +317,8 @@ defmodule Erl2ex.Pipeline.Analyze do
     detect_func_style_call(replacement, module_data)
   end
 
+  # When we encounter a macro defintion directive, update our information about
+  # whether definition state needs to be tracked.
   defp handle_form_for_macros(
     {{:attribute, _line, directive, name}, _form_node}, module_data)
   when directive == :ifdef or directive == :ifndef or directive == :undef
@@ -273,6 +340,7 @@ defmodule Erl2ex.Pipeline.Analyze do
     end
   end
 
+  # When we encounter a function, search it for macro calls.
   defp handle_form_for_macros(
     {{:function, _line, _name, _arity, clauses}, _form_node}, module_data)
   do
@@ -281,6 +349,10 @@ defmodule Erl2ex.Pipeline.Analyze do
 
   defp handle_form_for_macros(_, module_data), do: module_data
 
+
+  # Parse the macro definition expression, which may be a function with
+  # arguments, or just a macro name (which may be an atom or variable in
+  # Erlang depending on captialization.)
 
   defp interpret_macro_expr({:call, _, name_expr, arg_exprs}) do
     name = interpret_macro_name(name_expr)
@@ -294,10 +366,15 @@ defmodule Erl2ex.Pipeline.Analyze do
   end
 
 
+  # Extract the actual macro name as an atom from the Erlang AST.
+
   defp interpret_macro_name({:var, _, name}), do: name
   defp interpret_macro_name({:atom, _, name}), do: name
   defp interpret_macro_name(name) when is_atom(name), do: name
 
+
+  # Search an Erlang AST for macro calls that take arguments. This is used
+  # to populate the has_func_style_call field of MacroData.
 
   defp detect_func_style_call(
     {:call, _, {:var, _, name}, _},
@@ -334,6 +411,17 @@ defmodule Erl2ex.Pipeline.Analyze do
   defp detect_func_style_call(_, module_data), do: module_data
 
 
+  # A function that updates the MacroData based on new information from a
+  # macro definition. The arguments are:
+  #   * The current MacroData
+  #   * Whether this is a redefinition of this macro
+  #   * The argument list (or nil for a no-argument definition)
+  #   * The name of the macro, as an atom
+  #   * The macro replacement, as an Erlang AST
+  #   * The old ModuleData to update.
+
+  # This version is called when a no-argument macro is redefined after it has
+  # already been redefined at least once.
   defp update_macro_info(
     %MacroData{
       const_name: const_name,
@@ -355,6 +443,8 @@ defmodule Erl2ex.Pipeline.Analyze do
     }
   end
 
+  # This version is called when a macro with arguments is redefined after it
+  # has already been redefined at least once.
   defp update_macro_info(
     %MacroData{
       func_name: func_name,
@@ -376,6 +466,9 @@ defmodule Erl2ex.Pipeline.Analyze do
     }
   end
 
+  # This version is called when a macro is redefined for the first time. It
+  # flips the MacroData to request using the macro dispatcher instead of
+  # the const_name and func_name.
   defp update_macro_info(
     %MacroData{
       const_name: const_name,
@@ -415,6 +508,8 @@ defmodule Erl2ex.Pipeline.Analyze do
     }
   end
 
+  # This version is called when a no-argument macro is defined for the first
+  # time.
   defp update_macro_info(
     %MacroData{
       const_name: const_name,
@@ -438,6 +533,8 @@ defmodule Erl2ex.Pipeline.Analyze do
     }
   end
 
+  # This version is called when a macro with arguments is defined for the first
+  # time.
   defp update_macro_info(
     %MacroData{
       func_name: func_name,
@@ -460,9 +557,14 @@ defmodule Erl2ex.Pipeline.Analyze do
   end
 
 
+  # Gien a macro replacement Erlang AST, return the constant expression if
+  # recognized as such, or nil if not.
+
   defp extract_replacement_expr([[expr]]), do: expr
   defp extract_replacement_expr(_), do: nil
 
+
+  # Choose an Elixir name for a macro.
 
   defp update_macro_name(given_name, nil, used_names, prefix) do
     macro_name = Utils.find_available_name(given_name, used_names, prefix)
@@ -474,9 +576,14 @@ defmodule Erl2ex.Pipeline.Analyze do
   end
 
 
+  # Update the requires_init value. Makes a change if the old value is nil,
+  # otherwise keeps the old value.
+
   defp update_requires_init(nil, nval), do: nval
   defp update_requires_init(oval, _nval), do: oval
 
+
+  # Update the state of is_redefined.
 
   defp update_is_redefined(true, _args), do: true
   defp update_is_redefined(set, args) when is_list(args) do

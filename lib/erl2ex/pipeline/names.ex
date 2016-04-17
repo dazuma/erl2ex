@@ -1,12 +1,16 @@
+# This module knows about things like reserved words and other special names,
+# and what names are allowed in what contexts.
 
 defmodule Erl2ex.Pipeline.Names do
 
   @moduledoc false
 
+
   # These are not allowed as names of functions or variables.
   # The converter will attempt to rename things that use one of these names.
   # If an exported function uses one of these names, it will require special
   # handling in both definition and calling.
+
   @elixir_reserved_words [
     :after,
     :and,
@@ -33,6 +37,10 @@ defmodule Erl2ex.Pipeline.Names do
   ] |> Enum.into(MapSet.new)
 
 
+  # These are not allowed as qualified function names because Elixir's parser
+  # treats them specially. Calling functions with these names requires using
+  # Kernel.apply.
+
   @elixir_uncallable_functions [
     :unquote,
     :unquote_splicing
@@ -40,6 +48,7 @@ defmodule Erl2ex.Pipeline.Names do
 
 
   # This is a map of Erlang BIFs to equivalent Elixir functions.
+
   @bif_map %{
     abs: :abs,
     apply: :apply,
@@ -81,6 +90,7 @@ defmodule Erl2ex.Pipeline.Names do
   # The converter will allow variables with these names, but will attempt to
   # rename private functions. Exported functions will not be renamed, and will
   # be defined normally, but calling them will require full qualification.
+
   @elixir_special_forms [
     :alias,
     :case,
@@ -102,6 +112,7 @@ defmodule Erl2ex.Pipeline.Names do
   # rename private functions. Exported functions will not be renamed, and will
   # be defined normally, but calling them (and calling the Kernel functions of
   # the same name) will require full qualification.
+
   @elixir_auto_imports [
     # Kernel functions
     abs: 1,
@@ -208,6 +219,8 @@ defmodule Erl2ex.Pipeline.Names do
   end)
 
 
+  # Attributes that have a semantic meaning to Erlang.
+
   @special_attribute_names [
     :callback,
     :else,
@@ -235,6 +248,7 @@ defmodule Erl2ex.Pipeline.Names do
 
   # Returns true if the given name is an attribute with a semantic meaning
   # to Erlang.
+
   def special_attr_name?(name), do:
     MapSet.member?(@special_attribute_names, name)
 
@@ -243,6 +257,7 @@ defmodule Erl2ex.Pipeline.Names do
   # normal qualified syntax. e.g. :foo, :def, and :nil are callable because you
   # can say Kernel.nil(). However, :"9foo" is not callable. If a function name
   # is not callable, you have to use Kernel.apply() to call it.
+
   def callable_function_name?(name), do:
     Regex.match?(~r/^[_a-z]\w*$/, Atom.to_string(name)) and
         not MapSet.member?(@elixir_uncallable_functions, name)
@@ -251,18 +266,21 @@ defmodule Erl2ex.Pipeline.Names do
   # Returns true if the given name can be a function defined using "def"
   # syntax. If a function name is not deffable, you have to use a macro to
   # muck with the AST in order to define it.
+
   def deffable_function_name?(name), do:
     callable_function_name?(name) and not MapSet.member?(@elixir_reserved_words, name)
 
 
   # Returns true if the given function name can be called without module
   # qualification.
+
   def local_callable_function_name?(name), do:
     deffable_function_name?(name) and not MapSet.member?(@elixir_special_forms, name)
 
 
   # Returns {:ok, elixir_module, elixir_func} or :error depending on whether
   # the given Erlang BIF corresponds to an Elixir autoimport.
+
   def map_bif(name) do
     case Map.fetch(@bif_map, name) do
       {:ok, {mod, func}} -> {:ok, mod, func}

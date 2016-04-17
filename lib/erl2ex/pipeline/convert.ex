@@ -1,3 +1,11 @@
+# This is the fourth stage in the pipeline, after analyze.
+# It takes the output of the analysis phase (which inclues both the parsed
+# Erlang AST forms and the module-wide analysis results) and generates Elixir
+# AST along with metadata for codegen. The output is in the form of structures
+# defined in ex_data.ex.
+#
+# Much of the code for the convert phase lives in modules in the convert
+# directory.
 
 defmodule Erl2ex.Pipeline.Convert do
 
@@ -12,6 +20,9 @@ defmodule Erl2ex.Pipeline.Convert do
   alias Erl2ex.Convert.Headers
 
 
+  # The entry point of the convert phase. Takes a ModuleData as input and
+  # returns an ExModule.
+
   def module(module_data, opts \\ []) do
     context = Context.build(module_data, opts)
     {forms, context} = module_data.forms
@@ -24,6 +35,8 @@ defmodule Erl2ex.Pipeline.Convert do
     }
   end
 
+
+  # Generates comment header for a generate Elixir source file.
 
   defp file_comments(context, opts) do
     if Keyword.get(opts, :emit_file_headers, true) do
