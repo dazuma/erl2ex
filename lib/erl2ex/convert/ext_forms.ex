@@ -1,3 +1,4 @@
+# Conversion logic for extended (epp_dodger) AST forms.
 
 defmodule Erl2ex.Convert.ExtForms do
 
@@ -7,6 +8,10 @@ defmodule Erl2ex.Convert.ExtForms do
   alias Erl2ex.Pipeline.ExComment
 
 
+  # A dispatching function that converts a form with a context. Returns a
+  # tuple of a list (possibly empty) of ex_data forms, and an updated context.
+
+  # This clause converts a comment form to an ExComment
   def conv_form(:comment, ext_form, context) do
     comments = ext_form
       |> :erl_syntax.comment_text
@@ -16,10 +21,13 @@ defmodule Erl2ex.Convert.ExtForms do
     {[ex_comment], context}
   end
 
+  # This clause handles all other form types, and does not emit anything.
   def conv_form(_, _, context) do
     {[], context}
   end
 
+
+  # Given a list of comment data, returns a list of Elixir comment strings.
 
   defp convert_comments(comments) do
     comments |> Enum.map(fn
@@ -27,6 +35,10 @@ defmodule Erl2ex.Convert.ExtForms do
       str when is_binary(str) -> convert_comment_str(str)
     end)
   end
+
+
+  # Coverts an Erlang comment string to an Elixir comment string. i.e.
+  # it changes the % delimiter to #.
 
   defp convert_comment_str(str) do
     Regex.replace(~r{^%+}, str, fn prefix -> String.replace(prefix, "%", "#") end)

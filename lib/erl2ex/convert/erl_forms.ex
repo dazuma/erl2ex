@@ -1,3 +1,4 @@
+# Conversion logic for standard (erlparse) AST forms.
 
 defmodule Erl2ex.Convert.ErlForms do
 
@@ -23,63 +24,82 @@ defmodule Erl2ex.Convert.ErlForms do
   alias Erl2ex.Pipeline.Utils
 
 
+  # A list of attributes that are automatically registered in Elixir and
+  # do not need to be registered explicitly.
   @auto_registered_attrs [:vsn, :compile, :on_load, :behaviour, :behavior]
 
 
+  # A dispatching function that converts a form with a context. Returns a
+  # tuple of a list (possibly empty) of ex_data forms, and an updated context.
+
+  # Handler for function definitions.
   def conv_form({:function, _line, name, arity, clauses}, context) do
     conv_function_form(name, arity, clauses, context)
   end
 
+  # Handler for attribute definitions that are ignored by the converter because
+  # they are fully handled by earlier phases.
   def conv_form({:attribute, _line, attr_name, _}, context)
   when attr_name == :export or attr_name == :export_type or attr_name == :module or
       attr_name == :include or attr_name == :include_lib do
     {[], context}
   end
 
+  # Handler for import directives.
   def conv_form({:attribute, _line, :import, {modname, funcs}}, context) do
     conv_import_form(modname, funcs, context)
   end
 
+  # Handler for type definition directives.
   def conv_form({:attribute, _line, attr_name, {name, defn, params}}, context)
   when attr_name == :type or attr_name == :opaque do
     conv_type_form(attr_name, name, defn, params, context)
   end
 
+  # Handler for local function specification directives.
   def conv_form({:attribute, _line, attr_name, {{name, _}, clauses}}, context)
   when attr_name == :spec or attr_name == :callback do
     conv_spec_form(attr_name, {}, name, clauses, context)
   end
 
+  # Handler for remote function specification directives.
   def conv_form({:attribute, _line, :spec, {{spec_mod, name, _}, clauses}}, context) do
     conv_spec_form(:spec, spec_mod, name, clauses, context)
   end
 
+  # Handler for record definition directives.
   def conv_form({:attribute, _line, :record, {recname, fields}}, context) do
     conv_record_form(recname, fields, context)
   end
 
+  # Handler for file/line state directives.
   def conv_form({:attribute, _line, :file, {file, fline}}, context) do
     conv_file_form(file, fline, context)
   end
 
+  # Handler for "else" and "endif" directives (i.e. with no arguments)
   def conv_form({:attribute, _line, attr_name}, context)
   when attr_name == :else or attr_name == :endif do
     conv_directive_form(attr_name, {}, context)
   end
 
+  # Handler for "ifdef", "ifndef", and "undef" directives (i.e. with one argument)
   def conv_form({:attribute, _line, attr_name, arg}, context)
   when attr_name == :ifdef or attr_name == :ifndef or attr_name == :undef do
     conv_directive_form(attr_name, arg, context)
   end
 
+  # Handler for attributes not otherwise recognized as special.
   def conv_form({:attribute, _line, attr_name, arg}, context) do
     conv_attr_form(attr_name, arg, context)
   end
 
+  # Handler for Erlang macro definitions.
   def conv_form({:define, _line, macro, replacement}, context) do
     conv_define_form(macro, replacement, context)
   end
 
+  # Fall-through handler that throws an error for unrecognized form type.
   def conv_form(erl_form, context) do
     line = if is_tuple(erl_form) and tuple_size(erl_form) >= 3, do: elem(erl_form, 1), else: :unknown
     raise CompileError,
@@ -88,6 +108,8 @@ defmodule Erl2ex.Convert.ErlForms do
       description: "Unrecognized Erlang form ast: #{inspect(erl_form)}"
   end
 
+
+  #### Converts the given function.
 
   defp conv_function_form(name, arity, clauses, context) do
     module_data = context.module_data
@@ -111,6 +133,49 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
+  # Converts a single clause in a function definition
+
+  defp conv_clause(context, {:clause, _line, args, guards, exprs} = clause, name, name_var) do
+    context = context
+      |> Context.set_variable_maps(clause)
+      |> Context.push_scope()
+    {ex_signature, context} = clause_signature(name, name_var, args, guards, context)
+    {ex_exprs, _} = ErlExpressions.conv_list(exprs, context)
+
+    %ExClause{
+      signature: ex_signature,
+      exprs: ex_exprs
+    }
+  end
+
+
+  # Converts the signature in a function clause.
+
+  # This function handle the case without guards
+  defp clause_signature(name, name_var, params, [], context) do
+    context = Context.push_match_level(context, true)
+    {ex_params, context} = ErlExpressions.conv_list(params, context)
+    context = Context.pop_match_level(context)
+    {{signature_name(name, name_var), [], ex_params}, context}
+  end
+
+  # This function handle the case with guards
+  defp clause_signature(name, name_var, params, guards, context) do
+    {ex_guards, context} = ErlExpressions.guard_seq(guards, context)
+    {sig_without_guards, context} = clause_signature(name, name_var, params, [], context)
+    {{:when, [], [sig_without_guards | ex_guards]}, context}
+  end
+
+
+  # Generate the Elixir AST for the function name, including the unquote
+  # expression if it cannot be represented directly.
+
+  defp signature_name(name, nil), do: name
+  defp signature_name(_, name_var), do: {:unquote, [], [{name_var, [], Elixir}]}
+
+
+  #### Converts the given import directive.
+
   defp conv_import_form(modname, funcs, context) do
     ex_import = %ExImport{
       module: modname,
@@ -119,6 +184,8 @@ defmodule Erl2ex.Convert.ErlForms do
     {[ex_import], context}
   end
 
+
+  #### Converts the given type definition directive.
 
   defp conv_type_form(attr_name, name, defn, params, context) do
     ex_kind = cond do
@@ -145,31 +212,39 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
+  #### Converts the given function specification directive.
+  # The mod_name argument is nil if local, or the module if remote.
+  # For a remote function, emits something only if the module matches the
+  # current module being defined.
+  # Breaks the spec into clauses and calls conv_spec_clause on each.
+
   defp conv_spec_form(attr_name, mod_name, name, clauses, context) do
     if mod_name == {} or mod_name == context.module_data.name do
       if ModuleData.has_local_function_name?(context.module_data, name) do
         name = ModuleData.local_function_name(context.module_data, name)
       end
       specs = clauses |> Enum.map(fn spec_clause ->
-        {ex_spec, _} = conv_spec_clause(name, spec_clause, context)
-        ex_spec
+        {ex_spec_expr, _} = conv_spec_clause(name, spec_clause, context)
+        ex_spec_expr
       end)
-      ex_callback = %ExSpec{
+      ex_spec = %ExSpec{
         kind: attr_name,
         name: name,
         specs: specs
       }
-      {[ex_callback], context}
+      {[ex_spec], context}
     else
       {[], context}
     end
   end
 
 
+  # Converts a function specification clause without guards
   defp conv_spec_clause(name, {:type, _, :fun, [args, result]}, context) do
     conv_spec_clause_impl(name, args, result, [], context)
   end
 
+  # Converts a function specification clause with guards
   defp conv_spec_clause(name, {:type, _, :bounded_fun, [{:type, _, :fun, [args, result]}, constraints]}, context) do
     conv_spec_clause_impl(name, args, result, constraints, context)
   end
@@ -177,6 +252,8 @@ defmodule Erl2ex.Convert.ErlForms do
   defp conv_spec_clause(name, expr, context), do:
     Context.handle_error(context, expr, "in spec for #{name}")
 
+
+  # Convert a single function specification clause.
 
   defp conv_spec_clause_impl(name, args, result, constraints, context) do
     context = context
@@ -207,6 +284,8 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
+  # Convert a single constraint in a function specification
+
   defp conv_spec_constraint(context, _name, {:type, _, :constraint, [{:atom, _, :is_subtype}, [{:var, _, var}, type]]}) do
     {ex_type, _} = ErlExpressions.conv_expr(type, context)
     {:normal_var, mapped_name, _, _} = Context.map_variable_name(context, var)
@@ -216,6 +295,8 @@ defmodule Erl2ex.Convert.ErlForms do
   defp conv_spec_constraint(context, name, expr), do:
     Context.handle_error(context, expr, "in spec constraint for #{name}")
 
+
+  #### Converts the given record definition directive.
 
   defp conv_record_form(recname, fields, context) do
     context = Context.start_record_types(context)
@@ -232,12 +313,34 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
+  #### Converts the given file/line state directive.
+
   defp conv_file_form(file, fline, context) do
     comment = convert_comments(["% File #{file |> List.to_string |> inspect} Line #{fline}"])
     ex_comment = %ExComment{comments: comment}
     {[ex_comment], context}
   end
 
+
+  # Given a list of comment data, returns a list of Elixir comment strings.
+
+  defp convert_comments(comments) do
+    comments |> Enum.map(fn
+      {:comment, _, str} -> str |> List.to_string |> convert_comment_str
+      str when is_binary(str) -> convert_comment_str(str)
+    end)
+  end
+
+
+  # Coverts an Erlang comment string to an Elixir comment string. i.e.
+  # it changes the % delimiter to #.
+
+  defp convert_comment_str(str) do
+    Regex.replace(~r{^%+}, str, fn prefix -> String.replace(prefix, "%", "#") end)
+  end
+
+
+  #### Converts the given preprocessor control directive.
 
   defp conv_directive_form(directive, name, context) do
     tracking_name = if name == {} do
@@ -254,6 +357,8 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
+  #### Converts the given attribute definition directive.
+
   defp conv_attr_form(name, arg, context) do
     {name, arg} = conv_attr(name, arg)
     register = not name in @auto_registered_attrs
@@ -267,10 +372,14 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
+  # Maps a few well-known attributes to Elixir equivalents.
+
   defp conv_attr(:on_load, {name, 0}), do: {:on_load, name}
   defp conv_attr(:behavior, behaviour), do: {:behaviour, behaviour}
   defp conv_attr(attr, val), do: {attr, val}
 
+
+  #### Converts the given macro definition directive.
 
   defp conv_define_form(macro, replacement, context) do
     {name, args} = interpret_macro_expr(macro)
@@ -311,6 +420,8 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
+  # Interprets the macro call sequence.
+
   defp interpret_macro_expr({:call, _, name_expr, arg_exprs}) do
     name = interpret_macro_name(name_expr)
     args = arg_exprs |> Enum.map(fn {:var, _, n} -> n end)
@@ -323,56 +434,11 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
+  # Interprets a macro name. It may be a var or atom in the parse tree because
+  # it may be capitalized or not.
+
   defp interpret_macro_name({:var, _, name}), do: name
   defp interpret_macro_name({:atom, _, name}), do: name
   defp interpret_macro_name(name) when is_atom(name), do: name
-
-
-  defp conv_clause(context, clause, name, name_var) do
-    context
-      |> Context.set_variable_maps(clause)
-      |> conv_var_mapped_clause(clause, name, name_var)
-  end
-
-  defp conv_var_mapped_clause(context, {:clause, _line, args, guards, exprs}, name, name_var) do
-    context = Context.push_scope(context)
-    {ex_signature, context} = clause_signature(name, name_var, args, guards, context)
-    {ex_exprs, _} = ErlExpressions.conv_list(exprs, context)
-
-    %ExClause{
-      signature: ex_signature,
-      exprs: ex_exprs
-    }
-  end
-
-
-  defp clause_signature(name, name_var, params, [], context) do
-    context = Context.push_match_level(context, true)
-    {ex_params, context} = ErlExpressions.conv_list(params, context)
-    context = Context.pop_match_level(context)
-    {{signature_name(name, name_var), [], ex_params}, context}
-  end
-
-  defp clause_signature(name, name_var, params, guards, context) do
-    {ex_guards, context} = ErlExpressions.guard_seq(guards, context)
-    {sig_without_guards, context} = clause_signature(name, name_var, params, [], context)
-    {{:when, [], [sig_without_guards | ex_guards]}, context}
-  end
-
-
-  defp signature_name(name, nil), do: name
-  defp signature_name(_, name_var), do: {:unquote, [], [{name_var, [], Elixir}]}
-
-
-  defp convert_comments(comments) do
-    comments |> Enum.map(fn
-      {:comment, _, str} -> str |> List.to_string |> convert_comment_str
-      str when is_binary(str) -> convert_comment_str(str)
-    end)
-  end
-
-  defp convert_comment_str(str) do
-    Regex.replace(~r{^%+}, str, fn prefix -> String.replace(prefix, "%", "#") end)
-  end
 
 end

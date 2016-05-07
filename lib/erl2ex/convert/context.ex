@@ -1,3 +1,7 @@
+# The conversion context describes the "state" of a conversion, holding
+# information needed to select names, make variable scoping decisions, decide
+# how to call functions and macros, and so forth. It is passed down the
+# function tree during conversion and modified as needed.
 
 defmodule Erl2ex.Convert.Context do
 
@@ -9,25 +13,68 @@ defmodule Erl2ex.Convert.Context do
   alias Erl2ex.Convert.Context
 
 
-  defstruct module_data: nil,
-            cur_file_path: nil,
-            used_func_names: MapSet.new,
-            variable_map: %{},
-            stringification_map: %{},
-            quoted_variables: [],
-            match_level: 0,
-            in_type_expr: false,
-            in_bin_size_expr: false,
-            in_func_params: false,
-            in_macro_def: false,
-            in_eager_macro_replacement: false,
-            match_vars: MapSet.new,
-            scopes: [],
-            macro_exports: %{},
-            macro_export_collection_stack: [],
-            cur_record_types: [],
-            record_types: %{}
+  defstruct(
+    # The ModuleData containing results of module-wide analysis. The contents
+    # of this structure should not change during conversion.
+    module_data: nil,
+    # Path to the current file being converted, as a string, or nil if not
+    # known (e.g. because the input is a raw string rather than a file from
+    # the file system). Used to display error messages.
+    cur_file_path: nil,
+    # A set of function names currently in use (hence cannot be reused), as
+    # a set of strings.
+    used_func_names: MapSet.new,
+    # A map from Erlang variable names to Elixir variable names (both atoms)
+    variable_map: %{},
+    # A map from the Elixir variable name of a macro formal argument, to the
+    # name of a local variable within the macro that contains the "stringified"
+    # form of its value. (i.e. for the Erlang ?? operator.) Both are atoms.
+    stringification_map: %{},
+    # A list of Elixir variable names that need to be unquoted in a macro
+    # body, because they are arguments to the macro or computed "stringified"
+    # values.
+    quoted_variables: [],
+    # How many "match" structures the converter has descended into. If this is
+    # greater than 1, some variables may need carets when referenced rather
+    # than set.
+    match_level: 0,
+    # True if the converter has descended into a type expression.
+    in_type_expr: false,
+    # True if the converter has descended into a size expression in a binary.
+    in_bin_size_expr: false,
+    # True if the converter has descended into a list of function params.
+    in_func_params: false,
+    # True if the converter has descended into a macro definition.
+    in_macro_def: false,
+    # True if the converter has descended into a context where macro calls
+    # are not allowed, so eager macro replacement should be applied.
+    in_eager_macro_replacement: false,
+    # The set of Erlang variable names (as atoms) that are being set in the
+    # current match.
+    match_vars: MapSet.new,
+    # A stack of {vars, exports} tuples where the elements are sets of
+    # Erlang variable names as atoms. Used to determine where Erlang variables
+    # are declared and exported.
+    scopes: [],
+    # A map of {macro_name, arity} tuple to MapSet of argument indexes,
+    # specifying which arguments are exported from the macro to its calling
+    # environment.
+    macro_exports: %{},
+    # A list of {MapSet, Map} tuples used to build macro_exports during macro
+    # definition. The MapSet is a running set of exported argument indexes.
+    # The Map maps from argument name (as an atom) to its 0-based index.
+    macro_export_collection_stack: [],
+    # A map from Erlang record name (as an atom) to list of
+    # {field_name, field_type} for the fields, in order, where the field_type
+    # is the Elixir form of the type.
+    record_types: %{},
+    # A running list of {field_name, field_type} for the record currently
+    # being defined.
+    cur_record_types: []
+  )
 
+
+  # Populate a basic context for the module.
 
   def build(module_data, opts) do
     %Context{
@@ -37,6 +84,11 @@ defmodule Erl2ex.Convert.Context do
     }
   end
 
+
+  # Set information about the local variables for the current form.
+  # The expr is an Erlang AST of the form body. The macro_args should be
+  # present if this is a macro definition, and is a list of the argument
+  # names as atoms.
 
   def set_variable_maps(context, expr, macro_args \\ []) do
     {variable_map, stringification_map} = compute_var_maps(context, expr, macro_args)
@@ -51,6 +103,8 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Reset the local variable info when exiting a form definition.
+
   def clear_variable_maps(context) do
     %Context{context |
       quoted_variables: [],
@@ -60,8 +114,13 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Get the current variable name map (i.e. Erlang to Elixir names)
+
   def get_variable_map(%Context{variable_map: variable_map}), do: variable_map
 
+
+  # Begin collecting info on variables that the current macro exports. You
+  # must pass in the list of arguments of the macro.
 
   def start_macro_export_collection(context, args) do
     index_map = args |> Enum.with_index |> Enum.into(%{})
@@ -72,6 +131,9 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Suspend collection of exported variables for the macro, due to an internal
+  # macro or function call.
+
   def suspend_macro_export_collection(context) do
     %Context{context |
       macro_export_collection_stack: [{MapSet.new, nil} | context.macro_export_collection_stack]
@@ -79,12 +141,16 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Resume collection of exported variables for the macro, after suspension.
+
   def resume_macro_export_collection(context) do
     %Context{context |
       macro_export_collection_stack: tl(context.macro_export_collection_stack)
     }
   end
 
+
+  # Finish collecting macro export information, and set it for the given macro.
 
   def finish_macro_export_collection(context, name, arity) do
     [{indexes, _} | macro_export_collection_stack] = context.macro_export_collection_stack
@@ -95,6 +161,9 @@ defmodule Erl2ex.Convert.Context do
     }
   end
 
+
+  # Add a variable that may be exported from the current macro. It is exported
+  # if it is present in the macro args.
 
   def add_macro_export(context, erl_var) do
     case context.macro_export_collection_stack do
@@ -115,10 +184,15 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Get the MapSet of indexes of the arguments exported by the given macro.
+
   def get_macro_export_indexes(%Context{macro_exports: macro_exports}, name, arity) do
     Map.fetch!(macro_exports, {name, arity})
   end
 
+
+  # Descend into the LHS of a match. Pass true for in_func_params if we are
+  # parsing function arguments.
 
   def push_match_level(
     %Context{
@@ -133,6 +207,8 @@ defmodule Erl2ex.Convert.Context do
     }
   end
 
+
+  # Finish a match LHS
 
   def pop_match_level(
     %Context{
@@ -158,20 +234,31 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Begin processing a type expression.
+
   def set_type_expr_mode(context) do
     %Context{context | in_type_expr: true, in_eager_macro_replacement: true}
   end
 
+
+  # Finish processing a type expression.
 
   def clear_type_expr_mode(context) do
     %Context{context | in_type_expr: false, in_eager_macro_replacement: false}
   end
 
 
+  # Start a variable scope. This happens when descending into a function or
+  # macro definition, or a control structure. Begin collecting of variables
+  # bound in the scope and variables exported.
+
   def push_scope(%Context{scopes: scopes} = context) do
     %Context{context | scopes: [{MapSet.new, MapSet.new} | scopes]}
   end
 
+
+  # End a variable scope. If there are exports, add them to the next outer
+  # scope.
 
   def pop_scope(%Context{scopes: [_h]} = context) do
     %Context{context | scopes: []}
@@ -183,6 +270,8 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Clear exports. Used by structures that do not export variables.
+
   def clear_exports(%Context{scopes: [{top_vars, _top_exports} | t]} = context) do
     %Context{context | scopes: [{top_vars, MapSet.new} | t]}
   end
@@ -191,6 +280,8 @@ defmodule Erl2ex.Convert.Context do
     context
   end
 
+
+  # Apply the current exports to the current scope.
 
   def apply_exports(%Context{scopes: [{top_vars, top_exports} | t]} = context) do
     top_vars = MapSet.union(top_vars, top_exports)
@@ -202,10 +293,16 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Determine whether the given Elixir variable name should be unquoted
+  # in a macro body.
+
   def is_quoted_var?(%Context{quoted_variables: quoted_variables}, name) do
     Enum.member?(quoted_variables, name)
   end
 
+
+  # Determine whether the given Elixir variable name should be unhygenized
+  # (i.e. have the "var!" macro applied) when in a macro body.
 
   def is_unhygenized_var?(
     %Context{
@@ -220,6 +317,9 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Generate an Elixir macro name for the given Erlang macro, in the case when
+  # the macro needs to be dispatched due to redefinition.
+
   def generate_macro_name(%Context{used_func_names: used_func_names} = context, name, arity) do
     prefix = if arity == nil, do: "erlconst", else: "erlmacro"
     func_name = Utils.find_available_name(name, used_func_names, prefix)
@@ -229,6 +329,8 @@ defmodule Erl2ex.Convert.Context do
     {func_name, context}
   end
 
+
+  # Given an Erlang variable name, return the Elixir variable name.
 
   def map_variable_name(context, name) do
     case Map.fetch(context.variable_map, name) do
@@ -253,15 +355,21 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Enter a size expression in a binary literal.
+
   def start_bin_size_expr(context) do
     %Context{context | in_bin_size_expr: true}
   end
 
 
+  # Exit a size expression in a binary literal.
+
   def finish_bin_size_expr(context) do
     %Context{context | in_bin_size_expr: false}
   end
 
+
+  # Returns the current file path, for display in error messages.
 
   def cur_file_path_for_display(%Context{cur_file_path: nil}), do:
     "(Unknown source file)"
@@ -269,6 +377,8 @@ defmodule Erl2ex.Convert.Context do
   def cur_file_path_for_display(%Context{cur_file_path: path}), do:
     path
 
+
+  # Enter a list of record fields and begin recording types.
 
   def start_record_types(context) do
     %Context{context |
@@ -278,12 +388,17 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Add a record field and type to the current definition.
+
   def add_record_type(context, field, type) do
     %Context{context |
       cur_record_types: [{field, type} | context.cur_record_types]
     }
   end
 
+
+  # Exit a list of record fields. Save the accumulated field info under the
+  # given record name.
 
   def finish_record_types(context, name) do
     %Context{context |
@@ -294,10 +409,15 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Get the list of record fields, as a list of {field_name, elixir_type},
+  # for the given Erlang record name.
+
   def get_record_types(%Context{record_types: record_types}, name) do
     Map.fetch!(record_types, name)
   end
 
+
+  # Report an error for an unrecognized Erlang expression.
 
   def handle_error(context, expr, ast_context \\ nil) do
     ast_context = if ast_context, do: " #{ast_context}", else: ""
@@ -308,10 +428,15 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Extract the line number from the given Erlang AST node.
+
   defp find_error_line(expr) when is_tuple(expr) and tuple_size(expr) >= 3, do: elem(expr, 1)
   defp find_error_line([expr | _]), do: find_error_line(expr)
   defp find_error_line(_), do: :unknown
 
+
+  # Collect information about the local variables for the given Erlang
+  # expression.
 
   defp compute_var_maps(context, expr, extra_omits) do
     {normal_vars, _consts, stringified_args} = expr
@@ -328,6 +453,8 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # Given an Erlang expression and a set, adds any variable names to the set.
+
   defp collect_variable_names({:var, _, var}, var_names), do:
     MapSet.put(var_names, var)
 
@@ -342,6 +469,10 @@ defmodule Erl2ex.Convert.Context do
 
   defp collect_variable_names(_, var_names), do: var_names
 
+
+  # Given a set of variable names, return a tuple of three sets: normal
+  # names, names of macros (beginning with a single question mark), and names
+  # of stringification invocations (beginning with two question marks).
 
   defp classify_var_names(var_names) do
     groups = var_names
@@ -361,6 +492,9 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # For a variable that represents a stringifcation, update the variable
+  # collections.
+
   defp map_stringification(stringified_arg, {stringification_map, variables_map, all_names}) do
     if not Map.has_key?(stringification_map, stringified_arg) do
       arg_name = stringified_arg
@@ -378,6 +512,9 @@ defmodule Erl2ex.Convert.Context do
   end
 
 
+  # For a variable that represents a normal variable, update the variable
+  # collections.
+
   defp map_variables(var_name, {variables_map, all_names}) do
     if not Map.has_key?(variables_map, var_name) do
       mapped_name = var_name
@@ -390,6 +527,8 @@ defmodule Erl2ex.Convert.Context do
     {variables_map, all_names}
   end
 
+
+  # Returns true if the given variable has been seen in the given scope stack.
 
   defp variable_seen?([], _name), do: false
   defp variable_seen?([{scopes_h, _} | scopes_t], name) do

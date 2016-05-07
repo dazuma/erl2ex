@@ -1,3 +1,4 @@
+# Logic to determine what should appear in the "header" of the Elixir module.
 
 defmodule Erl2ex.Convert.Headers do
 
@@ -13,6 +14,9 @@ defmodule Erl2ex.Convert.Headers do
   alias Erl2ex.Pipeline.ModuleData
 
 
+  # Builds an ExHeader structure specifying what should go in the Elixir module
+  # header.
+
   def build_header(module_data, forms) do
     header = forms
       |> Enum.reduce(%ExHeader{}, &header_check_form/2)
@@ -27,6 +31,8 @@ defmodule Erl2ex.Convert.Headers do
   end
 
 
+  # Dispatcher called during reduction over forms.
+
   defp header_check_form(%ExFunc{clauses: clauses}, header), do:
     clauses |> Enum.reduce(header, &header_check_clause/2)
   defp header_check_form(%ExMacro{expr: expr}, header), do:
@@ -39,6 +45,9 @@ defmodule Erl2ex.Convert.Headers do
   defp header_check_clause(%ExClause{exprs: exprs}, header), do:
     exprs |> Enum.reduce(header, &header_check_expr/2)
 
+
+  # Searches expressions looking for uses of Bitwise operator, to determine
+  # whether we need to use Bitwise.
 
   defp header_check_expr(expr, header) when is_tuple(expr) and tuple_size(expr) == 2, do:
     header_check_expr(elem(expr, 1), header)

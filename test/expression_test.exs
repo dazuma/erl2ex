@@ -710,22 +710,6 @@ defmodule ExpressionTest do
   end
 
 
-  @tag :skip  # Not yet supported
-  test "Bitstring literal with complex types" do
-    input = """
-      foo() -> <<1:16/integer-signed-native>>.
-      """
-
-    expected = """
-      defp foo() do
-        ???
-      end
-      """
-
-    assert Erl2ex.convert_str!(input, @opts) == expected
-  end
-
-
   test "Bitstring pattern match" do
     input = """
       foo(S) -> <<A, B:10, C:D, E/float, F/binary>> = S.
