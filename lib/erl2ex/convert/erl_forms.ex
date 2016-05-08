@@ -115,16 +115,10 @@ defmodule Erl2ex.Convert.ErlForms do
     module_data = context.module_data
     mapped_name = ModuleData.local_function_name(module_data, name)
     is_exported = ModuleData.is_exported?(module_data, name, arity)
-    name_var = if Names.deffable_function_name?(mapped_name) do
-      nil
-    else
-      ModuleData.func_name_var(module_data)
-    end
-    ex_clauses = Enum.map(clauses, &(conv_clause(context, &1, mapped_name, name_var)))
+    ex_clauses = Enum.map(clauses, &(conv_clause(context, &1, mapped_name)))
 
     ex_func = %ExFunc{
       name: mapped_name,
-      name_var: name_var,
       arity: arity,
       public: is_exported,
       clauses: ex_clauses
@@ -135,11 +129,11 @@ defmodule Erl2ex.Convert.ErlForms do
 
   # Converts a single clause in a function definition
 
-  defp conv_clause(context, {:clause, _line, args, guards, exprs} = clause, name, name_var) do
+  defp conv_clause(context, {:clause, _line, args, guards, exprs} = clause, name) do
     context = context
       |> Context.set_variable_maps(clause)
       |> Context.push_scope()
-    {ex_signature, context} = clause_signature(name, name_var, args, guards, context)
+    {ex_signature, context} = clause_signature(name, args, guards, context)
     {ex_exprs, _} = ErlExpressions.conv_list(exprs, context)
 
     %ExClause{
@@ -152,26 +146,22 @@ defmodule Erl2ex.Convert.ErlForms do
   # Converts the signature in a function clause.
 
   # This function handle the case without guards
-  defp clause_signature(name, name_var, params, [], context) do
+  defp clause_signature(name, params, [], context) do
     context = Context.push_match_level(context, true)
     {ex_params, context} = ErlExpressions.conv_list(params, context)
     context = Context.pop_match_level(context)
-    {{signature_name(name, name_var), [], ex_params}, context}
+    if not Names.deffable_function_name?(name) do
+      name = {:unquote, [], [name]}
+    end
+    {{name, [], ex_params}, context}
   end
 
   # This function handle the case with guards
-  defp clause_signature(name, name_var, params, guards, context) do
+  defp clause_signature(name, params, guards, context) do
     {ex_guards, context} = ErlExpressions.guard_seq(guards, context)
-    {sig_without_guards, context} = clause_signature(name, name_var, params, [], context)
+    {sig_without_guards, context} = clause_signature(name, params, [], context)
     {{:when, [], [sig_without_guards | ex_guards]}, context}
   end
-
-
-  # Generate the Elixir AST for the function name, including the unquote
-  # expression if it cannot be represented directly.
-
-  defp signature_name(name, nil), do: name
-  defp signature_name(_, name_var), do: {:unquote, [], [{name_var, [], Elixir}]}
 
 
   #### Converts the given import directive.

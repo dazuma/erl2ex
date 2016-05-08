@@ -230,20 +230,17 @@ defmodule FunctionTest do
       """
 
     expected = """
-      function_name = :do
-      def unquote(function_name)() do
+      def unquote(:do)() do
         :hello
       end
 
 
-      function_name = :unquote
-      def unquote(function_name)() do
+      def unquote(:unquote)() do
         :world
       end
 
 
-      function_name = :"E=mc^2"
-      def unquote(function_name)() do
+      def unquote(:"E=mc^2")() do
         :bye
       end
 

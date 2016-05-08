@@ -180,7 +180,6 @@ defmodule Erl2ex.Pipeline.Codegen do
     context,
     %ExFunc{
       name: name,
-      name_var: name_var,
       comments: comments,
       clauses: [first_clause | remaining_clauses],
       public: public,
@@ -191,9 +190,9 @@ defmodule Erl2ex.Pipeline.Codegen do
     context
       |> write_comment_list(comments, :func_header, io)
       |> write_func_specs(specs, io)
-      |> write_func_clause(public, name, name_var, first_clause, :func_clause_first, io)
+      |> write_func_clause(public, name, first_clause, :func_clause_first, io)
       |> foreach(remaining_clauses, fn (ctx, clause) ->
-        write_func_clause(ctx, public, name, name_var, clause, :func_clause, io)
+        write_func_clause(ctx, public, name, clause, :func_clause, io)
       end)
   end
 
@@ -380,16 +379,12 @@ defmodule Erl2ex.Pipeline.Codegen do
 
   # Write a single function clause (i.e. a def or defp)
 
-  defp write_func_clause(context, public, name, name_var, clause, form_type, io) do
+  defp write_func_clause(context, public, name, clause, form_type, io) do
     decl = if public, do: "def", else: "defp"
     sig = clause.signature
     context = context
       |> skip_lines(form_type, io)
       |> foreach(clause.comments, io, &write_string/3)
-    if name_var != nil do
-      context = context
-        |> write_string("#{name_var} = #{expr_to_string(name)}", io)
-    end
     context = context
       |> write_string("#{decl} #{signature_to_string(sig)} do", io)
       |> increment_indent
@@ -452,6 +447,12 @@ defmodule Erl2ex.Pipeline.Codegen do
   defp calc_skip_lines(:attr, :attr), do: 1
   defp calc_skip_lines(_, _), do: 2
 
+
+  # Generates code for a function signature.
+  # Handles a special case where the signature ends with a keyword argument
+  # block that includes "do:" as a keyword. Macro.to_string erroneously
+  # generates a do block for that case, so we detect that case and modify the
+  # generated string.
 
   defp signature_to_string({target, ctx, args} = expr) do
     str = expr_to_string(expr)

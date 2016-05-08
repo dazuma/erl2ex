@@ -4,6 +4,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 ## v0.1.0 (not yet released)
 
+*   Further simplified conversion of public functions with normally un-deffable names.
 *   Documented the code better.
 
 ## v0.0.9 (2016-04-11)
@@ -22,7 +23,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 *   Factored out source and sink processes, to make testing easier and secondary jobs cleaner.
 *   Perform `epp_dodger` parsing in addition to `erl_parse`. We're not taking full advantage of this yet, but it should eventually help preserve comments better, as well as handle some more preprocessor edge cases.
-*   REGRESSION: preservation of module and form comments is currently broken as a result of the above. This will be fixed in a subsequent version.
+*   REGRESSION: preservation of module and form comments is currently broken as a result of the above. This will be fixed in a later version.
 *   Refactored and rearranged the internal pipeline modules.
 *   Support full bitstring modifier syntax.
 *   Support comprehensions whose first qualifier isn't a generator. (Thanks to eproxus for the tip.)

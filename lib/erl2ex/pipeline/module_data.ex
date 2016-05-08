@@ -260,13 +260,6 @@ defmodule Erl2ex.Pipeline.ModuleData do
   end
 
 
-  # Returs the name of a module variable to use for function renaming.
-
-  def func_name_var(%ModuleData{used_func_names: used_func_names}) do
-    Utils.find_available_name("function_name", used_func_names)
-  end
-
-
   # Returns the name of the Elixir macro to call to get a record's size.
 
   def record_size_macro(%ModuleData{record_size_macro: macro_name}) do

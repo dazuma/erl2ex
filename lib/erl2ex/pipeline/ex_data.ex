@@ -198,10 +198,6 @@ defmodule Erl2ex.Pipeline.ExFunc do
   defstruct(
     # The name of the function.
     name: nil,
-    # The name of a variable that contains the function name, or nil if no such
-    # variable is needed. Used when we need to define a function with a reserved
-    # or "illegal" name, such as "unquote" or "E=m*c^2"
-    name_var: nil,
     # Arity of the function, as an integer
     arity: nil,
     # Whether the function should be public.
