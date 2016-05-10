@@ -378,33 +378,66 @@ defmodule ExpressionTest do
   end
 
 
-  test "Local fun reference" do
+  test "Local fun capture" do
     input = """
-      foo() -> fun sqrt/1.
+      -export([foo/0]).
+      foo() -> fun double/1.
+      double(A) -> A * 2.
       """
 
     expected = """
-      defp foo() do
-        &sqrt/1
+      def foo() do
+        &double/1
+      end
+
+
+      defp double(a) do
+        a * 2
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    f = apply(result.module, :foo, [])
+    assert f.(4) == 8
   end
 
 
-  test "Remote fun reference" do
+  test "Remote fun capture" do
     input = """
+      -export([foo/1]).
       foo(A) -> fun A:sqrt/1.
       """
 
     expected = """
-      defp foo(a) do
+      def foo(a) do
         &a.sqrt/1
       end
       """
 
-    assert Erl2ex.convert_str!(input, @opts) == expected
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    f = apply(result.module, :foo, [:math])
+    assert f.(4) == 2.0
+  end
+
+
+  test "Remote fun capture with variables" do
+    input = """
+      -export([foo/3]).
+      foo(A, B, C) -> fun A:B/C.
+      """
+
+    expected = """
+      def foo(a, b, c) do
+        :erlang.make_fun(a, b, c)
+      end
+      """
+
+    result = test_conversion(input, @opts)
+    assert result.output == expected
+    f = apply(result.module, :foo, [:math, :sqrt, 1])
+    assert f.(4) == 2.0
   end
 
 

@@ -46,6 +46,22 @@ defmodule Erl2ex.TestHelper do
   end
 
 
+  def compile_dir_individually(name, path, opts \\ []) do
+    "#{project_path(name, path)}/*.ex"
+      |> Path.wildcard
+      |> Enum.each(fn file_path ->
+        run_cmd("elixirc", [Path.basename(file_path)],
+            Keyword.merge(opts, name: name, path: path, DEFINE_TEST: "true"))
+      end)
+    "#{project_path(name, path)}/*.erl"
+      |> Path.wildcard
+      |> Enum.each(fn file_path ->
+        run_cmd("erlc", ["-DTEST", Path.basename(file_path)],
+            Keyword.merge(opts, name: name, path: path))
+      end)
+  end
+
+
   def compile_dir(name, path, opts \\ []) do
     if Path.wildcard("#{project_path(name, path)}/*.ex") != [] do
       run_cmd("elixirc", [{"*.ex"}],
@@ -76,6 +92,7 @@ defmodule Erl2ex.TestHelper do
     path = Keyword.get(opts, :path)
     cd = Keyword.get(opts, :cd, project_path(name, path))
     display_output = Keyword.get(opts, :display_output)
+    display_cmd = Keyword.get(opts, :display_cmd)
     env = opts |> Enum.filter_map(
       fn {k, _} -> Regex.match?(~r/^[A-Z]/, Atom.to_string(k)) end,
       fn {k, v} -> {Atom.to_string(k), v} end
@@ -87,10 +104,13 @@ defmodule Erl2ex.TestHelper do
           |> Enum.map(&(String.replace_prefix(&1, "#{cd}/", "")))
       str -> [str]
     end)
+    if display_cmd do
+      IO.puts("cd #{cd} && #{cmd} #{Enum.join(args, " ")}")
+    end
     output = case System.cmd(cmd, args, cd: cd, env: env, stderr_to_stdout: true) do
       {str, 0} -> str
       {str, code} ->
-        raise "Error #{code} when running command #{cmd} #{inspect(args)}\n#{str}"
+        raise "Error #{code} when running command #{cmd} #{inspect(args)} :: #{str}"
     end
     if display_output do
       IO.puts(output)

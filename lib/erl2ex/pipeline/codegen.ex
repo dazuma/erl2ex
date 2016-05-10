@@ -179,7 +179,6 @@ defmodule Erl2ex.Pipeline.Codegen do
   defp write_form(
     context,
     %ExFunc{
-      name: name,
       comments: comments,
       clauses: [first_clause | remaining_clauses],
       public: public,
@@ -190,9 +189,9 @@ defmodule Erl2ex.Pipeline.Codegen do
     context
       |> write_comment_list(comments, :func_header, io)
       |> write_func_specs(specs, io)
-      |> write_func_clause(public, name, first_clause, :func_clause_first, io)
+      |> write_func_clause(public, first_clause, :func_clause_first, io)
       |> foreach(remaining_clauses, fn (ctx, clause) ->
-        write_func_clause(ctx, public, name, clause, :func_clause, io)
+        write_func_clause(ctx, public, clause, :func_clause, io)
       end)
   end
 
@@ -379,7 +378,7 @@ defmodule Erl2ex.Pipeline.Codegen do
 
   # Write a single function clause (i.e. a def or defp)
 
-  defp write_func_clause(context, public, name, clause, form_type, io) do
+  defp write_func_clause(context, public, clause, form_type, io) do
     decl = if public, do: "def", else: "defp"
     sig = clause.signature
     context = context

@@ -8,7 +8,6 @@ defmodule Erl2ex.Pipeline.ModuleData do
 
   alias Erl2ex.Pipeline.ModuleData
   alias Erl2ex.Pipeline.Names
-  alias Erl2ex.Pipeline.Utils
 
 
   defstruct(

@@ -178,20 +178,41 @@ defmodule E2ETest do
   end
 
 
-  # Fails because there is a capture with a variable arity in elixir_dispatch.erl
+  # In progress. Doesn't run tests properly yet because it gets confused between
+  # the compiled modules and the modules from the installed Elixir runtime.
+  # TODO: Try running the tests using erl, to disable the Elixir runtime.
   @tag :skip
   test "elixir" do
     download_project("elixir", "https://github.com/elixir-lang/elixir.git")
     clean_dir("elixir", "lib/elixir/src_ex")
     convert_dir("elixir", "lib/elixir/src", "lib/elixir/src_ex")
 
-    # elixir_bootstrap.erl generates __info__ functions so can't be converted
+    # elixir_bootstrap.erl generates __info__ functions so can't be converted for now
     File.rm!(project_path("elixir", "lib/elixir/src_ex/elixir_bootstrap.ex"))
     File.cp!(project_path("elixir", "lib/elixir/src/elixir_bootstrap.erl"),
         project_path("elixir", "lib/elixir/src_ex/elixir_bootstrap.erl"))
 
-    copy_dir("elixir", "lib/elixir/test/erlang", "lib/elixir/src_ex")
-    compile_dir("elixir", "lib/elixir/src_ex", display_output: true)
+    copy_dir("elixir", "lib/elixir/test/erlang", "lib/elixir/src_ex/test_erlang")
+
+    # Compile each elixir file separately; otherwise newly compiled modules will
+    # be added to the VM, causing compatibility issues between old and new.
+    compile_dir_individually("elixir", "lib/elixir/src_ex", display_output: true, display_cmd: true)
+
+    compile_dir("elixir", "lib/elixir/src_ex/test_erlang", display_output: true, display_cmd: true)
+    copy_dir("elixir", "lib/elixir/src_ex/test_erlang", "lib/elixir/src_ex")
+
+    #run_eunit_tests(
+    #    [
+    #      :atom_test,
+    #      :control_test,
+    #      :function_test,
+    #      :match_test,
+    #      :module_test,
+    #      :operators_test,
+    #      :string_test,
+    #      :tokenizer_test
+    #    ],
+    #    "elixir", "src_ex", display_output: true, display_cmd: true)
   end
 
 

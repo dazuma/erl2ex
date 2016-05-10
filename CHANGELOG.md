@@ -4,6 +4,7 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 
 ## v0.1.0 (not yet released)
 
+*   Support for variables in fun M:F/A.
 *   Further simplified conversion of public functions with normally un-deffable names.
 *   Documented the code better.
 

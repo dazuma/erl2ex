@@ -174,7 +174,12 @@ defmodule Erl2ex.Convert.ErlExpressions do
     {ex_mod, context} = conv_expr(mod_expr, context)
     {ex_name, context} = conv_expr(name_expr, context)
     {ex_arity, context} = conv_expr(arity_expr, context)
-    {{:&, [], [{:/, @import_kernel_metadata, [{{:., [], [ex_mod, ex_name]}, [], []}, ex_arity]}]}, context}
+    ex_expr = if is_atom(ex_name) and is_integer(ex_arity) do
+      {:&, [], [{:/, @import_kernel_metadata, [{{:., [], [ex_mod, ex_name]}, [], []}, ex_arity]}]}
+    else
+      {{:., [], [:erlang, :make_fun]}, [], [ex_mod, ex_name, ex_arity]}
+    end
+    {ex_expr, context}
   end
 
   def conv_expr({:block, _, arg}, context) when is_list(arg) do

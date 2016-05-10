@@ -56,7 +56,6 @@ This software is still under heavy development, and many capabilities are not ye
 *   Fully-qualified macros cannot appear in in typespecs; Erlang's parser won't handle it. (Example in the spec for abstract_module_/2 in https://github.com/DeadZen/goldrush/blob/master/src/glc_code.erl)
 *   Macro invocations cannot appear in comprehensions; Erlang's parser rejects it. (Example in the definition of the LOWER macro in https://github.com/ninenines/cowlib/blob/master/include/cow_inline.hrl)
 *   Elixir reserves the function name `__info__` and won't allow its definition. (Failure example in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl).
-*   Erlang allows variables for function name/arity in captures, whereas Elixir apparently doesn't. (Example in the `expand_macro_named/6` function in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_dispatch.erl)
 
 ### Incomplete features
 
