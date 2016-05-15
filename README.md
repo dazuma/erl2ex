@@ -57,7 +57,7 @@ This software is still under heavy development, and many capabilities are not ye
 *   Macro invocations cannot appear in comprehensions; Erlang's parser rejects it. (Example in the definition of the LOWER macro in https://github.com/ninenines/cowlib/blob/master/include/cow_inline.hrl)
 *   Elixir reserves the function name `__info__` and won't allow its definition. (Failure example in https://github.com/elixir-lang/elixir/blob/master/lib/elixir/src/elixir_bootstrap.erl).
 
-### Incomplete features
+### Incomplete features / wishlist
 
 *   Preserve comments from the Erlang source.
 *   Generate exdoc comments, probably based on heuristics on the funtion comments.
@@ -68,6 +68,8 @@ This software is still under heavy development, and many capabilities are not ye
 *   Closer integration with EUnit.
 *   Dead macro elimination, especially when inlining hrl files.
 *   Do better at determining when a macro contains content that is allowed in guard clauses. We may be able to do away with the generated `Macro.Env.in_guard?` check.
+*   Convert yrl files.
+*   Fix expressions that cause scope "export" warnings in newer versions of Elixir.
 
 ## Contributing
 

@@ -21,7 +21,6 @@ defmodule Erl2ex.Convert.ErlForms do
 
   alias Erl2ex.Pipeline.ModuleData
   alias Erl2ex.Pipeline.Names
-  alias Erl2ex.Pipeline.Utils
 
 
   # A list of attributes that are automatically registered in Elixir and
@@ -75,6 +74,11 @@ defmodule Erl2ex.Convert.ErlForms do
   # Handler for file/line state directives.
   def conv_form({:attribute, _line, :file, {file, fline}}, context) do
     conv_file_form(file, fline, context)
+  end
+
+  # Handler for file/line state directives.
+  def conv_form({:attribute, _line, :compile, arg}, context) do
+    conv_compile_directive_form(arg, context)
   end
 
   # Handler for "else" and "endif" directives (i.e. with no arguments)
@@ -347,6 +351,38 @@ defmodule Erl2ex.Convert.ErlForms do
   end
 
 
+  #### Converts the given compile options directive.
+
+  defp conv_compile_directive_form(args, context) do
+    conv_attr_form(:compile, conv_compile_option(args, context), context)
+  end
+
+
+  # Checks compile options. For inline options, maps the function name.
+
+  defp conv_compile_option(options, context) when is_list(options) do
+    options |> Enum.map(&(conv_compile_option(&1, context)))
+  end
+
+  defp conv_compile_option({:inline, {name, arity}}, context) do
+    mapped_name = ModuleData.local_function_name(context.module_data, name)
+    {:inline, {mapped_name, arity}}
+  end
+
+  defp conv_compile_option({:inline, funcs}, context) when is_list(funcs) do
+    module_data = context.module_data
+    mapped_funcs = funcs
+      |> Enum.map(fn {name, arity} ->
+        {ModuleData.local_function_name(module_data, name), arity}
+      end)
+    {:inline, mapped_funcs}
+  end
+
+  defp conv_compile_option(option, _context) do
+    option
+  end
+
+
   #### Converts the given attribute definition directive.
 
   defp conv_attr_form(name, arg, context) do
@@ -377,7 +413,6 @@ defmodule Erl2ex.Convert.ErlForms do
     if args == nil, do: args = []
     module_data = context.module_data
     needs_dispatch = ModuleData.macro_needs_dispatch?(module_data, name)
-    ex_args = args |> Enum.map(fn arg -> {Utils.lower_atom(arg), [], Elixir} end)
     macro_name = ModuleData.macro_function_name(module_data, name, arity)
     mapped_name = macro_name
     dispatch_name = nil
@@ -391,6 +426,13 @@ defmodule Erl2ex.Convert.ErlForms do
       |> Context.set_variable_maps(replacement, args)
       |> Context.push_scope
       |> Context.start_macro_export_collection(args)
+
+    variable_map = Context.get_variable_map(context)
+    ex_args = args
+      |> Enum.map(fn arg ->
+        {Map.fetch!(variable_map, arg), [], Elixir}
+      end)
+
     {normal_expr, guard_expr, context} = ErlExpressions.conv_macro_expr(replacement, context)
     ex_macro = %ExMacro{
       macro_name: mapped_name,

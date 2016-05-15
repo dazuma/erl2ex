@@ -5,6 +5,8 @@ Erl2ex is currently pre-alpha software. Expect significant backwards-incompatibl
 ## v0.1.0 (not yet released)
 
 *   Support for variables in fun M:F/A.
+*   A macro argument that collides with a reserved word or function name wasn't properly renamed. Fixed.
+*   The "inline" compile option didn't map function names properly. Fixed.
 *   Further simplified conversion of public functions with normally un-deffable names.
 *   Documented the code better.
 

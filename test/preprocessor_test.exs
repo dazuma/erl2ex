@@ -308,6 +308,29 @@ defmodule PreprocessorTest do
   end
 
 
+  test "Macro arg collides with function name" do
+    input = """
+      -define(foo(Bar), Bar).
+      bar() -> hello.
+      """
+
+    expected = """
+      defmacrop erlmacro_foo(var_bar) do
+        quote do
+          unquote(var_bar)
+        end
+      end
+
+
+      defp bar() do
+        :hello
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
   test "Basic directives" do
     input = """
       -define(debug, 1).

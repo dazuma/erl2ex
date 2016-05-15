@@ -1,3 +1,4 @@
+# Conversion functions for erlparse AST.
 
 defmodule Erl2ex.Convert.ErlExpressions do
 

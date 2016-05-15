@@ -204,4 +204,29 @@ defmodule StructureTest do
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
 
+
+  test "compile attribute" do
+    input = """
+      -compile({inline, [pi/0, def/1]}).
+      pi() -> 3.14.
+      def(A) -> A.
+      """
+
+    expected = """
+      @compile {:inline, [pi: 0, func_def: 1]}
+
+
+      defp pi() do
+        3.14
+      end
+
+
+      defp func_def(a) do
+        a
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
 end

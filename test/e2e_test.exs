@@ -178,14 +178,21 @@ defmodule E2ETest do
   end
 
 
-  # In progress. Doesn't run tests properly yet because it gets confused between
-  # the compiled modules and the modules from the installed Elixir runtime.
-  # TODO: Try running the tests using erl, to disable the Elixir runtime.
+  # In progress. Compilation of the generated elixir is still failing.
   @tag :skip
+  @tag timeout: 300000
   test "elixir" do
     download_project("elixir", "https://github.com/elixir-lang/elixir.git")
+
+    # Run yecc on the elixir_parser source.
+    clean_dir("elixir", "lib/elixir/src2")
+    copy_dir("elixir", "lib/elixir/src", "lib/elixir/src2")
+    run_cmd("erl", ["-run", "yecc", "file", "elixir_parser", "-run", "init", "stop", "-noshell"],
+        name: "elixir", path: "lib/elixir/src2")
+
+    # Convert
     clean_dir("elixir", "lib/elixir/src_ex")
-    convert_dir("elixir", "lib/elixir/src", "lib/elixir/src_ex")
+    convert_dir("elixir", "lib/elixir/src2", "lib/elixir/src_ex")
 
     # elixir_bootstrap.erl generates __info__ functions so can't be converted for now
     File.rm!(project_path("elixir", "lib/elixir/src_ex/elixir_bootstrap.ex"))
@@ -201,18 +208,8 @@ defmodule E2ETest do
     compile_dir("elixir", "lib/elixir/src_ex/test_erlang", display_output: true, display_cmd: true)
     copy_dir("elixir", "lib/elixir/src_ex/test_erlang", "lib/elixir/src_ex")
 
-    #run_eunit_tests(
-    #    [
-    #      :atom_test,
-    #      :control_test,
-    #      :function_test,
-    #      :match_test,
-    #      :module_test,
-    #      :operators_test,
-    #      :string_test,
-    #      :tokenizer_test
-    #    ],
-    #    "elixir", "src_ex", display_output: true, display_cmd: true)
+    run_cmd("erl", ["-run", "test_helper", "test", "-run", "init", "stop", "-noshell"],
+        name: "elixir", path: "lib/elixir/src_ex")
   end
 
 
