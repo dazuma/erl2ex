@@ -205,7 +205,7 @@ defmodule StructureTest do
   end
 
 
-  test "compile attribute" do
+  test "inline compile attribute" do
     input = """
       -compile({inline, [pi/0, def/1]}).
       pi() -> 3.14.
@@ -223,6 +223,25 @@ defmodule StructureTest do
 
       defp func_def(a) do
         a
+      end
+      """
+
+    assert Erl2ex.convert_str!(input, @opts) == expected
+  end
+
+
+  test "inline nowarn_unused_function attribute" do
+    input = """
+      -compile([nowarn_unused_function, {nowarn_unused_function, [pi/0]}]).
+      pi() -> 3.14.
+      """
+
+    expected = """
+      @compile :nowarn_unused_function
+
+
+      defp pi() do
+        3.14
       end
       """
 

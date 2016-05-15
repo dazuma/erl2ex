@@ -354,19 +354,25 @@ defmodule Erl2ex.Convert.ErlForms do
   #### Converts the given compile options directive.
 
   defp conv_compile_directive_form(args, context) do
-    conv_attr_form(:compile, conv_compile_option(args, context), context)
+    case conv_compile_option(args, context) do
+      [] -> {[], context}
+      [arg] -> conv_attr_form(:compile, arg, context)
+      arg_list -> conv_attr_form(:compile, arg_list, context)
+    end
   end
 
 
-  # Checks compile options. For inline options, maps the function name.
+  # Does some transforms on the compile options.
+  # For inline options, changes function names to their Elixir counterparts.
+  # Removes nowarn_unused_function because it doesn't work in Elixir.
 
   defp conv_compile_option(options, context) when is_list(options) do
-    options |> Enum.map(&(conv_compile_option(&1, context)))
+    Enum.flat_map(options, &(conv_compile_option(&1, context)))
   end
 
   defp conv_compile_option({:inline, {name, arity}}, context) do
     mapped_name = ModuleData.local_function_name(context.module_data, name)
-    {:inline, {mapped_name, arity}}
+    [{:inline, {mapped_name, arity}}]
   end
 
   defp conv_compile_option({:inline, funcs}, context) when is_list(funcs) do
@@ -375,11 +381,15 @@ defmodule Erl2ex.Convert.ErlForms do
       |> Enum.map(fn {name, arity} ->
         {ModuleData.local_function_name(module_data, name), arity}
       end)
-    {:inline, mapped_funcs}
+    [{:inline, mapped_funcs}]
+  end
+
+  defp conv_compile_option({:nowarn_unused_function, _funcs}, _context) do
+    []
   end
 
   defp conv_compile_option(option, _context) do
-    option
+    [option]
   end
 
 

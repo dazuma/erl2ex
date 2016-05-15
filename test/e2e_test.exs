@@ -178,7 +178,7 @@ defmodule E2ETest do
   end
 
 
-  # In progress. Compilation of the generated elixir is still failing.
+  # In progress.
   @tag :skip
   @tag timeout: 300000
   test "elixir" do
