@@ -128,9 +128,12 @@ defmodule Erl2ex do
   @spec convert_file(Path.t, Path.t | nil, options) :: Results.t
 
   def convert_file(source_path, dest_path \\ nil, opts \\ []) do
-    if dest_path == nil do
-      dest_path = "#{Path.rootname(source_path)}.ex"
-    end
+    dest_path =
+      if dest_path == nil do
+        "#{Path.rootname(source_path)}.ex"
+      else
+        dest_path
+      end
     cur_dir = File.cwd!
     include_dirs = Keyword.get_values(opts, :include_dir)
     source = Source.start_link(source_dir: cur_dir, include_dirs: include_dirs)
@@ -164,9 +167,7 @@ defmodule Erl2ex do
   @spec convert_dir(Path.t, Path.t | nil, options) :: Results.t
 
   def convert_dir(source_dir, dest_dir \\ nil, opts \\ []) do
-    if dest_dir == nil do
-      dest_dir = source_dir
-    end
+    dest_dir = if dest_dir == nil, do: source_dir, else: dest_dir
     source = opts
       |> Keyword.put(:source_dir, source_dir)
       |> Source.start_link
@@ -203,9 +204,12 @@ defmodule Erl2ex do
 
   def convert(source, sink, results_collector, source_path, dest_path, opts \\ []) do
     {source_str, actual_source_path} = Source.read_source(source, source_path)
-    if actual_source_path != nil do
-      opts = [{:cur_file_path, actual_source_path} | opts]
-    end
+    opts =
+      if actual_source_path == nil do
+        opts
+      else
+        [{:cur_file_path, actual_source_path} | opts]
+      end
     try do
       str = source_str
         |> Parse.string(opts)

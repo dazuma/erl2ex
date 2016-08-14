@@ -104,7 +104,7 @@ defmodule Erl2ex.Sink do
           IO.binwrite(io, str)
         end)
       end
-      if not state.allow_get, do: str = nil
+      str = if state.allow_get, do: str, else: nil
       state = %State{state | data: Map.put(state.data, path, str)}
       {:reply, :ok, state}
     end

@@ -130,10 +130,12 @@ defmodule Erl2ex.Convert.ErlExpressions do
     {metadata, ex_op} = Map.fetch!(@op_map, op)
     {ex_arg1, context} = conv_expr(arg1, context)
     {ex_arg2, context} = conv_expr(arg2, context)
-    if ModuleData.binary_bif_requires_qualification?(context.module_data, ex_op) do
-      ex_op = {:., [], [Kernel, ex_op]}
-      metadata = []
-    end
+    {ex_op, metadata} =
+      if ModuleData.binary_bif_requires_qualification?(context.module_data, ex_op) do
+        {{:., [], [Kernel, ex_op]}, []}
+      else
+        {ex_op, metadata}
+      end
     {{ex_op, metadata, [ex_arg1, ex_arg2]}, context}
   end
 
@@ -332,13 +334,16 @@ defmodule Erl2ex.Convert.ErlExpressions do
     {ex_qualifiers, context} = conv_list(qualifiers, context)
     {ex_prequalifiers, context} = conv_list(prequalifiers, context)
     generator_clause = {:for, [], ex_qualifiers ++ [[into: base, do: ex_expr]]}
-    if not Enum.empty?(prequalifiers) do
-      prequalifiers_clause = combine_prequalifiers(ex_prequalifiers)
-      generator_clause = {
-        :if, @import_kernel_metadata,
-        [prequalifiers_clause, [do: generator_clause, else: base]]
-      }
-    end
+    generator_clause =
+      if Enum.empty?(prequalifiers) do
+        generator_clause
+      else
+        prequalifiers_clause = combine_prequalifiers(ex_prequalifiers)
+        {
+          :if, @import_kernel_metadata,
+          [prequalifiers_clause, [do: generator_clause, else: base]]
+        }
+      end
     {generator_clause, context}
   end
 
@@ -393,37 +398,57 @@ defmodule Erl2ex.Convert.ErlExpressions do
   end
 
 
-  defp conv_record_def_elem(record_elem, context) when elem(record_elem, 0) == :record_field do
-    {ex_name, context} = conv_expr(elem(record_elem, 2), context)
-    context = Context.add_record_type(context, ex_name, {:term, [], []})
-    conv_expr(record_elem, context)
+  defp conv_record_def_elem({:record_field, _, name} = record_elem, context) do
+    conv_record_def_elem(record_elem, name, {:term, [], []}, context)
   end
 
-  defp conv_record_def_elem(record_elem, context) when elem(record_elem, 0) == :typed_record_field do
-    {ex_type, context} = conv_expr(elem(record_elem, 2), context)
-    {ex_name, context} = conv_expr(elem(elem(record_elem, 1), 2), context)
+  defp conv_record_def_elem({:record_field, _, name, _} = record_elem, context) do
+    conv_record_def_elem(record_elem, name, {:term, [], []}, context)
+  end
+
+  defp conv_record_def_elem({:typed_record_field, {:record_field, _, name} = record_elem, type}, context) do
+    {ex_type, context} = conv_expr(type, context)
+    conv_record_def_elem(record_elem, name, {:|, [], [:undefined, ex_type]}, context)
+  end
+
+  defp conv_record_def_elem({:typed_record_field, {:record_field, _, name, _} = record_elem, type}, context) do
+    {ex_type, context} = conv_expr(type, context)
+    conv_record_def_elem(record_elem, name, ex_type, context)
+  end
+
+  def conv_record_def_elem(record_elem, name, ex_type, context) do
+    {ex_name, context} = conv_expr(name, context)
     context = Context.add_record_type(context, ex_name, ex_type)
-    conv_expr(elem(record_elem, 1), context)
+    conv_expr(record_elem, context)
   end
 
 
   defp conv_clause_list(type, clauses, context) do
-    if type == :case or type == :if or type == :receive do
-      context = Context.clear_exports(context)
-    end
+    context =
+      if type == :case or type == :if or type == :receive do
+        Context.clear_exports(context)
+      else
+        context
+      end
     {result, context} = Enum.map_reduce(clauses, context, fn
       ({:clause, line, params, guards, arg}, context) ->
         context = Context.push_scope(context)
-        if type == :if and Enum.empty?(params) do
-          params = [{:atom, line, :if}]
-        end
+        params =
+          if type == :if and Enum.empty?(params) do
+            [{:atom, line, :if}]
+          else
+            params
+          end
         {result, context} = conv_clause(type, params, guards, arg, context)
         context = Context.pop_scope(context)
         {result, context}
     end)
-    if type == :case or type == :if or type == :receive do
-      context = Context.apply_exports(context)
-    end
+    context =
+      if type == :case or type == :if or type == :receive do
+        Context.apply_exports(context)
+      else
+        context
+      end
     {result, context}
   end
 
@@ -496,17 +521,26 @@ defmodule Erl2ex.Convert.ErlExpressions do
     {ex_expr, context} = conv_block(expr, context)
     try_elems = [do: ex_expr]
     {catch_clauses, context} = conv_clause_list(:catch, catches, context)
-    if not Enum.empty?(catch_clauses) do
-      try_elems = try_elems ++ [catch: catch_clauses]
-    end
-    if not Enum.empty?(after_expr) do
-      {ex_after_expr, context} = conv_block(after_expr, context)
-      try_elems = try_elems ++ [after: ex_after_expr]
-    end
-    if not Enum.empty?(of_clauses) do
-      {ex_of_clauses, context} = conv_clause_list(:try_of, of_clauses, context)
-      try_elems = try_elems ++ [else: ex_of_clauses]
-    end
+    try_elems =
+      if Enum.empty?(catch_clauses) do
+        try_elems
+      else
+        try_elems ++ [catch: catch_clauses]
+      end
+    {try_elems, context} =
+      if Enum.empty?(after_expr) do
+        {try_elems, context}
+      else
+        {ex_after_expr, context2} = conv_block(after_expr, context)
+        {try_elems ++ [after: ex_after_expr], context2}
+      end
+    {try_elems, context} =
+      if Enum.empty?(of_clauses) do
+        {try_elems, context}
+      else
+        {ex_of_clauses, context2} = conv_clause_list(:try_of, of_clauses, context)
+        {try_elems ++ [else: ex_of_clauses], context2}
+      end
     {{:try, [], [try_elems]}, context}
   end
 
@@ -703,7 +737,12 @@ defmodule Erl2ex.Convert.ErlExpressions do
     context = Context.start_bin_size_expr(context)
     {ex_size, context} = conv_expr(size, context)
     context = Context.finish_bin_size_expr(context)
-    if verbose or not is_integer(ex_size), do: ex_size = {:size, [], [ex_size]}
+    ex_size =
+      if verbose or not is_integer(ex_size) do
+        {:size, [], [ex_size]}
+      else
+        ex_size
+      end
     {ex_size, context}
   end
 
@@ -941,17 +980,21 @@ defmodule Erl2ex.Convert.ErlExpressions do
       |> Enum.with_index
       |> Enum.map_reduce(context, fn {expr, index}, ctx ->
         export_this_arg = MapSet.member?(exported_indexes, index)
-        if not export_this_arg do
-          ctx = ctx |> Context.suspend_macro_export_collection
-        end
+        ctx =
+          if export_this_arg do
+            ctx
+          else
+            ctx |> Context.suspend_macro_export_collection
+          end
         ctx = ctx |> Context.clear_exports |> Context.push_scope
         {ex_expr, ctx} = conv_expr(expr, ctx)
         ctx = ctx |> Context.pop_scope
-        if export_this_arg do
-          ctx = ctx |> Context.apply_exports
-        else
-          ctx = ctx |> Context.resume_macro_export_collection
-        end
+        ctx =
+          if export_this_arg do
+            ctx |> Context.apply_exports
+          else
+            ctx |> Context.resume_macro_export_collection
+          end
         {ex_expr, ctx}
       end)
   end

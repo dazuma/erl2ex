@@ -184,14 +184,17 @@ defmodule E2ETest do
   test "elixir" do
     download_project("elixir", "https://github.com/elixir-lang/elixir.git")
 
-    # Run yecc on the elixir_parser source.
+    File.rm_rf!(project_path("elixir", "lib/elixir/ebin"))
     clean_dir("elixir", "lib/elixir/src2")
-    copy_dir("elixir", "lib/elixir/src", "lib/elixir/src2")
+    clean_dir("elixir", "lib/elixir/src_ex")
+
+    # Run yecc on the elixir_parser source.
+    copy_file("elixir", "lib/elixir/src/elixir_parser.yrl", "lib/elixir/src2/elixir_parser.yrl")
     run_cmd("erl", ["-run", "yecc", "file", "elixir_parser", "-run", "init", "stop", "-noshell"],
         name: "elixir", path: "lib/elixir/src2")
 
     # Convert
-    clean_dir("elixir", "lib/elixir/src_ex")
+    convert_dir("elixir", "lib/elixir/src", "lib/elixir/src_ex")
     convert_dir("elixir", "lib/elixir/src2", "lib/elixir/src_ex")
 
     # elixir_bootstrap.erl generates __info__ functions so can't be converted for now
@@ -199,17 +202,29 @@ defmodule E2ETest do
     File.cp!(project_path("elixir", "lib/elixir/src/elixir_bootstrap.erl"),
         project_path("elixir", "lib/elixir/src_ex/elixir_bootstrap.erl"))
 
-    copy_dir("elixir", "lib/elixir/test/erlang", "lib/elixir/src_ex/test_erlang")
+    # Create a dummy elixir_parser.erl so rebar doesn't generate it.
+    create_file("elixir", "lib/elixir/src/elixir_parser.erl",
+        """
+        -module(elixir_parser).
+        """)
+
+    # Converted code needs Enum.reduce
+    create_file("elixir", "lib/elixir/src_ex/Elixir.Enum.erl",
+        """
+        -module('Elixir.Enum').
+        -export([reduce/3]).
+        reduce(List, Acc, Fn) -> lists:foldl(Fn, Acc, List).
+        """)
 
     # Compile each elixir file separately; otherwise newly compiled modules will
     # be added to the VM, causing compatibility issues between old and new.
-    compile_dir_individually("elixir", "lib/elixir/src_ex", display_output: true, display_cmd: true)
+    compile_dir_individually("elixir", "lib/elixir/src_ex",
+        display_output: true, display_cmd: true, output: "../ebin")
 
-    compile_dir("elixir", "lib/elixir/src_ex/test_erlang", display_output: true, display_cmd: true)
-    copy_dir("elixir", "lib/elixir/src_ex/test_erlang", "lib/elixir/src_ex")
+    run_cmd("make", ["lib/elixir/src/elixir.app.src"], name: "elixir")
+    run_cmd(project_path("elixir", "rebar"), ["compile"], name: "elixir", path: "lib/elixir")
 
-    run_cmd("erl", ["-run", "test_helper", "test", "-run", "init", "stop", "-noshell"],
-        name: "elixir", path: "lib/elixir/src_ex")
+    run_cmd("make", ["test"], name: "elixir")
   end
 
 

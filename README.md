@@ -50,6 +50,7 @@ This software is still under heavy development, and many capabilities are not ye
 
 ### Known issues
 
+*   Erlang exports match strings in case statements, whereas Elixir does not. Examples: the `ER` match in `elixir_bitstring:expand_bitstr/4` and the `Final` match in `elixir_interpolation:finish_extraction/5`.
 *   Returning a remote function reference from a macro is not supported: e.g. `-define(A, m:f).` generates illegal Elixir syntax.
 *   Function macros cannot return function names; Erlang's parser rejects the syntax `?A()()`. In Erlang, the preprocessor fixes this, but we're not running the Erlang preprocessor directly.
 *   Record names cannot be macro results; Erlang's parser rejects the syntax `-record(?MODULE, {...}).` and `#?MODULE{...}`. (Examples in https://github.com/soranoba/bbmustache/blob/master/src/bbmustache.erl)

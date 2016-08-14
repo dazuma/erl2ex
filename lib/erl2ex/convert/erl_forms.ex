@@ -154,9 +154,12 @@ defmodule Erl2ex.Convert.ErlForms do
     context = Context.push_match_level(context, true)
     {ex_params, context} = ErlExpressions.conv_list(params, context)
     context = Context.pop_match_level(context)
-    if not Names.deffable_function_name?(name) do
-      name = {:unquote, [], [name]}
-    end
+    name =
+      if Names.deffable_function_name?(name) do
+        name
+      else
+        {:unquote, [], [name]}
+      end
     {{name, [], ex_params}, context}
   end
 
@@ -214,9 +217,12 @@ defmodule Erl2ex.Convert.ErlForms do
 
   defp conv_spec_form(attr_name, mod_name, name, clauses, context) do
     if mod_name == {} or mod_name == context.module_data.name do
-      if ModuleData.has_local_function_name?(context.module_data, name) do
-        name = ModuleData.local_function_name(context.module_data, name)
-      end
+      name =
+        if ModuleData.has_local_function_name?(context.module_data, name) do
+          ModuleData.local_function_name(context.module_data, name)
+        else
+          name
+        end
       specs = clauses |> Enum.map(fn spec_clause ->
         {ex_spec_expr, _} = conv_spec_clause(name, spec_clause, context)
         ex_spec_expr
@@ -271,9 +277,12 @@ defmodule Erl2ex.Convert.ErlForms do
         end
       end)
 
-    if not Enum.empty?(ex_constraints) do
-      ex_expr = {:when, [], [ex_expr, ex_constraints]}
-    end
+    ex_expr =
+      if Enum.empty?(ex_constraints) do
+        ex_expr
+      else
+        {:when, [], [ex_expr, ex_constraints]}
+      end
     {ex_expr, context}
   end
 
@@ -420,16 +429,18 @@ defmodule Erl2ex.Convert.ErlForms do
   defp conv_define_form(macro, replacement, context) do
     {name, args} = interpret_macro_expr(macro)
     arity = if args == nil, do: nil, else: Enum.count(args)
-    if args == nil, do: args = []
+    args = if args == nil, do: [], else: args
     module_data = context.module_data
     needs_dispatch = ModuleData.macro_needs_dispatch?(module_data, name)
     macro_name = ModuleData.macro_function_name(module_data, name, arity)
     mapped_name = macro_name
     dispatch_name = nil
-    if needs_dispatch do
-      {mapped_name, context} = Context.generate_macro_name(context, name, arity)
-      dispatch_name = macro_name
-    end
+    {{mapped_name, context}, dispatch_name} =
+      if needs_dispatch do
+        {Context.generate_macro_name(context, name, arity), macro_name}
+      else
+        {{mapped_name, context}, dispatch_name}
+      end
     tracking_name = ModuleData.tracking_attr_name(module_data, name)
 
     context = context

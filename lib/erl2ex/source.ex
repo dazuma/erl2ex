@@ -149,8 +149,12 @@ defmodule Erl2ex.Source do
     _from,
     %State{include_dirs: include_dirs, include_data: include_data} = state)
   do
-    dirs = include_dirs
-    if cur_dir != nil, do: dirs = [cur_dir | dirs]
+    dirs =
+      if cur_dir == nil do
+        include_dirs
+      else
+        [cur_dir | include_dirs]
+      end
     dirs = [File.cwd! | dirs]
     result = read_impl(path, include_data, dirs)
     {:reply, result, state}

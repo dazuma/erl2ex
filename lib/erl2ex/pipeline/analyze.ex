@@ -148,22 +148,22 @@ defmodule Erl2ex.Pipeline.Analyze do
       arity = :erl_syntax.function_arity(form_node)
       name_node = :erl_syntax.function_name(form_node)
       ErlSyntax.on_atom(name_node, module_data, fn name ->
-        local_funcs = MapSet.put(module_data.local_funcs, {name, arity})
-        used_func_names = module_data.used_func_names
+        module_data = %ModuleData{module_data |
+          local_funcs: MapSet.put(module_data.local_funcs, {name, arity})
+        }
         func_rename_map = module_data.func_rename_map
         if not Map.has_key?(func_rename_map, name) and
           (MapSet.member?(module_data.exports, {name, arity}) or
             (Names.local_callable_function_name?(name) and
               not Map.has_key?(module_data.imported_funcs, name)))
         do
-          func_rename_map = Map.put_new(func_rename_map, name, name)
-          used_func_names = MapSet.put(used_func_names, name)
+          %ModuleData{module_data |
+            func_rename_map: Map.put_new(func_rename_map, name, name),
+            used_func_names: MapSet.put(module_data.used_func_names, name)
+          }
+        else
+          module_data
         end
-        %ModuleData{module_data |
-          local_funcs: local_funcs,
-          func_rename_map: func_rename_map,
-          used_func_names: used_func_names
-        }
       end)
     end)
   end
@@ -388,10 +388,13 @@ defmodule Erl2ex.Pipeline.Analyze do
       << "?" :: utf8, basename :: binary >> ->
         macro = Map.get(macros, String.to_atom(basename), %MacroData{})
         macro = %MacroData{macro | has_func_style_call: true}
-        if macro_dispatcher == nil and macro.func_name == nil do
-          macro_dispatcher = Utils.find_available_name("erlmacro", used_func_names)
-          used_func_names = used_func_names |> MapSet.put(macro_dispatcher)
-        end
+        {macro_dispatcher, used_func_names} =
+          if macro_dispatcher == nil and macro.func_name == nil do
+            macro_dispatcher2 = Utils.find_available_name("erlmacro", used_func_names)
+            {macro_dispatcher2, used_func_names |> MapSet.put(macro_dispatcher2)}
+          else
+            {macro_dispatcher, used_func_names}
+          end
         %ModuleData{module_data |
           macros: Map.put(macros, name, macro),
           macro_dispatcher: macro_dispatcher,
@@ -485,16 +488,25 @@ defmodule Erl2ex.Pipeline.Analyze do
     used_func_names = used_func_names
       |> MapSet.delete(const_name)
       |> MapSet.delete(func_name)
-    if const_name != nil or args == nil do
-      {const_name, used_attr_names} = update_macro_name(name, nil, used_attr_names, "erlconst")
-    end
-    if func_name != nil or args != nil do
-      {func_name, used_attr_names} = update_macro_name(name, nil, used_attr_names, "erlmacro")
-    end
-    if macro_dispatcher == nil do
-      macro_dispatcher = Utils.find_available_name("erlmacro", used_func_names)
-      used_func_names = used_func_names |> MapSet.put(macro_dispatcher)
-    end
+    {const_name, used_attr_names} =
+      if const_name != nil or args == nil do
+        update_macro_name(name, nil, used_attr_names, "erlconst")
+      else
+        {const_name, used_attr_names}
+      end
+    {func_name, used_attr_names} =
+      if func_name != nil or args != nil do
+        update_macro_name(name, nil, used_attr_names, "erlmacro")
+      else
+        {func_name, used_attr_names}
+      end
+    {macro_dispatcher, used_func_names} =
+      if macro_dispatcher == nil do
+        macro_dispatcher2 = Utils.find_available_name("erlmacro", used_func_names)
+        {macro_dispatcher2, MapSet.put(used_func_names, macro_dispatcher2)}
+      else
+        {macro_dispatcher, used_func_names}
+      end
     macro = %MacroData{macro |
       is_redefined: true,
       const_name: const_name,

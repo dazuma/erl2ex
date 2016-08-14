@@ -4,8 +4,8 @@ defmodule Erl2ex.Mixfile do
   def project do
     [
       app: :erl2ex,
-      version: "0.0.9",
-      elixir: "~> 1.2",
+      version: "0.0.10",
+      elixir: "~> 1.3",
       name: "Erl2ex",
       source_url: "https://github.com/dazuma/erl2ex",
       build_embedded: Mix.env == :prod,
@@ -24,9 +24,9 @@ defmodule Erl2ex.Mixfile do
 
   defp deps do
     [
-      {:earmark, "~> 0.2", only: :dev},
-      {:ex_doc, "~> 0.11", only: :dev},
-      {:credo, "~> 0.3", only: :dev}
+      {:earmark, "~> 1.0", only: :dev},
+      {:ex_doc, "~> 0.13", only: :dev},
+      {:credo, "~> 0.4", only: :dev}
     ]
   end
 

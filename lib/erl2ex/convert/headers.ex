@@ -54,9 +54,12 @@ defmodule Erl2ex.Convert.Headers do
 
   defp header_check_expr(expr, header) when is_tuple(expr) and tuple_size(expr) >= 3 do
     imported = expr |> elem(1) |> Keyword.get(:import, nil)
-    if imported == Bitwise do
-      header = %ExHeader{header | use_bitwise: true}
-    end
+    header =
+      if imported == Bitwise do
+        %ExHeader{header | use_bitwise: true}
+      else
+        header
+      end
     expr
       |> Tuple.to_list
       |> Enum.reduce(header, &header_check_expr/2)

@@ -6,7 +6,7 @@ defmodule Erl2ex.TestHelper do
   def download_project(name, url) do
     File.mkdir_p!(@e2e_files_dir)
     if File.dir?(project_path(name, ".git")) do
-      run_cmd("git", ["pull"])
+      run_cmd("git", ["pull"], name: name)
     else
       run_cmd("git", ["clone", url, name])
     end
@@ -46,29 +46,37 @@ defmodule Erl2ex.TestHelper do
   end
 
 
+  def create_file(name, path, content) do
+    full_path = project_path(name, path)
+    File.write(full_path, content);
+  end
+
+
   def compile_dir_individually(name, path, opts \\ []) do
+    output_dir = Keyword.get(opts, :output, ".")
     "#{project_path(name, path)}/*.ex"
       |> Path.wildcard
       |> Enum.each(fn file_path ->
-        run_cmd("elixirc", [Path.basename(file_path)],
+        run_cmd("elixirc", ["-o", output_dir, Path.basename(file_path)],
             Keyword.merge(opts, name: name, path: path, DEFINE_TEST: "true"))
       end)
     "#{project_path(name, path)}/*.erl"
       |> Path.wildcard
       |> Enum.each(fn file_path ->
-        run_cmd("erlc", ["-DTEST", Path.basename(file_path)],
+        run_cmd("erlc", ["-o", output_dir, "-DTEST", Path.basename(file_path)],
             Keyword.merge(opts, name: name, path: path))
       end)
   end
 
 
   def compile_dir(name, path, opts \\ []) do
+    output_dir = Keyword.get(opts, :output, ".")
     if Path.wildcard("#{project_path(name, path)}/*.ex") != [] do
-      run_cmd("elixirc", [{"*.ex"}],
+      run_cmd("elixirc", ["-o", output_dir, {"*.ex"}],
           Keyword.merge(opts, name: name, path: path, DEFINE_TEST: "true"))
     end
     if Path.wildcard("#{project_path(name, path)}/*.erl") != [] do
-      run_cmd("erlc", ["-DTEST", {"*.erl"}],
+      run_cmd("erlc", ["-o", output_dir, "-DTEST", {"*.erl"}],
           Keyword.merge(opts, name: name, path: path))
     end
   end

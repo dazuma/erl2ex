@@ -219,18 +219,19 @@ defmodule Erl2ex.Convert.Context do
     } = context)
   do
     if old_match_level == 1 do
-      in_func_params = false
       [{top_vars, top_exports} | other_scopes] = scopes
       top_vars = MapSet.union(top_vars, match_vars)
-      scopes = [{top_vars, top_exports} | other_scopes]
-      match_vars = MapSet.new
+      %Context{context |
+        match_level: old_match_level - 1,
+        in_func_params: false,
+        scopes: [{top_vars, top_exports} | other_scopes],
+        match_vars: MapSet.new
+      }
+    else
+      %Context{context |
+        match_level: old_match_level - 1,
+      }
     end
-    %Context{context |
-      match_level: old_match_level - 1,
-      in_func_params: in_func_params,
-      scopes: scopes,
-      match_vars: match_vars
-    }
   end
 
 
@@ -335,16 +336,20 @@ defmodule Erl2ex.Convert.Context do
   def map_variable_name(context, name) do
     case Map.fetch(context.variable_map, name) do
       {:ok, mapped_name} ->
-        needs_caret = false
         if not context.in_bin_size_expr and context.match_level > 0 and name != :_ do
           needs_caret = not context.in_func_params and variable_seen?(context.scopes, name)
-          if not needs_caret do
-            context = %Context{context |
-              match_vars: MapSet.put(context.match_vars, name)
-            }
-          end
+          context =
+            if needs_caret do
+              context
+            else
+              %Context{context |
+                match_vars: MapSet.put(context.match_vars, name)
+              }
+            end
+          {:normal_var, mapped_name, needs_caret, context}
+        else
+          {:normal_var, mapped_name, false, context}
         end
-        {:normal_var, mapped_name, needs_caret, context}
       :error ->
         if context.in_type_expr do
           {:unknown_type_var, context}
@@ -496,7 +501,9 @@ defmodule Erl2ex.Convert.Context do
   # collections.
 
   defp map_stringification(stringified_arg, {stringification_map, variables_map, all_names}) do
-    if not Map.has_key?(stringification_map, stringified_arg) do
+    if Map.has_key?(stringification_map, stringified_arg) do
+      {stringification_map, variables_map, all_names}
+    else
       arg_name = stringified_arg
         |> Atom.to_string
         |> String.lstrip(??)
@@ -507,8 +514,8 @@ defmodule Erl2ex.Convert.Context do
       variables_map = Map.put(variables_map, stringified_arg, mangled_name)
       stringification_map = Map.put(stringification_map, mapped_arg, mangled_name)
       all_names = MapSet.put(all_names, mangled_name)
+      {stringification_map, variables_map, all_names}
     end
-    {stringification_map, variables_map, all_names}
   end
 
 
@@ -516,15 +523,17 @@ defmodule Erl2ex.Convert.Context do
   # collections.
 
   defp map_variables(var_name, {variables_map, all_names}) do
-    if not Map.has_key?(variables_map, var_name) do
+    if Map.has_key?(variables_map, var_name) do
+      {variables_map, all_names}
+    else
       mapped_name = var_name
         |> Atom.to_string
         |> Utils.lower_str
         |> Utils.find_available_name(all_names, "var", 0)
       variables_map = Map.put(variables_map, var_name, mapped_name)
       all_names = MapSet.put(all_names, mapped_name)
+      {variables_map, all_names}
     end
-    {variables_map, all_names}
   end
 
 
