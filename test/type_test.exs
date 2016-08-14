@@ -246,7 +246,7 @@ defmodule TypeTest do
 
   test "Records" do
     input = """
-      -record(myrecord, {field1 :: any(), field2 :: tuple() | integer(), field3}).
+      -record(myrecord, {field1=hello :: any(), field2 :: tuple() | integer(), field3}).
       -type type1() :: #myrecord{}.
       -type type2() :: #myrecord{field1 :: string()}.
       """
@@ -255,9 +255,9 @@ defmodule TypeTest do
       require Record
 
       @erlrecordfields_myrecord [:field1, :field2, :field3]
-      Record.defrecordp :erlrecord_myrecord, :myrecord, [field1: :undefined, field2: :undefined, field3: :undefined]
+      Record.defrecordp :erlrecord_myrecord, :myrecord, [field1: :hello, field2: :undefined, field3: :undefined]
 
-      @typep type1() :: record(:erlrecord_myrecord, field1: :undefined | any(), field2: :undefined | tuple() | integer(), field3: term())
+      @typep type1() :: record(:erlrecord_myrecord, field1: any(), field2: :undefined | tuple() | integer(), field3: term())
 
       @typep type2() :: record(:erlrecord_myrecord, field1: char_list(), field2: :undefined | tuple() | integer(), field3: term())
       """

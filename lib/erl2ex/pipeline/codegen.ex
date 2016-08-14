@@ -61,9 +61,12 @@ defmodule Erl2ex.Pipeline.Codegen do
 
   defp build_context(opts) do
     defines_from_config = Keyword.get(opts, :defines_from_config, nil)
-    if is_binary(defines_from_config) do
-      defines_from_config = String.to_atom(defines_from_config)
-    end
+    defines_from_config =
+      if is_binary(defines_from_config) do
+        String.to_atom(defines_from_config)
+      else
+        defines_from_config
+      end
     %Context{
       define_prefix: Keyword.get(opts, :define_prefix, "DEFINE_"),
       defines_from_config: defines_from_config

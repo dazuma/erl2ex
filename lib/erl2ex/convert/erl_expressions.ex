@@ -408,7 +408,14 @@ defmodule Erl2ex.Convert.ErlExpressions do
 
   defp conv_record_def_elem({:typed_record_field, {:record_field, _, name} = record_elem, type}, context) do
     {ex_type, context} = conv_expr(type, context)
-    conv_record_def_elem(record_elem, name, {:|, [], [:undefined, ex_type]}, context)
+    # Erlang 18's parser includes :undefined in the type when there is no
+    # default value, but Erlang 19 doesn't. Need to handle both cases.
+    ex_type =
+      case ex_type do
+        {:|, [], [:undefined, _]} -> ex_type
+        _ -> {:|, [], [:undefined, ex_type]}
+      end
+    conv_record_def_elem(record_elem, name, ex_type, context)
   end
 
   defp conv_record_def_elem({:typed_record_field, {:record_field, _, name, _} = record_elem, type}, context) do

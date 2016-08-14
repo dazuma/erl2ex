@@ -28,9 +28,7 @@ defmodule Erl2ex.Pipeline.Parse do
   # make sure it ends with a newline (also expected by Erlang's parsers).
 
   defp generate_charlist(str) do
-    if not String.ends_with?(str, "\n") do
-      str = str <> "\n"
-    end
+    str = if String.ends_with?(str, "\n"), do: str, else: str <> "\n"
     String.to_char_list(str)
   end
 

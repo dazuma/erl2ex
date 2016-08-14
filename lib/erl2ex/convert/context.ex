@@ -215,7 +215,6 @@ defmodule Erl2ex.Convert.Context do
       scopes: scopes,
       match_vars: match_vars,
       match_level: old_match_level,
-      in_func_params: in_func_params
     } = context)
   do
     if old_match_level == 1 do
