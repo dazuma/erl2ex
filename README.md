@@ -30,7 +30,7 @@ After adding Erl2ex as a dependency, run `mix deps.get` followed by `mix deps.co
 
 ### Building the escript
 
-To build a standalone command line application (escript), clone this repository using `git clone https://github.com/dazuma/erl2ex.git`, and then run `mix escript.build` within the cloned project.
+To build a standalone command line application (escript), execute `git clone https://github.com/dazuma/erl2ex.git && cd erl2ex && mix deps.get && mix escript.build`.
 
 ## Usage
 
