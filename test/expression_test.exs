@@ -175,7 +175,7 @@ defmodule ExpressionTest do
 
     expected = """
       defp foo() do
-        not a
+        not(a)
         a or b
         a and b
         :erlang.and(a, b)
@@ -792,12 +792,12 @@ defmodule ExpressionTest do
             e
           kind, h ->
             {kind, h}
-        after
-          f
-          g
         else
           a ->
             a + 2
+        after
+          f
+          g
         end
       end
       """
