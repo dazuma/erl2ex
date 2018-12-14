@@ -505,7 +505,7 @@ defmodule Erl2ex.Convert.Context do
     else
       arg_name = stringified_arg
         |> Atom.to_string
-        |> String.lstrip(??)
+        |> String.trim_leading("?")
         |> String.to_atom
       mapped_arg = Map.fetch!(variables_map, arg_name)
       mangled_name = mapped_arg

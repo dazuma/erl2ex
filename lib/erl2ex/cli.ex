@@ -46,7 +46,7 @@ defmodule Erl2ex.Cli do
       not Enum.empty?(errors) ->
         display_errors(errors)
       Keyword.get(options, :help) ->
-        display_help
+        display_help()
       true ->
         run_conversion(args, options)
     end
@@ -156,7 +156,7 @@ defmodule Erl2ex.Cli do
 
   defp run_conversion(paths, _) do
     IO.puts(:stderr, "Got too many input paths: #{inspect(paths)}\n")
-    display_help
+    display_help()
     1
   end
 
@@ -178,7 +178,7 @@ defmodule Erl2ex.Cli do
         IO.puts(:stderr, "Unrecognized or malformed switch: #{switch}=#{val}")
       end)
     IO.puts(:stderr, "")
-    display_help
+    display_help()
     1
   end
 

@@ -183,7 +183,7 @@ defmodule Erl2ex.Pipeline.Names do
     defimpl: 3,
     defmacro: 2,
     defmacrop: 2,
-    "defmodule": 2,
+    defmodule: 2,
     defoverridable: 1,
     defp: 2,
     defprotocol: 2,

@@ -14,7 +14,7 @@ Erl2ex may be run as a mix task or as a standalone escript.
 
 ### Requirements
 
-Erl2ex recognizes Erlang source that is compatible with Erlang 18.x. The generated Elixir source requires Elixir 1.2 or later. The Erl2ex tool itself also requires Elixir 1.2 or later.
+Erl2ex recognizes Erlang source that is compatible with Erlang 18.x. The generated Elixir source requires Elixir 1.4 or later. The Erl2ex tool itself also requires Elixir 1.4 or later.
 
 ### Installing the mix task
 

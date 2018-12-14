@@ -406,7 +406,7 @@ defmodule Erl2ex.Convert.ErlForms do
 
   defp conv_attr_form(name, arg, context) do
     {name, arg} = conv_attr(name, arg)
-    register = not name in @auto_registered_attrs
+    register = not(name in @auto_registered_attrs)
 
     ex_attr = %ExAttr{
       name: name,

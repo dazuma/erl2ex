@@ -29,7 +29,7 @@ defmodule Erl2ex.Pipeline.Parse do
 
   defp generate_charlist(str) do
     str = if String.ends_with?(str, "\n"), do: str, else: str <> "\n"
-    String.to_char_list(str)
+    String.to_charlist(str)
   end
 
 
