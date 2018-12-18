@@ -5,16 +5,16 @@ defmodule Erl2ex.Mixfile do
     [
       app: :erl2ex,
       version: "0.0.10",
-      elixir: "~> 1.3",
+      elixir: "~> 1.4",
       name: "Erl2ex",
       source_url: "https://github.com/dazuma/erl2ex",
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       escript: [main_module: Erl2ex.Cli],
-      deps: deps,
-      docs: docs,
-      description: description,
-      package: package
+      deps: deps(),
+      docs: docs(),
+      description: description(),
+      package: package()
     ]
   end
 
@@ -51,5 +51,4 @@ defmodule Erl2ex.Mixfile do
       links: %{"GitHub" => "https://github.com/dazuma/erl2ex"}
     ]
   end
-
 end

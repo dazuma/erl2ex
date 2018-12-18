@@ -226,7 +226,7 @@ defmodule PreprocessorTest do
 
     expected = """
       defmacrop erlmacro_hello(x) do
-        str_x = Macro.to_string(quote do: unquote(x)) |> String.to_char_list
+        str_x = Macro.to_string(quote do: unquote(x)) |> String.to_charlist
         quote do
           unquote(str_x)
         end
@@ -254,7 +254,7 @@ defmodule PreprocessorTest do
 
     expected = """
       defmacrop erlmacro_hello(x) do
-        str2_x = Macro.to_string(quote do: unquote(x)) |> String.to_char_list
+        str2_x = Macro.to_string(quote do: unquote(x)) |> String.to_charlist
         quote do
           unquote(str2_x) ++ str_x()
         end
@@ -543,8 +543,8 @@ defmodule PreprocessorTest do
     expected = """
       defp foo() do
         __MODULE__
-        Atom.to_char_list(__MODULE__)
-        String.to_char_list(__ENV__.file())
+        Atom.to_charlist(__MODULE__)
+        String.to_charlist(__ENV__.file())
         __ENV__.line()
         'BEAM'
       end

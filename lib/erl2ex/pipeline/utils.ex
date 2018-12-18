@@ -27,7 +27,8 @@ defmodule Erl2ex.Pipeline.Utils do
 
   def find_available_name(basename, used_names, prefix, val) do
     suggestion = suggest_name(basename, prefix, val)
-    if Set.member?(used_names, suggestion) do
+    set = MapSet.new(used_names)
+    if MapSet.member?(set, suggestion) do
       find_available_name(basename, used_names, prefix, val + 1)
     else
       suggestion

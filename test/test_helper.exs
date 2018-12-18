@@ -101,10 +101,12 @@ defmodule Erl2ex.TestHelper do
     cd = Keyword.get(opts, :cd, project_path(name, path))
     display_output = Keyword.get(opts, :display_output)
     display_cmd = Keyword.get(opts, :display_cmd)
-    env = opts |> Enum.filter_map(
-      fn {k, _} -> Regex.match?(~r/^[A-Z]/, Atom.to_string(k)) end,
-      fn {k, v} -> {Atom.to_string(k), v} end
-    )
+
+    env =
+      opts
+      |> Enum.filter(fn {k, _} -> Regex.match?(~r/^[A-Z]/, Atom.to_string(k)) end)
+      |> Enum.map(fn {k, v} -> {Atom.to_string(k), v} end)
+
     args = args |> Enum.flat_map(fn
       {wildcard} ->
         "#{cd}/#{wildcard}"

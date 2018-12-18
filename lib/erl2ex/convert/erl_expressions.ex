@@ -701,7 +701,7 @@ defmodule Erl2ex.Convert.ErlExpressions do
 
   defp record_field_list(record_name, fields, context) do
     {ex_all_fields, context} = conv_list(fields, context)
-    {underscores, ex_fields} = Enum.partition(ex_all_fields, fn
+    {underscores, ex_fields} = Enum.split_with(ex_all_fields, fn
       {{:_, _, Elixir}, _} -> true
       {_, _} -> false
     end)

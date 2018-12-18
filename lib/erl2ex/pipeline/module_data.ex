@@ -322,14 +322,14 @@ defmodule Erl2ex.Pipeline.ModuleData do
   # require init.
 
   def macros_that_need_init(%ModuleData{macros: macros}) do
-    macros |> Enum.filter_map(
-      fn
+    macros
+    |> Enum.filter(fn
         {_, %MacroData{requires_init: true}} -> true
         _ -> false
-      end,
-      fn {name, %MacroData{define_tracker: define_tracker}} ->
-        {name, define_tracker}
       end)
+    |> Enum.map(fn {name, %MacroData{define_tracker: define_tracker}} ->
+        {name, define_tracker}
+    end)
   end
 
 
