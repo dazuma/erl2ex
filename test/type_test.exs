@@ -178,9 +178,9 @@ defmodule TypeTest do
 
       @typep type4() :: <<_::10>>
 
-      @typep type5() :: <<_::_ * 8>>
+      @typep type5() :: <<_::_*8>>
 
-      @typep type6() :: <<_::10, _::_ * 8>>
+      @typep type6() :: <<_::10, _::_*8>>
       """
 
     assert Erl2ex.convert_str!(input, @opts) == expected

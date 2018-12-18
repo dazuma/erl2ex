@@ -805,7 +805,7 @@ defmodule PreprocessorTest do
     expected = """
       defmacrop erlmacro_HELLO(a, b) do
         quote do
-          {unquote(a), fn -> unquote(b) end.()}
+          {unquote(a), (fn -> unquote(b) end).()}
         end
       end
 
