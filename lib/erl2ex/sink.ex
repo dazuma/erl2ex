@@ -1,18 +1,14 @@
-
 defmodule Erl2ex.Sink do
-
   @moduledoc """
   Erl2ex.Sink is a process that consumes generated Elixir source, normally
   writing files to the file system.
   """
-
 
   @typedoc """
   The ProcessID of a sink process.
   """
 
   @type t :: pid()
-
 
   @doc """
   Starts a sink and returns its PID.
@@ -25,17 +21,15 @@ defmodule Erl2ex.Sink do
     pid
   end
 
-
   @doc """
   Writes data to a sink, at the given path.
   """
 
-  @spec write(t, Erl2ex.file_id, String.t) :: :ok | {:error, term}
+  @spec write(t, Erl2ex.file_id(), String.t()) :: :ok | {:error, term}
 
   def write(sink, path, str) do
     GenServer.call(sink, {:write, path, str})
   end
-
 
   @doc """
   Gets the file contents written to the given ID.
@@ -43,23 +37,21 @@ defmodule Erl2ex.Sink do
   Available only if the `allow_get` configuration is in effect.
   """
 
-  @spec get_string(t, Erl2ex.file_id) :: {:ok, String.t} | {:error, term}
+  @spec get_string(t, Erl2ex.file_id()) :: {:ok, String.t()} | {:error, term}
 
   def get_string(sink, path) do
     GenServer.call(sink, {:get_string, path})
   end
 
-
   @doc """
   Returns whether the given file identifier has been written to.
   """
 
-  @spec path_written?(t, Erl2ex.file_id) :: boolean
+  @spec path_written?(t, Erl2ex.file_id()) :: boolean
 
   def path_written?(sink, path) do
     GenServer.call(sink, {:path_written, path})
   end
-
 
   @doc """
   Stops the sink process.
@@ -70,7 +62,6 @@ defmodule Erl2ex.Sink do
   def stop(sink) do
     GenServer.cast(sink, {:stop})
   end
-
 
   use GenServer
 
@@ -84,16 +75,15 @@ defmodule Erl2ex.Sink do
     )
   end
 
-
   def init(opts) do
     state = %State{
       dest_dir: Keyword.get(opts, :dest_dir, nil),
       allow_get: Keyword.get(opts, :allow_get, false),
       allow_overwrite: Keyword.get(opts, :allow_overwrite, false)
     }
+
     {:ok, state}
   end
-
 
   def handle_call({:write, path, str}, _from, state) do
     if not state.allow_overwrite and Map.has_key?(state.data, path) do
@@ -104,6 +94,7 @@ defmodule Erl2ex.Sink do
           IO.binwrite(io, str)
         end)
       end
+
       str = if state.allow_get, do: str, else: nil
       state = %State{state | data: Map.put(state.data, path, str)}
       {:reply, :ok, state}
@@ -115,10 +106,12 @@ defmodule Erl2ex.Sink do
   end
 
   def handle_call({:get_string, path}, _from, %State{data: data} = state) do
-    result = case Map.fetch(data, path) do
-      {:ok, str} -> {:ok, str}
-      :error -> {:error, :not_found}
-    end
+    result =
+      case Map.fetch(data, path) do
+        {:ok, str} -> {:ok, str}
+        :error -> {:error, :not_found}
+      end
+
     {:reply, result, state}
   end
 
@@ -126,9 +119,7 @@ defmodule Erl2ex.Sink do
     {:reply, Map.has_key?(data, path), state}
   end
 
-
   def handle_cast({:stop}, state) do
     {:stop, :normal, state}
   end
-
 end

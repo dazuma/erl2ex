@@ -1,22 +1,19 @@
 # CLI implementation for erl2ex
 
 defmodule Erl2ex.Cli do
-
   @moduledoc """
   This module provides the command line interface for the erl2ex binary and
   the mix erl2ex task.
   """
 
-
   alias Erl2ex.Results
-
 
   @doc """
   Runs the erl2ex binary, given a set of command line arguments.
   Returns the OS result code, which is 0 for success or nonzero for failure.
   """
 
-  @spec run([String.t]) :: non_neg_integer
+  @spec run([String.t()]) :: non_neg_integer
 
   def run(argv) do
     {options, args, errors} =
@@ -35,7 +32,7 @@ defmodule Erl2ex.Cli do
           v: :verbose,
           "?": :help,
           o: :output,
-          "I": :include_dir
+          I: :include_dir
         ]
       )
 
@@ -45,13 +42,14 @@ defmodule Erl2ex.Cli do
     cond do
       not Enum.empty?(errors) ->
         display_errors(errors)
+
       Keyword.get(options, :help) ->
         display_help()
+
       true ->
         run_conversion(args, options)
     end
   end
-
 
   @doc """
   Runs the erl2ex binary, given a set of command line arguments.
@@ -59,14 +57,13 @@ defmodule Erl2ex.Cli do
   OS result code.
   """
 
-  @spec main([String.t]) :: no_return
+  @spec main([String.t()]) :: no_return
 
   def main(argv) do
     argv
-      |> run
-      |> System.halt
+    |> run
+    |> System.halt()
   end
-
 
   @doc """
   Returns the usage documentation for the command line.
@@ -76,7 +73,7 @@ defmodule Erl2ex.Cli do
   as plain text as well.
   """
 
-  @spec usage_text(String.t) :: String.t
+  @spec usage_text(String.t()) :: String.t()
 
   def usage_text(invocation \\ "erl2ex") do
     """
@@ -108,46 +105,54 @@ defmodule Erl2ex.Cli do
     """
   end
 
-
   defp decode_options(options) do
-    verbose_count = options
+    verbose_count =
+      options
       |> Keyword.get_values(:verbose)
-      |> Enum.count
-    {lib_dirs, errors} = options
+      |> Enum.count()
+
+    {lib_dirs, errors} =
+      options
       |> Keyword.get_values(:lib_dir)
-      |> Enum.reduce({%{}, []}, fn (str, {map, errs}) ->
+      |> Enum.reduce({%{}, []}, fn str, {map, errs} ->
         case Regex.run(~r{^([^=]+)=([^=]+)$}, str) do
           nil ->
             {map, [{:lib_dir, str} | errs]}
+
           [_, key, val] ->
             {Map.put(map, String.to_atom(key), val), errs}
         end
       end)
 
-    options = options
+    options =
+      options
       |> Keyword.put(:verbosity, verbose_count)
       |> Keyword.put(:lib_dir, lib_dirs)
+
     {options, errors}
   end
 
-
   defp run_conversion([], options) do
     :all
-      |> IO.read
-      |> Erl2ex.convert_str!(options)
-      |> IO.write
+    |> IO.read()
+    |> Erl2ex.convert_str!(options)
+    |> IO.write()
+
     0
   end
 
   defp run_conversion([path], options) do
     output = Keyword.get(options, :output)
+
     cond do
       File.dir?(path) ->
         result = Erl2ex.convert_dir(path, output, options)
         handle_result(result)
+
       File.regular?(path) ->
         result = Erl2ex.convert_file(path, output, options)
         handle_result(result)
+
       true ->
         IO.puts(:stderr, "Could not find input: #{path}")
         1
@@ -160,9 +165,9 @@ defmodule Erl2ex.Cli do
     1
   end
 
-
   defp handle_result(results) do
     error = Results.get_error(results)
+
     if error == nil do
       0
     else
@@ -171,20 +176,18 @@ defmodule Erl2ex.Cli do
     end
   end
 
-
   defp display_errors(errors) do
     Enum.each(errors, fn
       {switch, val} ->
         IO.puts(:stderr, "Unrecognized or malformed switch: #{switch}=#{val}")
-      end)
+    end)
+
     IO.puts(:stderr, "")
     display_help()
     1
   end
 
-
   defp display_help do
     IO.write(:stderr, usage_text("erl2ex"))
   end
-
 end

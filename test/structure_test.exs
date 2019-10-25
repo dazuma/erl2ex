@@ -3,249 +3,235 @@ defmodule StructureTest do
 
   @opts [emit_file_headers: false]
 
-
   # Comments are not working.
   @tag :skip
   test "Module comments" do
     input = """
-      %% This is an empty module.
-      -module(foo).
-      """
+    %% This is an empty module.
+    -module(foo).
+    """
 
     expected = """
-      ## This is an empty module.
+    ## This is an empty module.
 
-      defmodule :foo do
+    defmodule :foo do
 
-      end
-      """
+    end
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "Input does not end with a newline" do
     input = "-module(foo)."
 
     expected = """
-      defmodule :foo do
+    defmodule :foo do
 
-      end
-      """
+    end
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "Record operations" do
     input = """
-      -record(foo, {field1, field2=123}).
-      foo() ->
-        A = #foo{field1="Ada"},
-        B = A#foo{field2=234},
-        C = #foo{field1="Lovelace", _=345},
-        #foo{field1=D} = B,
-        B#foo.field2.
-      """
+    -record(foo, {field1, field2=123}).
+    foo() ->
+      A = #foo{field1="Ada"},
+      B = A#foo{field2=234},
+      C = #foo{field1="Lovelace", _=345},
+      #foo{field1=D} = B,
+      B#foo.field2.
+    """
 
     expected = """
-      require Record
+    require Record
 
-      @erlrecordfields_foo [:field1, :field2]
-      Record.defrecordp :erlrecord_foo, :foo, [field1: :undefined, field2: 123]
+    @erlrecordfields_foo [:field1, :field2]
+    Record.defrecordp :erlrecord_foo, :foo, [field1: :undefined, field2: 123]
 
 
-      defp foo() do
-        a = erlrecord_foo(field1: 'Ada')
-        b = erlrecord_foo(a, field2: 234)
-        c = erlrecord_foo(field1: 'Lovelace', field2: 345)
-        erlrecord_foo(field1: d) = b
-        erlrecord_foo(b, :field2)
-      end
-      """
+    defp foo() do
+      a = erlrecord_foo(field1: 'Ada')
+      b = erlrecord_foo(a, field2: 234)
+      c = erlrecord_foo(field1: 'Lovelace', field2: 345)
+      erlrecord_foo(field1: d) = b
+      erlrecord_foo(b, :field2)
+    end
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "Record queries" do
     input = """
-      -record(foo, {field1, field2=123}).
-      foo() ->
-        #foo.field2,
-        record_info(size, foo),
-        record_info(fields, foo).
-      """
+    -record(foo, {field1, field2=123}).
+    foo() ->
+      #foo.field2,
+      record_info(size, foo),
+      record_info(fields, foo).
+    """
 
     expected = """
-      require Record
+    require Record
 
-      defmacrop erlrecordsize(data_attr) do
-        __MODULE__ |> Module.get_attribute(data_attr) |> Enum.count |> +(1)
-      end
+    defmacrop erlrecordsize(data_attr) do
+      __MODULE__ |> Module.get_attribute(data_attr) |> Enum.count |> +(1)
+    end
 
-      defmacrop erlrecordindex(data_attr, field) do
-        index = __MODULE__ |> Module.get_attribute(data_attr) |> Enum.find_index(&(&1 ==field))
-        if index == nil, do: 0, else: index + 1
-      end
+    defmacrop erlrecordindex(data_attr, field) do
+      index = __MODULE__ |> Module.get_attribute(data_attr) |> Enum.find_index(&(&1 ==field))
+      if index == nil, do: 0, else: index + 1
+    end
 
-      @erlrecordfields_foo [:field1, :field2]
-      Record.defrecordp :erlrecord_foo, :foo, [field1: :undefined, field2: 123]
+    @erlrecordfields_foo [:field1, :field2]
+    Record.defrecordp :erlrecord_foo, :foo, [field1: :undefined, field2: 123]
 
 
-      defp foo() do
-        erlrecordindex(:erlrecordfields_foo, :field2)
-        erlrecordsize(:erlrecordfields_foo)
-        @erlrecordfields_foo
-      end
-      """
+    defp foo() do
+      erlrecordindex(:erlrecordfields_foo, :field2)
+      erlrecordsize(:erlrecordfields_foo)
+      @erlrecordfields_foo
+    end
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "is_record BIF" do
     input = """
-      foo() -> is_record(foo, bar).
-      """
+    foo() -> is_record(foo, bar).
+    """
 
     expected = """
-      require Record
+    require Record
 
 
-      defp foo() do
-        Record.is_record(:foo, :bar)
-      end
-      """
+    defp foo() do
+      Record.is_record(:foo, :bar)
+    end
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "on_load attribute" do
     input = """
-      -on_load(foo/0).
-      """
+    -on_load(foo/0).
+    """
 
     expected = """
-      @on_load :foo
-      """
+    @on_load :foo
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "vsn attribute" do
     input = """
-      -vsn(123).
-      """
+    -vsn(123).
+    """
 
     expected = """
-      @vsn 123
-      """
+    @vsn 123
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "behaviour attribute (british spelling)" do
     input = """
-      -behaviour(gen_server).
-      """
+    -behaviour(gen_server).
+    """
 
     expected = """
-      @behaviour :gen_server
-      """
+    @behaviour :gen_server
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "behavior attribute (american spelling)" do
     input = """
-      -behavior(gen_server).
-      """
+    -behavior(gen_server).
+    """
 
     expected = """
-      @behaviour :gen_server
-      """
+    @behaviour :gen_server
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "callback attributes" do
     input = """
-      -callback foo(A :: atom(), integer()) -> boolean()
-        ; (A :: integer(), B :: atom()) -> 'hello' | boolean().
-      -callback bar(A, B) -> A | B when A :: tuple(), B :: atom().
-      """
+    -callback foo(A :: atom(), integer()) -> boolean()
+      ; (A :: integer(), B :: atom()) -> 'hello' | boolean().
+    -callback bar(A, B) -> A | B when A :: tuple(), B :: atom().
+    """
 
     expected = """
-      @callback foo(atom(), integer()) :: boolean()
-      @callback foo(integer(), atom()) :: :hello | boolean()
+    @callback foo(atom(), integer()) :: boolean()
+    @callback foo(integer(), atom()) :: :hello | boolean()
 
-      @callback bar(a, b) :: a | b when a: tuple(), b: atom()
-      """
+    @callback bar(a, b) :: a | b when a: tuple(), b: atom()
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "file attribute" do
     input = """
-      -file("myfile.erl", 10).
-      """
+    -file("myfile.erl", 10).
+    """
 
     expected = """
-      # File "myfile.erl" Line 10
-      """
+    # File "myfile.erl" Line 10
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "inline compile attribute" do
     input = """
-      -compile({inline, [pi/0, def/1]}).
-      pi() -> 3.14.
-      def(A) -> A.
-      """
+    -compile({inline, [pi/0, def/1]}).
+    pi() -> 3.14.
+    def(A) -> A.
+    """
 
     expected = """
-      @compile {:inline, [pi: 0, func_def: 1]}
+    @compile {:inline, [pi: 0, func_def: 1]}
 
 
-      defp pi() do
-        3.14
-      end
+    defp pi() do
+      3.14
+    end
 
 
-      defp func_def(a) do
-        a
-      end
-      """
+    defp func_def(a) do
+      a
+    end
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 
   test "inline nowarn_unused_function attribute" do
     input = """
-      -compile([nowarn_unused_function, {nowarn_unused_function, [pi/0]}]).
-      pi() -> 3.14.
-      """
+    -compile([nowarn_unused_function, {nowarn_unused_function, [pi/0]}]).
+    pi() -> 3.14.
+    """
 
     expected = """
-      @compile :nowarn_unused_function
+    @compile :nowarn_unused_function
 
 
-      defp pi() do
-        3.14
-      end
-      """
+    defp pi() do
+      3.14
+    end
+    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
-
 end

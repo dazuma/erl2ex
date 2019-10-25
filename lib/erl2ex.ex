@@ -1,7 +1,6 @@
 # Main entry points for erl2ex.
 
 defmodule Erl2ex do
-
   @moduledoc """
   Erl2ex is an Erlang to Elixir transpiler, converting well-formed Erlang
   source to Elixir source with equivalent functionality.
@@ -23,7 +22,6 @@ defmodule Erl2ex do
   alias Erl2ex.Pipeline.InlineIncludes
   alias Erl2ex.Pipeline.Parse
 
-
   @typedoc """
   Options that may be provided to a conversion run.
 
@@ -41,21 +39,19 @@ defmodule Erl2ex do
       2 outputs debug information.)
   """
   @type options :: [
-    include_dir: Path.t,
-    lib_dir: {atom, Path.t} | %{atom => Path.t},
-    define_prefix: String.t,
-    defines_from_config: atom,
-    emit_file_headers: boolean,
-    verbosity: integer
-  ]
-
+          include_dir: Path.t(),
+          lib_dir: {atom, Path.t()} | %{atom => Path.t()},
+          define_prefix: String.t(),
+          defines_from_config: atom,
+          emit_file_headers: boolean,
+          verbosity: integer
+        ]
 
   @typedoc """
   A file identifier, which may be a filesystem path or a symbolic id.
   """
 
-  @type file_id :: Path.t | atom
-
+  @type file_id :: Path.t() | atom
 
   @doc """
   Converts the source for an Erlang module, represented as a string.
@@ -64,19 +60,17 @@ defmodule Erl2ex do
   If an error occurs, returns a tuple of {:error, error_details}.
   """
 
-  @spec convert_str(String.t, options) ::
-    {:ok, String.t} | {:error, %CompileError{}}
+  @spec convert_str(String.t(), options) ::
+          {:ok, String.t()} | {:error, %CompileError{}}
 
   def convert_str(source_str, opts \\ []) do
-    internal_convert_str(source_str, opts,
-      fn(results, sink) ->
-        case Results.get_error(results) do
-          nil -> Sink.get_string(sink, nil)
-          err -> {:error, err}
-        end
-      end)
+    internal_convert_str(source_str, opts, fn results, sink ->
+      case Results.get_error(results) do
+        nil -> Sink.get_string(sink, nil)
+        err -> {:error, err}
+      end
+    end)
   end
-
 
   @doc """
   Converts the source for an Erlang module, represented as a string, and
@@ -85,23 +79,22 @@ defmodule Erl2ex do
   Raises a CompileError if an error occurs.
   """
 
-  @spec convert_str!(String.t, options) :: String.t
+  @spec convert_str!(String.t(), options) :: String.t()
 
   def convert_str!(source_str, opts \\ []) do
-    internal_convert_str(source_str, opts,
-      fn(results, sink) ->
-        Results.throw_error(results)
-        {:ok, str} = Sink.get_string(sink, nil)
-        str
-      end)
+    internal_convert_str(source_str, opts, fn results, sink ->
+      Results.throw_error(results)
+      {:ok, str} = Sink.get_string(sink, nil)
+      str
+    end)
   end
-
 
   defp internal_convert_str(source_str, opts, result_handler) do
     opts = Keyword.merge(opts, source_data: source_str)
     source = Source.start_link(opts)
     sink = Sink.start_link(allow_get: true)
     results_collector = Results.Collector.start_link()
+
     try do
       convert(source, sink, results_collector, nil, nil, opts)
       results = Results.Collector.get(results_collector)
@@ -112,7 +105,6 @@ defmodule Erl2ex do
       Results.Collector.stop(results_collector)
     end
   end
-
 
   @doc """
   Converts a single Erlang source file, and writes the generated Elixir code
@@ -125,7 +117,7 @@ defmodule Erl2ex do
   Returns a results object.
   """
 
-  @spec convert_file(Path.t, Path.t | nil, options) :: Results.t
+  @spec convert_file(Path.t(), Path.t() | nil, options) :: Results.t()
 
   def convert_file(source_path, dest_path \\ nil, opts \\ []) do
     dest_path =
@@ -134,16 +126,20 @@ defmodule Erl2ex do
       else
         dest_path
       end
-    cur_dir = File.cwd!
+
+    cur_dir = File.cwd!()
     include_dirs = Keyword.get_values(opts, :include_dir)
     source = Source.start_link(source_dir: cur_dir, include_dirs: include_dirs)
     sink = Sink.start_link(dest_dir: cur_dir)
     results_collector = Results.Collector.start_link()
+
     try do
       convert(source, sink, source_path, dest_path, opts)
+
       if Keyword.get(opts, :verbosity, 0) > 0 do
         IO.puts(:stderr, "Converted #{source_path} -> #{dest_path}")
       end
+
       Results.Collector.get(results_collector)
     after
       Source.stop(source)
@@ -151,7 +147,6 @@ defmodule Erl2ex do
       Results.Collector.stop(results_collector)
     end
   end
-
 
   @doc """
   Searches a directory for Erlang source files, and writes corresponding
@@ -164,27 +159,33 @@ defmodule Erl2ex do
   Returns a results object.
   """
 
-  @spec convert_dir(Path.t, Path.t | nil, options) :: Results.t
+  @spec convert_dir(Path.t(), Path.t() | nil, options) :: Results.t()
 
   def convert_dir(source_dir, dest_dir \\ nil, opts \\ []) do
     dest_dir = if dest_dir == nil, do: source_dir, else: dest_dir
-    source = opts
+
+    source =
+      opts
       |> Keyword.put(:source_dir, source_dir)
-      |> Source.start_link
+      |> Source.start_link()
+
     sink = Sink.start_link(dest_dir: dest_dir)
     results_collector = Results.Collector.start_link()
+
     try do
       "#{source_dir}/**/*.erl"
-        |> Path.wildcard
-        |> Enum.each(fn source_full_path ->
-          source_rel_path = Path.relative_to(source_full_path, source_dir)
-          dest_rel_path = "#{Path.rootname(source_rel_path)}.ex"
-          dest_full_path = Path.join(dest_dir, dest_rel_path)
-          convert(source, sink, results_collector, source_rel_path, dest_rel_path, opts)
-          if Keyword.get(opts, :verbosity, 0) > 0 do
-            IO.puts(:stderr, "Converted #{source_full_path} -> #{dest_full_path}")
-          end
-        end)
+      |> Path.wildcard()
+      |> Enum.each(fn source_full_path ->
+        source_rel_path = Path.relative_to(source_full_path, source_dir)
+        dest_rel_path = "#{Path.rootname(source_rel_path)}.ex"
+        dest_full_path = Path.join(dest_dir, dest_rel_path)
+        convert(source, sink, results_collector, source_rel_path, dest_rel_path, opts)
+
+        if Keyword.get(opts, :verbosity, 0) > 0 do
+          IO.puts(:stderr, "Converted #{source_full_path} -> #{dest_full_path}")
+        end
+      end)
+
       Results.Collector.get(results_collector)
     after
       Source.stop(source)
@@ -193,37 +194,40 @@ defmodule Erl2ex do
     end
   end
 
-
   @doc """
   Given a source and a sink, and the source path for one Erlang source file,
   converts to Elixir and writes the result to the sink at the given destination
   path. Writes the result to the given results collector. Returns :ok.
   """
 
-  @spec convert(Source.t, Sink.t, Results.Collector.t, Erl2ex.file_id, Erl2ex.file_id, options) :: :ok
+  @spec convert(Source.t(), Sink.t(), Results.Collector.t(), Erl2ex.file_id(), Erl2ex.file_id(), options) :: :ok
 
   def convert(source, sink, results_collector, source_path, dest_path, opts \\ []) do
     {source_str, actual_source_path} = Source.read_source(source, source_path)
+
     opts =
       if actual_source_path == nil do
         opts
       else
         [{:cur_file_path, actual_source_path} | opts]
       end
+
     try do
-      str = source_str
+      str =
+        source_str
         |> Parse.string(opts)
         |> InlineIncludes.process(source, actual_source_path)
         |> Analyze.forms(opts)
         |> Convert.module(opts)
         |> Codegen.to_str(opts)
+
       :ok = Sink.write(sink, dest_path, str)
       :ok = Results.Collector.put_success(results_collector, source_path, dest_path)
     rescue
       error in CompileError ->
         :ok = Results.Collector.put_error(results_collector, source_path, error)
     end
+
     :ok
   end
-
 end
