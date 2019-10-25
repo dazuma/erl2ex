@@ -296,7 +296,7 @@ defmodule ExpressionTest do
 
     expected = """
     defp foo() do
-      receive() do
+      receive do
         a when b and c or d == 2 ->
           e = 3
           e
@@ -321,7 +321,7 @@ defmodule ExpressionTest do
 
     expected = """
     defp foo() do
-      receive() do
+      receive do
         a ->
           :ok
       after
@@ -738,7 +738,7 @@ defmodule ExpressionTest do
 
     expected = """
     defp foo() do
-      try() do
+      try do
         x
         y
       catch
@@ -773,7 +773,7 @@ defmodule ExpressionTest do
 
     expected = """
     defp foo() do
-      try() do
+      try do
         a
       catch
         :throw, term ->
