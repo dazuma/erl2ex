@@ -3,12 +3,11 @@ defmodule ErrorTest do
 
   @opts [emit_file_headers: false]
 
-
   test "Erlang parse error" do
     input = """
-      foo() ->
-        bar(.
-      """
+    foo() ->
+      bar(.
+    """
 
     expected = %CompileError{
       file: "(unknown source file)",
@@ -18,6 +17,4 @@ defmodule ErrorTest do
 
     assert Erl2ex.convert_str(input, @opts) == {:error, expected}
   end
-
-
 end

@@ -1,7 +1,6 @@
 # These internal data structures are the output of Pipeline.Convert, and
 # represent Elixir source trees for codegen.
 
-
 # A toplevel comment.
 
 defmodule Erl2ex.Pipeline.ExComment do
@@ -11,9 +10,7 @@ defmodule Erl2ex.Pipeline.ExComment do
     # List of comments, one per line. Each comment must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # A module attribute.
 
@@ -30,9 +27,7 @@ defmodule Erl2ex.Pipeline.ExAttr do
     # List of pre-form comments, one per line. Each must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # The Elixir form of an Erlang compiler directive (such as ifdef).
 # This is represented as an abstract directive here, and codegen takes care
@@ -49,9 +44,7 @@ defmodule Erl2ex.Pipeline.ExDirective do
     # List of pre-form comments, one per line. Each must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # A directive to import a module.
 
@@ -66,9 +59,7 @@ defmodule Erl2ex.Pipeline.ExImport do
     # List of pre-form comments, one per line. Each must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # An Elixir macro
 
@@ -98,9 +89,7 @@ defmodule Erl2ex.Pipeline.ExMacro do
     # List of pre-form comments, one per line. Each must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # An Elixir record.
 
@@ -119,9 +108,7 @@ defmodule Erl2ex.Pipeline.ExRecord do
     # List of pre-form comments, one per line. Each must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # An Elixir type definition.
 
@@ -138,9 +125,7 @@ defmodule Erl2ex.Pipeline.ExType do
     # List of pre-form comments, one per line. Each must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # An Elixir function spec.
 
@@ -157,9 +142,7 @@ defmodule Erl2ex.Pipeline.ExSpec do
     # List of pre-form comments, one per line. Each must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # The header for an Elixir module. Includes auto-generated pieces such as
 # require statements for Bitwise and Record, if needed, as well as various
@@ -186,9 +169,7 @@ defmodule Erl2ex.Pipeline.ExHeader do
     # The name of the macro that computes record index, or nil if not needed.
     record_index_macro: nil
   )
-
 end
-
 
 # An Elixir function.
 
@@ -210,9 +191,7 @@ defmodule Erl2ex.Pipeline.ExFunc do
     # List of pre-form comments, one per line. Each must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # A single clause of an Elixir function.
 
@@ -227,9 +206,7 @@ defmodule Erl2ex.Pipeline.ExClause do
     # List of pre-form comments, one per line. Each must begin with a hash "#".
     comments: []
   )
-
 end
-
 
 # The full Elixir module representation.
 
@@ -247,5 +224,4 @@ defmodule Erl2ex.Pipeline.ExModule do
     # List of forms (other structures from this file).
     forms: []
   )
-
 end
