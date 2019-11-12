@@ -163,19 +163,38 @@ defmodule ExpressionTest do
       A ! B.
     """
 
-    expected = """
-    defp foo() do
-      not(a)
-      a or b
-      a and b
-      :erlang.and(a, b)
-      :erlang.or(a, b)
-      :erlang.xor(a, b)
-      a ++ b
-      a -- b
-      send(a, b)
-    end
-    """
+    expected =
+      case String.split(System.version(), ".", parts: 3) do
+        ["1", minor, _patch] when minor in ["4", "5"] ->
+          """
+          defp foo() do
+            not a
+            a or b
+            a and b
+            :erlang.and(a, b)
+            :erlang.or(a, b)
+            :erlang.xor(a, b)
+            a ++ b
+            a -- b
+            send(a, b)
+          end
+          """
+
+        _ ->
+          """
+          defp foo() do
+            not(a)
+            a or b
+            a and b
+            :erlang.and(a, b)
+            :erlang.or(a, b)
+            :erlang.xor(a, b)
+            a ++ b
+            a -- b
+            send(a, b)
+          end
+          """
+      end
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
@@ -294,17 +313,34 @@ defmodule ExpressionTest do
       end.
     """
 
-    expected = """
-    defp foo() do
-      receive() do
-        a when b and c or d == 2 ->
-          e = 3
-          e
+    expected =
+      case String.split(System.version(), ".", parts: 3) do
+        ["1", minor, _patch] when minor in ["4", "5", "6", "7"] ->
+          """
+          defp foo() do
+            receive() do
+              a when b and c or d == 2 ->
+                e = 3
+                e
+              _ ->
+                2
+            end
+          end
+          """
+
         _ ->
-          2
+          """
+          defp foo() do
+            receive do
+              a when b and c or d == 2 ->
+                e = 3
+                e
+              _ ->
+                2
+            end
+          end
+          """
       end
-    end
-    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
@@ -319,17 +355,34 @@ defmodule ExpressionTest do
       end.
     """
 
-    expected = """
-    defp foo() do
-      receive() do
-        a ->
-          :ok
-      after
-        100 ->
-          :err
+    expected =
+      case String.split(System.version(), ".", parts: 3) do
+        ["1", minor, _patch] when minor in ["4", "5", "6", "7"] ->
+          """
+          defp foo() do
+            receive() do
+              a ->
+                :ok
+            after
+              100 ->
+                :err
+            end
+          end
+          """
+
+        _ ->
+          """
+          defp foo() do
+            receive do
+              a ->
+                :ok
+            after
+              100 ->
+                :err
+            end
+          end
+          """
       end
-    end
-    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
@@ -736,31 +789,89 @@ defmodule ExpressionTest do
       end.
     """
 
-    expected = """
-    defp foo() do
-      try() do
-        x
-        y
-      catch
-        (:throw, b) when is_integer(b) ->
-          b
-        :throw, c ->
-          c
-        (:exit, d) when d == 0 ->
-          d
-        :error, :badarith ->
-          e
-        kind, h ->
-          {kind, h}
-      else
-        a ->
-          a + 2
-      after
-        f
-        g
+    expected =
+      case String.split(System.version(), ".", parts: 3) do
+        ["1", minor, _patch] when minor in ["4", "5"] ->
+          """
+          defp foo() do
+            try() do
+              x
+              y
+            catch
+              (:throw, b) when is_integer(b) ->
+                b
+              :throw, c ->
+                c
+              (:exit, d) when d == 0 ->
+                d
+              :error, :badarith ->
+                e
+              kind, h ->
+                {kind, h}
+            after
+              f
+              g
+            else
+              a ->
+                a + 2
+            end
+          end
+          """
+
+        ["1", minor, _patch] when minor in ["6", "7"] ->
+          """
+          defp foo() do
+            try() do
+              x
+              y
+            catch
+              (:throw, b) when is_integer(b) ->
+                b
+              :throw, c ->
+                c
+              (:exit, d) when d == 0 ->
+                d
+              :error, :badarith ->
+                e
+              kind, h ->
+                {kind, h}
+            else
+              a ->
+                a + 2
+            after
+              f
+              g
+            end
+          end
+          """
+
+        _ ->
+          """
+          defp foo() do
+            try do
+              x
+              y
+            catch
+              (:throw, b) when is_integer(b) ->
+                b
+              :throw, c ->
+                c
+              (:exit, d) when d == 0 ->
+                d
+              :error, :badarith ->
+                e
+              kind, h ->
+                {kind, h}
+            else
+              a ->
+                a + 2
+            after
+              f
+              g
+            end
+          end
+          """
       end
-    end
-    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
@@ -771,20 +882,40 @@ defmodule ExpressionTest do
       catch A.
     """
 
-    expected = """
-    defp foo() do
-      try() do
-        a
-      catch
-        :throw, term ->
-          term
-        :exit, reason ->
-          {:EXIT, reason}
-        :error, reason ->
-          {:EXIT, {reason, :erlang.get_stacktrace()}}
+    expected =
+      case String.split(System.version(), ".", parts: 3) do
+        ["1", minor, _patch] when minor in ["4", "5", "6", "7"] ->
+          """
+          defp foo() do
+            try() do
+              a
+            catch
+              :throw, term ->
+                term
+              :exit, reason ->
+                {:EXIT, reason}
+              :error, reason ->
+                {:EXIT, {reason, :erlang.get_stacktrace()}}
+            end
+          end
+          """
+
+        _ ->
+          """
+          defp foo() do
+            try do
+              a
+            catch
+              :throw, term ->
+                term
+              :exit, reason ->
+                {:EXIT, reason}
+              :error, reason ->
+                {:EXIT, {reason, :erlang.get_stacktrace()}}
+            end
+          end
+          """
       end
-    end
-    """
 
     assert Erl2ex.convert_str!(input, @opts) == expected
   end
