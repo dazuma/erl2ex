@@ -1,14 +1,10 @@
-
 defmodule Erl2ex.Results.Collector do
-
   @moduledoc """
   Erl2ex.Results.Collector is a process that accumulates results of a
   conversion run.
   """
 
-
   alias Erl2ex.Results
-
 
   @typedoc """
   The ProcessID of a results collector process.
@@ -16,13 +12,11 @@ defmodule Erl2ex.Results.Collector do
 
   @type t :: pid()
 
-
   @typedoc """
   A file identifier, which may be a filesystem path or a symbolic id.
   """
 
-  @type file_id :: Path.t | atom
-
+  @type file_id :: Path.t() | atom
 
   @doc """
   Starts a result collector and returns its PID.
@@ -35,7 +29,6 @@ defmodule Erl2ex.Results.Collector do
     pid
   end
 
-
   @doc """
   Record that a conversion was successful for the given input and output paths.
   """
@@ -45,7 +38,6 @@ defmodule Erl2ex.Results.Collector do
   def put_success(results, input_path, output_path) do
     GenServer.call(results, {:success, input_path, output_path})
   end
-
 
   @doc """
   Record that a conversion was unsuccessful for the given input path.
@@ -57,28 +49,25 @@ defmodule Erl2ex.Results.Collector do
     GenServer.call(results, {:error, input_path, error})
   end
 
-
   @doc """
   Returns the results for the given input path.
   """
 
-  @spec get_file(t, file_id) :: {:ok, Results.File.t} | {:error, term}
+  @spec get_file(t, file_id) :: {:ok, Results.File.t()} | {:error, term}
 
   def get_file(results, path) do
     GenServer.call(results, {:get_file, path})
   end
 
-
   @doc """
   Returns the results for the entire conversion so far.
   """
 
-  @spec get(t) :: Results.t
+  @spec get(t) :: Results.t()
 
   def get(results) do
     GenServer.call(results, {:get})
   end
-
 
   @doc """
   Stops the collector process.
@@ -90,7 +79,6 @@ defmodule Erl2ex.Results.Collector do
     GenServer.cast(results, {:stop})
   end
 
-
   use GenServer
 
   defmodule State do
@@ -101,14 +89,13 @@ defmodule Erl2ex.Results.Collector do
     )
   end
 
-
   def init(opts) do
     state = %State{
       allow_overwrite: Keyword.get(opts, :allow_overwrite, false)
     }
+
     {:ok, state}
   end
-
 
   def handle_call({:success, input_path, output_path}, _from, state) do
     if not state.allow_overwrite and Map.has_key?(state.data, input_path) do
@@ -118,6 +105,7 @@ defmodule Erl2ex.Results.Collector do
         input_path: input_path,
         output_path: output_path
       }
+
       state = %State{state | data: Map.put(state.data, input_path, file)}
       {:reply, :ok, state}
     end
@@ -131,16 +119,19 @@ defmodule Erl2ex.Results.Collector do
         input_path: input_path,
         error: error
       }
+
       state = %State{state | data: Map.put(state.data, input_path, file)}
       {:reply, :ok, state}
     end
   end
 
   def handle_call({:get_file, input_path}, _from, %State{data: data} = state) do
-    reply = case Map.fetch(data, input_path) do
-      {:ok, file} -> {:ok, file}
-      :error -> {:error, :not_found}
-    end
+    reply =
+      case Map.fetch(data, input_path) do
+        {:ok, file} -> {:ok, file}
+        :error -> {:error, :not_found}
+      end
+
     {:reply, reply, state}
   end
 
@@ -148,9 +139,7 @@ defmodule Erl2ex.Results.Collector do
     {:reply, %Results{files: Map.values(data)}, state}
   end
 
-
   def handle_cast({:stop}, state) do
     {:stop, :normal, state}
   end
-
 end
